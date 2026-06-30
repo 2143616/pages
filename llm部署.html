@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step-3.7-Flash 部署指南 — vLLM + 4-bit 量化 on DGX Spark</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #181b24; --border: #262a36;
+    --accent: #6c8cff; --green: #4ade80; --orange: #fb923c; --red: #f87171;
+    --text: #e1e5ee; --text-dim: #8b92a5; --code-bg: #1e212b; --heading: #f0f2f8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 780px; margin: 0 auto; padding: 0 1.5rem; }
+
+  .sidebar {
+    position: fixed; left: 0; top: 0; width: 240px; height: 100vh;
+    background: var(--card); border-right: 1px solid var(--border);
+    padding: 2rem 1rem; overflow-y: auto; z-index: 100;
+  }
+  .sidebar h2 { font-size: .78rem; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .8rem; }
+  .sidebar nav { display: flex; flex-direction: column; gap: .2rem; }
+  .sidebar a {
+    color: var(--text-dim); text-decoration: none; font-size: .74rem;
+    padding: .25rem .5rem; border-radius: 6px; transition: all .15s;
+  }
+  .sidebar a:hover { color: var(--accent); background: rgba(108,140,255,.1); }
+  .sidebar .l2 { padding-left: 1.2rem; font-size: .68rem; }
+
+  .main { margin-left: 240px; padding: 2rem 0 6rem; }
+
+  h1, h2, h3, h4 { color: var(--heading); line-height: 1.3; }
+  h1 { font-size: 2rem; margin: 2rem 0 .5rem; text-align: center; }
+  .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 2.5rem; font-size: .92rem; }
+  h2 { font-size: 1.35rem; margin: 2.5rem 0 .8rem; padding-bottom: .4rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; margin: 1.8rem 0 .6rem; }
+  h4 { font-size: .88rem; margin: 1.2rem 0 .4rem; color: var(--accent); }
+  p { margin-bottom: 1rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { color: var(--heading); }
+  ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+  li { margin-bottom: .3rem; }
+
+  .hero {
+    text-align: center; padding: 2.5rem 0 1.5rem;
+    background: linear-gradient(135deg, rgba(108,140,255,.08) 0%, transparent 70%);
+    border-radius: 16px;
+  }
+  .hero h1 { margin: 0; }
+  .hero .badge {
+    display: inline-block; padding: .2rem .6rem; border-radius: 999px;
+    font-size: .7rem; font-weight: 600; margin: .3rem;
+  }
+  .badge-blue { background: rgba(108,140,255,.15); color: var(--accent); border: 1px solid rgba(108,140,255,.25); }
+  .badge-green { background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.2); }
+  .badge-orange { background: rgba(251,146,60,.12); color: var(--orange); border: 1px solid rgba(251,146,60,.2); }
+
+  .info-box, .tip-box, .warn-box, .err-box {
+    padding: .85rem 1.1rem; border-radius: 10px; margin: 1.2rem 0; border-left: 3px solid;
+  }
+  .info-box { background: rgba(108,140,255,.08); border-color: var(--accent); }
+  .tip-box  { background: rgba(74,222,128,.06); border-color: var(--green); }
+  .warn-box { background: rgba(251,146,60,.08); border-color: var(--orange); }
+  .err-box  { background: rgba(248,113,113,.06); border-color: var(--red); }
+  .info-box strong { color: var(--accent); }
+  .tip-box strong  { color: var(--green); }
+
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: .82em; background: var(--code-bg); padding: .15em .4em; border-radius: 4px; color: #c9d1d9;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.2rem; overflow-x: auto; margin: 1rem 0; font-size: .78rem; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .c1 { color: #8b949e; font-style: italic; }
+  .nb { color: #79c0ff; } .s { color: #a5d6ff; } .kc { color: #79c0ff; }
+  .kn { color: #ff7b72; } .o { color: #ffa657; }
+
+  .step-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.2rem; margin-bottom: .9rem;
+  }
+  .step-card .step-hd {
+    display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem;
+  }
+  .step-card .step-num {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: .78rem;
+  }
+  .step-card .step-title { font-weight: 600; color: var(--heading); }
+  .step-card p { margin: 0 0 .4rem; font-size: .88rem; }
+  .step-card p:last-child { margin-bottom: 0; }
+
+  .cmp-table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: .8rem; }
+  .cmp-table th, .cmp-table td { padding: .5rem .7rem; border: 1px solid var(--border); text-align: left; }
+  .cmp-table th { background: var(--card); color: var(--accent); font-weight: 600; }
+  .cmp-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  .flow-arrow { text-align: center; color: var(--text-dim); font-size: 1.2rem; margin: .2rem 0; }
+
+  .arch-diagram {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.2rem; margin: 1.2rem 0;
+  }
+  .arch-diagram svg { width: 100%; height: auto; display: block; }
+
+  .footer { text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: .75rem; color: var(--text-dim); }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h2>🚀 部署指南</h2>
+  <nav>
+    <a href="#intro">1. 整体方案</a>
+    <a href="#arch" class="l2">架构概览</a>
+    <a href="#specs" class="l2">模型规格</a>
+    <a href="#prepare">2. 环境准备</a>
+    <a href="#install-cuda" class="l2">CUDA 环境</a>
+    <a href="#install-vllm" class="l2">安装 vLLM</a>
+    <a href="#deploy">3. 部署模型</a>
+    <a href="#download" class="l2">下载模型</a>
+    <a href="#vllm-serve" class="l2">启动服务</a>
+    <a href="#launch-py" class="l2">Python 启动</a>
+    <a href="#test">4. 测试验证</a>
+    <a href="#curl" class="l2">curl 测试</a>
+    <a href="#python-client" class="l2">Python 客户端</a>
+    <a href="#opt">5. 调优</a>
+    <a href="#memory" class="l2">内存优化</a>
+    <a href="#batch" class="l2">批量与并发</a>
+    <a href="#faq">6. 常见问题</a>
+  </nav>
+</aside>
+
+<div class="main">
+<div class="container">
+
+<section class="hero">
+  <h1>🚀 Step-3.7-Flash 部署指南</h1>
+  <p class="subtitle">
+    在 DGX Spark 上通过 vLLM + 4-bit 量化部署 143B MoE 多模态大模型
+    <br>
+    <span class="badge badge-blue">vLLM</span>
+    <span class="badge badge-green">4-bit 量化</span>
+    <span class="badge badge-orange">DGX Spark</span>
+    <span class="badge badge-blue">128GB</span>
+  </p>
+</section>
+
+<!-- ═══ 1. ═══ -->
+<h2 id="intro">1. 整体方案</h2>
+
+<h3>我们最终选择</h3>
+
+<div class="arch-diagram">
+<svg viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .rc { fill: #1e212b; stroke: #262a36; stroke-width: 1.5; rx: 8; }
+    .rf { fill: rgba(108,140,255,.1); stroke: #6c8cff; stroke-width: 1.5; rx: 6; }
+    .tl { fill: #e1e5ee; font-size: 11px; font-family: system-ui; }
+    .td { fill: #8b92a5; font-size: 9px; font-family: system-ui; }
+    .ar { stroke: #6c8cff; stroke-width: 2; fill: none; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#6c8cff" />
+    </marker>
+  </defs>
+  <rect class="rc" x="40" y="60" width="160" height="70" />
+  <text class="tl" x="120" y="88" text-anchor="middle" font-weight="bold">🧠 Step-3.7-Flash</text>
+  <text class="td" x="120" y="105" text-anchor="middle">143B MoE 多模态</text>
+  <text class="td" x="120" y="118" text-anchor="middle">HuggingFace Safetensors</text>
+
+  <rect class="rf" x="260" y="40" width="180" height="100" />
+  <text class="tl" x="350" y="58" text-anchor="middle" font-size="10" font-weight="bold">vLLM 引擎</text>
+  <text class="td" x="350" y="75" text-anchor="middle">PagedAttention</text>
+  <text class="td" x="350" y="90" text-anchor="middle">Continuous Batching</text>
+  <text class="td" x="350" y="105" text-anchor="middle">FlashAttention</text>
+  <text class="td" x="350" y="120" text-anchor="middle">bitsandbytes 4-bit</text>
+
+  <rect class="rc" x="500" y="60" width="160" height="70" />
+  <text class="tl" x="580" y="88" text-anchor="middle" font-weight="bold">🖥 DGX Spark</text>
+  <text class="td" x="580" y="105" text-anchor="middle">Grace Blackwell</text>
+  <text class="td" x="580" y="118" text-anchor="middle">128GB 统一内存</text>
+
+  <path class="ar" d="M200,95 L250,95" />
+  <path class="ar" d="M440,95 L490,95" />
+</svg>
+</div>
+
+<table class="cmp-table">
+  <thead>
+    <tr><th>组件</th><th>选择</th><th>原因</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>模型</strong></td>
+      <td>Step-3.7-Flash</td>
+      <td>~143B 总参，~7B 激活，比 3.5 更小更新，支持多模态</td>
+    </tr>
+    <tr>
+      <td><strong>推理引擎</strong></td>
+      <td>vLLM</td>
+      <td>原生 CUDA 加速，PagedAttention 省显存，社区最活跃</td>
+    </tr>
+    <tr>
+      <td><strong>量化方式</strong></td>
+      <td>bitsandbytes 4-bit</td>
+      <td>动态量化，无需提前转 GGUF，加载即用</td>
+    </tr>
+    <tr>
+      <td><strong>硬件</strong></td>
+      <td>DGX Spark</td>
+      <td>128GB 统一内存，4-bit 下约 72GB 装得下</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="specs">内存估算</h3>
+
+<table class="cmp-table">
+  <thead>
+    <tr><th>部分</th><th>大小</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>模型权重 (4-bit)</td><td>~72 GB</td><td>143B × 0.5 字节</td></tr>
+    <tr><td>KV Cache (8K context)</td><td>~8 GB</td><td>MoE 8K 上下文估计</td></tr>
+    <tr><td>中间激活 / 其他</td><td>~10 GB</td><td>MoE 路由、注意力计算等</td></tr>
+    <tr><td><strong>总计</strong></td><td><strong>~90 GB</strong></td><td>DGX Spark 128GB ✅ 充裕</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══ 2. ═══ -->
+<h2 id="prepare">2. 环境准备</h2>
+
+<h3 id="install-cuda">Step 1: 确认 CUDA 环境</h3>
+
+<div class="step-card">
+  <p>DGX Spark 预装了 CUDA。验证一下：</p>
+
+<pre><code><span class="c1"># 检查 CUDA 版本</span>
+nvidia-smi
+<span class="c1"># 期望看到 CUDA Version: 12.x 或更高</span>
+
+<span class="c1"># 检查 GPU</span>
+nvcc --version</code></pre>
+
+  <div class="tip-box">
+    <strong>💡 </strong>如果没有 nvidia-smi，先装 NVIDIA 驱动：<code>sudo apt install nvidia-driver-545</code>（具体版本看 DGX Spark 官方文档）。
+  </div>
+</div>
+
+<h3 id="install-vllm">Step 2: 安装 Python 环境与 vLLM</h3>
+
+<div class="step-card">
+<p>推荐用 conda 创建独立环境：</p>
+
+<pre><code><span class="c1"># 创建 Python 3.11 环境</span>
+conda create -n step37 python=3.11 -y
+conda activate step37
+
+<span class="c1"># 安装 PyTorch（确认 CUDA 版本）</span>
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+<span class="c1"># 验证 PyTorch 和 GPU</span>
+python -c <span class="s">"import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"</span>
+<span class="c1"># 应输出：True 和 Grace Blackwell 或类似</span></code></pre>
+</div>
+
+<div class="step-card">
+<p>安装 vLLM 和 bitsandbytes：</p>
+
+<pre><code><span class="c1"># 安装 vLLM（推荐从源码编译以支持 Grace 架构）</span>
+pip install vllm
+
+<span class="c1"># 如果上面报错，试试预编译 wheel</span>
+<span class="c1"># pip install https://github.com/vllm-project/vllm/releases/...</span>
+
+<span class="c1"># 安装 bitsandbytes（4-bit 量化依赖）</span>
+pip install bitsandbytes
+
+<span class="c1"># 验证安装</span>
+python -c <span class="s">"import vllm; print(vllm.__version__)"</span>
+python -c <span class="s">"import bitsandbytes; print(bitsandbytes.__version__)"</span></code></pre>
+
+<div class="warn-box">
+  <strong>⚠️ </strong>如果 pip install vllm 失败，可能是 Grace ARM 架构没有预编译包。备选方案：<br>
+  1. 从源码编译：<code>git clone https://github.com/vllm-project/vllm.git && cd vllm && pip install -e .</code><br>
+  2. 或使用 <strong>SGLang</strong> 替代：<code>pip install sglang[all]</code>
+</div>
+</div>
+
+<div class="step-card">
+<p>安装 HuggingFace 相关工具：</p>
+
+<pre><code><span class="c1"># 用于下载模型</span>
+pip install huggingface-hub
+
+<span class="c1"># 登录（可选，公开模型不需要）</span>
+huggingface-cli login</code></pre>
+</div>
+
+<!-- ═══ 3. ═══ -->
+<h2 id="deploy">3. 部署模型</h2>
+
+<h3 id="download">Step 3: 下载模型权重</h3>
+
+<div class="step-card">
+<p>从 HuggingFace 下载 Step-3.7-Flash 的原始权重（Safetensors 格式）：</p>
+
+<pre><code><span class="c1"># 方法一：用 huggingface-cli 下载（推荐，支持断点续传）</span>
+huggingface-cli download stepfun-ai/Step-3.7-Flash \
+  --local-dir ./models/Step-3.7-Flash \
+  --local-dir-use-symlinks False
+
+<span class="c1"># ⚠️ 注意：下载约 286GB（BF16），确保磁盘有 >400GB 空间</span></code></pre>
+
+<div class="tip-box">
+  <strong>💡 磁盘空间提醒：</strong>原始 BF16 权重 ~286GB。4-bit 加载只需要 ~72GB 内存，但下载时需要 286GB 磁盘空间。建议准备一个 512GB+ 的 SSD。
+</div>
+</div>
+
+<h3 id="vllm-serve">Step 4: 启动服务（方式一：vLLM 命令行）</h3>
+
+<div class="step-card">
+<p>vLLM 内置了 OpenAI 兼容的 API 服务器：</p>
+
+<pre><code><span class="c1"># 启动 OpenAI 兼容 API 服务</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model ./models/Step-3.7-Flash \             <span class="c1"># 或用 HF ID: stepfun-ai/Step-3.7-Flash</span>
+  --trust-remote-code \                           <span class="c1"># 必须！StepFun 自定义架构</span>
+  --quantization bitsandbytes \                   <span class="c1"># 启用 4-bit 量化</span>
+  --load-format bitsandbytes \                    <span class="c1"># bitsandbytes 加载格式</span>
+  --max-model-len 8192 \                          <span class="c1"># 限制上下文长度，省内存</span>
+  --gpu-memory-utilization 0.9 \                  <span class="c1"># 使用 90% 统一内存</span>
+  --dtype auto \                                  <span class="c1"># 自动选择数据类型</span>
+  --port 8000                                     <span class="c1"># API 端口</span></code></pre>
+
+<div class="warn-box">
+  <strong>⚠️ 第一次启动会做什么？</strong><br>
+  1. 加载模型配置 → 2. 实例化自定义架构 → 3. 下载并加载权重 → 4. bitsandbytes 实时量化到 4-bit → 5. 启动 API 服务<br>
+  整个过程取决于磁盘读取速度，约 5-15 分钟。
+</div>
+</div>
+
+<h3 id="launch-py">Step 4b: 启动服务（方式二：Python 脚本）</h3>
+
+<div class="step-card">
+<p>如果需要更多控制，写一个 Python 启动脚本：</p>
+
+<pre><code><span class="c1"># serve_step37.py</span>
+<span class="kn">from</span> vllm <span class="kn">import</span> LLM, SamplingParams
+<span class="kn">from</span> vllm.entrypoints.openai.api_server <span class="kn">import</span> run_server
+<span class="kn">import</span> uvicorn
+
+<span class="c1"># 配置模型</span>
+llm = LLM(
+    model=<span class="s">"stepfun-ai/Step-3.7-Flash"</span>,    <span class="c1"># 或本地路径 ./models/Step-3.7-Flash</span>
+    trust_remote_code=<span class="kc">True</span>,                   <span class="c1"># 自定义架构</span>
+    quantization=<span class="s">"bitsandbytes"</span>,              <span class="c1"># 4-bit 量化</span>
+    load_format=<span class="s">"bitsandbytes"</span>,
+    max_model_len=<span class="mi">8192</span>,                      <span class="c1"># 上下文长度</span>
+    gpu_memory_utilization=<span class="mf">0.9</span>,               <span class="c1"># 内存使用率</span>
+    dtype=<span class="s">"auto"</span>,
+)
+
+<span class="c1"># 启动 OpenAI 兼容 API 服务器</span>
+<span class="c1"># 监听 http://0.0.0.0:8000</span>
+run_server(
+    llm=llm,
+    host=<span class="s">"0.0.0.0"</span>,
+    port=<span class="mi">8000</span>,
+)</code></pre>
+
+<pre><code><span class="c1"># 运行</span>
+python serve_step37.py</code></pre>
+</div>
+
+<div class="info-box">
+  <strong>💡 </strong>启动后，服务会在 <code>http://localhost:8000</code> 提供 OpenAI 兼容 API，可以用任意 OpenAI SDK 调用。
+</div>
+
+<!-- ═══ 4. ═══ -->
+<h2 id="test">4. 测试验证</h2>
+
+<h3 id="curl">用 curl 测试 API</h3>
+
+<div class="step-card">
+<p>服务启动后，用 curl 发送请求：</p>
+
+<pre><code><span class="c1"># 纯文本对话</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "model": "stepfun-ai/Step-3.7-Flash",
+    "messages": [
+      {"role": "user", "content": "用一句话解释什么是 MoE"}
+    ],
+    "max_tokens": 200,
+    "temperature": 0.7
+  }'</span> | python3 -m json.tool</code></pre>
+
+<pre><code><span class="c1"># 多模态：图片理解（如需要）</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "model": "stepfun-ai/Step-3.7-Flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "image_url", "image_url": {"url": "https://example.com/photo.jpg"}},
+          {"type": "text", "text": "这张图片里有什么？"}
+        ]
+      }
+    ],
+    "max_tokens": 300
+  }'</span> | python3 -m json.tool</code></pre>
+</div>
+
+<h3 id="python-client">用 Python 客户端测试</h3>
+
+<div class="step-card">
+<pre><code><span class="c1"># test_client.py</span>
+<span class="kn">from</span> openai <span class="kn">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="s">"http://localhost:8000/v1"</span>,
+    api_key=<span class="s">"not-needed"</span>,  <span class="c1"># vLLM 不验证 key</span>
+)
+
+<span class="c1"># 对话测试</span>
+response = client.chat.completions.create(
+    model=<span class="s">"stepfun-ai/Step-3.7-Flash"</span>,
+    messages=[
+        {<span class="s">"role"</span>: <span class="s">"system"</span>, <span class="s">"content"</span>: <span class="s">"你是一个有用的助手。"</span>},
+        {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"解释什么是注意力机制"</span>},
+    ],
+    max_tokens=<span class="mi">500</span>,
+    temperature=<span class="mf">0.7</span>,
+)
+
+<span class="nb">print</span>(response.choices[0].message.content)</code></pre>
+
+<pre><code>python test_client.py</code></pre>
+</div>
+
+<div class="tip-box">
+  <strong>✅ 成功标志：</strong>能看到模型返回流畅的中文回答，说明部署成功。
+</div>
+
+<!-- ═══ 5. ═══ -->
+<h2 id="opt">5. 调优</h2>
+
+<h3 id="memory">内存调优</h3>
+
+<table class="cmp-table">
+  <thead>
+    <tr><th>参数</th><th>推荐值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>--max-model-len</code></td>
+      <td>4096 ~ 16384</td>
+      <td>值越小，KV Cache 越省内存。简单问答 4096 就够</td>
+    </tr>
+    <tr>
+      <td><code>--gpu-memory-utilization</code></td>
+      <td>0.85 ~ 0.95</td>
+      <td>DGX Spark 统一内存，设到 0.9 安全</td>
+    </tr>
+    <tr>
+      <td><code>--max-num-batched-tokens</code></td>
+      <td>4096 ~ 8192</td>
+      <td>控制每批处理的 token 数</td>
+    </tr>
+    <tr>
+      <td><code>--enforce-eager</code></td>
+      <td>可选</td>
+      <td>关闭 CUDA graph，省内存但降低速度</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="batch">批量与并发</h3>
+
+<pre><code><span class="c1"># 优化吞吐量的启动参数</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model ./models/Step-3.7-Flash \
+  --trust-remote-code \
+  --quantization bitsandbytes \
+  --load-format bitsandbytes \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.9 \
+  --max-num-batched-tokens 8192 \
+  --max-num-seqs 8 \              <span class="c1"># 最多同时处理 8 个请求</span>
+  --port 8000</code></pre>
+
+<!-- ═══ 6. ═══ -->
+<h2 id="faq">6. 常见问题</h2>
+
+<div class="err-box">
+  <strong>Q：ImportError: cannot import name 'bitsandbytes'</strong><br>
+  <strong>A：</strong>安装 bitsandbytes：<code>pip install bitsandbytes</code>。如果 ARM 架构不支持，试试 <code>pip install bitsandbytes --prefer-binary</code>。
+</div>
+
+<div class="err-box">
+  <strong>Q：RuntimeError: trust_remote_code=True is required</strong><br>
+  <strong>A：</strong>启动时加上 <code>--trust-remote-code</code>，因为 Step-3.7-Flash 使用了自定义模型架构。
+</div>
+
+<div class="err-box">
+  <strong>Q：CUDA out of memory</strong><br>
+  <strong>A：</strong>降低 <code>--max-model-len</code>（如 4096）和 <code>--gpu-memory-utilization</code>（如 0.8）。如果还是 OOM，考虑用 Q3 量化或换更小的模型。
+</div>
+
+<div class="err-box">
+  <strong>Q：模型回答速度很慢</strong><br>
+  <strong>A：</strong>这是 143B MoE 模型的正常现象，4-bit 量化本身会增加解码延迟。可以：<br>
+  1. 减少 <code>--max-model-len</code> <br>
+  2. 使用 <code>--enforce-eager</code><br>
+  3. 考虑加 <code>--num-scheduler-steps</code> 优化调度
+</div>
+
+<div class="err-box">
+  <strong>Q：vLLM 不支持 ARM (Grace) 架构</strong><br>
+  <strong>A：</strong>DGX Spark 是 ARM64 架构。如果 vLLM 没有预编译包：<br>
+  1. 从源码编译：<code>git clone https://github.com/vllm-project/vllm.git && cd vllm && pip install -e .</code><br>
+  2. 或使用 <strong>SGLang</strong>：<code>pip install sglang[all]</code><br>
+  3. 或先用 <strong>HuggingFace Transformers + bitsandbytes</strong> 跑（慢但能用）
+</div>
+
+<div class="tip-box">
+  <strong>备用方案：HuggingFace Transformers 直接加载</strong>
+  <pre><code><span class="c1"># 如果 vLLM 搞不定，用 Transformers + bitsandbytes</span>
+<span class="kn">from</span> transformers <span class="kn">import</span> AutoModelForCausalLM, AutoProcessor, BitsAndBytesConfig
+<span class="kn">import</span> torch
+
+quant_config = BitsAndBytesConfig(load_in_4bit=<span class="kc">True</span>)
+
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="s">"stepfun-ai/Step-3.7-Flash"</span>,
+    trust_remote_code=<span class="kc">True</span>,
+    quantization_config=quant_config,
+    device_map=<span class="s">"auto"</span>,
+    torch_dtype=torch.bfloat16,
+)
+
+processor = AutoProcessor.from_pretrained(
+    <span class="s">"stepfun-ai/Step-3.7-Flash"</span>,
+    trust_remote_code=<span class="kc">True</span>,
+)</code></pre>
+</div>
+
+<!-- ═══ 引用 ═══ -->
+<hr style="border-color: var(--border); margin: 2.5rem 0;">
+
+<div class="info-box">
+  <strong>📌 部署后 Checklist</strong>
+  <ul style="margin: .4rem 0 0 1.2rem;">
+    <li>✅ CUDA 可用 → <code>python -c "import torch; print(torch.cuda.is_available())"</code></li>
+    <li>✅ vLLM 已安装 → <code>python -c "import vllm; print(vllm.__version__)"</code></li>
+    <li>✅ 模型下载完成 → <code>ls ./models/Step-3.7-Flash/*.safetensors</code></li>
+    <li>✅ 服务启动无报错 → 看终端日志</li>
+    <li>✅ API 响应正常 → 跑一次 curl 测试</li>
+  </ul>
+</div>
+
+<p class="footer">
+  基于实际操作流程编写 &nbsp;·&nbsp; 最后更新：2026 年 6 月
+</p>
+
+</div>
+</div>
+
+</body>
+</html>
