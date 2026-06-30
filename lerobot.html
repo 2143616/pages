@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeRobot SO-101 完全攻略 — 低成本 AI 机械臂入门与实践</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1419;
+    --surface: #1a2332;
+    --surface2: #243044;
+    --border: #2d3f57;
+    --text: #e8edf5;
+    --text2: #8b9bb5;
+    --accent: #6c8cff;
+    --accent2: #4ade80;
+    --accent3: #f59e0b;
+    --accent4: #f472b6;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+    --purple: #a78bfa;
+    --red: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(160deg, #0f1419 0%, #1a2332 50%, #0f1929 100%);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(108,140,255,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(74,222,128,0.04) 0%, transparent 50%);
+    animation: heroGlow 15s ease-in-out infinite alternate;
+  }
+  @keyframes heroGlow {
+    0% { transform: translate(0,0) rotate(0deg); }
+    100% { transform: translate(-2%,-2%) rotate(3deg); }
+  }
+  .hero-badge {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(108,140,255,0.12);
+    border: 1px solid rgba(108,140,255,0.25);
+    padding: 0.4rem 1.2rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.3px;
+  }
+  .hero h1 {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #e8edf5 0%, #6c8cff 40%, #4ade80 70%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    max-width: 900px;
+  }
+  .hero p.sub {
+    position: relative;
+    z-index: 1;
+    color: var(--text2);
+    font-size: 1.15rem;
+    max-width: 680px;
+    margin-top: 1.2rem;
+    line-height: 1.7;
+  }
+  .hero-stats {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hero-stats .stat {
+    text-align: center;
+  }
+  .hero-stats .stat .num {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .hero-stats .stat .label {
+    font-size: 0.8rem;
+    color: var(--text2);
+    margin-top: 0.15rem;
+  }
+
+  /* ── Container ── */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* ── Sections ── */
+  section { padding: 4rem 0; }
+  section + section { border-top: 1px solid var(--border); }
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  h2 .icon { font-size: 1.6rem; }
+  h2 + p.lead {
+    color: var(--text2);
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+    line-height: 1.7;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1.8rem 0 0.8rem;
+    color: var(--accent);
+  }
+  h4 {
+    font-weight: 600;
+    margin: 1.2rem 0 0.4rem;
+    color: var(--accent3);
+  }
+
+  p, li { color: var(--text2); line-height: 1.8; }
+  p { margin-bottom: 1rem; }
+  strong { color: var(--text); font-weight: 600; }
+
+  /* ── Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+  .card .emoji { font-size: 1.8rem; display: block; margin-bottom: 0.5rem; }
+  .card h4 { margin: 0 0 0.4rem; color: var(--text); font-weight: 600; }
+  .card p { font-size: 0.92rem; margin: 0; color: var(--text2); }
+
+  .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    margin-right: 0.3rem;
+    font-weight: 500;
+  }
+  .tag.green { background: rgba(74,222,128,0.12); color: var(--accent2); }
+  .tag.orange { background: rgba(251,146,60,0.12); color: var(--orange); }
+  .tag.pink { background: rgba(244,114,182,0.12); color: var(--accent4); }
+  .tag.cyan { background: rgba(34,211,238,0.12); color: var(--cyan); }
+  .tag.purple { background: rgba(167,139,250,0.12); color: var(--purple); }
+
+  /* ── Project cards ── */
+  .project-list { display: flex; flex-direction: column; gap: 1.2rem; margin: 1.5rem 0; }
+  .project-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .project-card:hover { border-color: var(--accent); }
+  .project-card .header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+  .project-card .header a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .project-card .header a:hover { text-decoration: underline; }
+  .project-card .header .stars {
+    color: var(--accent3);
+    font-size: 0.85rem;
+  }
+  .project-card .desc { font-size: 0.95rem; margin-bottom: 0.5rem; }
+  .project-card .detail {
+    font-size: 0.88rem;
+    color: var(--text2);
+    padding: 0.8rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* ── Model Table ── */
+  .model-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.92rem;
+  }
+  .model-table th {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  .model-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .model-table tr:hover td { background: rgba(108,140,255,0.04); }
+
+  /* ── Code ── */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 1rem 0;
+  }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+  :not(pre) > code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+  }
+  .hl-comment { color: #5c6e8a; }
+  .hl-keyword { color: var(--accent4); }
+  .hl-string { color: var(--accent2); }
+  .hl-fn { color: var(--accent3); }
+  .hl-var { color: var(--cyan); }
+
+  /* ── Workflow ── */
+  .workflow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem;
+    margin: 1.5rem 0;
+  }
+  .workflow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    text-align: center;
+    position: relative;
+  }
+  .workflow-step .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .workflow-step h4 { margin: 0; font-size: 0.95rem; }
+  .workflow-step p { font-size: 0.82rem; margin: 0.3rem 0 0; }
+
+  /* ── FAQ / highlight boxes ── */
+  .highlight-box {
+    background: var(--surface);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 1.2rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+  .highlight-box.orange { border-left-color: var(--orange); }
+  .highlight-box.green { border-left-color: var(--accent2); }
+  .highlight-box h4 { margin: 0 0 0.5rem; color: var(--accent); }
+  .highlight-box.orange h4 { color: var(--orange); }
+  .highlight-box.green h4 { color: var(--accent2); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text2);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .hero { min-height: 60vh; padding: 3rem 1.2rem; }
+    .hero h1 { font-size: 2rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .workflow { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="hero">
+  <div class="hero-badge">🤗 Hugging Face LeRobot &times; Seeed Studio</div>
+  <h1>LeRobot SO-101 完全攻略</h1>
+  <p class="sub">
+    一款 6 自由度低成本机械臂，结合 Hugging Face 开源机器人学习框架，<br>
+    让你以千元级成本进入 AI + 机器人实操时代。
+  </p>
+  <div class="hero-stats">
+    <div class="stat"><div class="num">⭐ 280+</div><div class="label">Isaac Lab 集成项目</div></div>
+    <div class="stat"><div class="num">🎯 15+</div><div class="label">开源 AI 结合项目</div></div>
+    <div class="stat"><div class="num">🧠 15+</div><div class="label">LeRobot 支持模型</div></div>
+    <div class="stat"><div class="num">💰 ~¥2000</div><div class="label">入门套件成本</div></div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ═══════════ 1. 认识 SO-101 ═══════════ -->
+<section>
+  <h2><span class="icon">🦾</span> 认识 SO-101 机械臂</h2>
+  <p class="lead">SO-101 是 Seeed Studio 推出的低成本 6 自由度机械臂，也是广受欢迎的 SO-100 的升级型号，在 Hugging Face LeRobot 社区中拥有原生支持。</p>
+
+  <h3>硬件规格</h3>
+  <div class="card-grid">
+    <div class="card">
+      <span class="emoji">⚙️</span>
+      <h4>6 自由度</h4>
+      <p>6 个关节伺服电机，覆盖工业机械臂常见的运动范围，适合抓取、搬运、操作等任务。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🤝</span>
+      <h4>主从遥操作</h4>
+      <p>Leader-Follower 架构——主臂记录人类动作，从臂实时复现。这是数据采集的核心机制。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🐍</span>
+      <h4>Python 原生驱动</h4>
+      <p>通过 LeRobot 的统一 <code>Robot</code> 类接口控制，一行代码连接、读写状态、发送动作。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">💰</span>
+      <h4>极低成本</h4>
+      <p>全套约 ¥2000 人民币，是入门 AI 机器人领域门槛最低的实体平台之一。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">📦</span>
+      <h4>开源生态</h4>
+      <p>3D 打印件 + 开源固件 + LeRobot 全套软件栈，社区活跃，资料丰富。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🔌</span>
+      <h4>即插即用</h4>
+      <p>USB 连接即可开始遥操作和数据采集，无需复杂配置。</p>
+    </div>
+  </div>
+
+  <h3>SO-101 vs SO-100：有什么不同？</h3>
+  <p>"101" 通常指代 SO-100 的改进迭代。两者共享相同的 6-DOF 架构和 LeRobot 软件支持，但 SO-101 在结构件强度、伺服性能、装配工艺上有优化。社区项目中两者常混用，代码基本兼容。</p>
+</section>
+
+<!-- ═══════════ 2. 能力矩阵 ═══════════ -->
+<section>
+  <h2><span class="icon">🎯</span> SO-101 能力矩阵</h2>
+  <p class="lead">一台千元级机械臂能做什么？以下是 SO-101 在实际项目中被验证过的全部能力。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <span class="emoji">🎮</span>
+      <h4>遥操作</h4>
+      <p>主臂控制从臂，实时复现人类动作。这是最基础也是最核心的功能——人类示教机器人做任务。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">💾</span>
+      <h4>数据采集</h4>
+      <p>录制遥操作数据为 episodes（MP4 视频 + Parquet 状态/动作序列），可上传 Hugging Face Hub 共享。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🧠</span>
+      <h4>模仿学习</h4>
+      <p>从人类示教数据中学习策略。训练 ACT（Action Chunking Transformer）、Diffusion Policy 等模型，让机器人自主复现任务。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🏋️</span>
+      <h4>强化学习</h4>
+      <p>在仿真（Isaac Lab / ManiSkill3）中通过试错学习最优策略，然后迁移到真机（Sim-to-Real）。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">👁️</span>
+      <h4>视觉伺服抓取</h4>
+      <p>结合 YOLO-World 等开放词汇检测模型，实时识别目标物体并闭环控制机械臂抓取。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🗣️</span>
+      <h4>语音控制</h4>
+      <p>说"把红色方块放到左边"，SmolVLA 等 VLA 模型理解自然语言并生成动作序列执行。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🌐</span>
+      <h4>轨迹规划</h4>
+      <p>Web 界面可视化设计路径点，生成平滑轨迹。适合教学演示和精密操作任务。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">☁️</span>
+      <h4>云集成</h4>
+      <p>通过 AWS IoT Greengrass 将伺服数据流式传输到云端，支持远程监控和控制。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🔄</span>
+      <h4>Sim-to-Real</h4>
+      <p>在 Isaac Sim / ManiSkill3 仿真中训练策略，零样本迁移到真实 SO-101，大幅降低真机调试成本。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🤖</span>
+      <h4>VLA 模型部署</h4>
+      <p>原生支持 Pi0、SmolVLA、GR00T N1.5 等视觉-语言-动作模型，实现"看+想+做"的完整闭环。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">📊</span>
+      <h4>ROS2 集成</h4>
+      <p>通过 lododo-arm 等项目接入 ROS2 Humble 生态，与现有机器人软件栈互通。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 3. 核心概念解释 ═══════════ -->
+<section>
+  <h2><span class="icon">📖</span> 核心概念科普</h2>
+  <p class="lead">在深入项目之前，先理解几个关键概念——这对看懂后续内容至关重要。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <span class="emoji">🔄</span>
+      <h4>模仿学习 (IL)</h4>
+      <p>人先做一遍演示（遥操作），记录"看到什么→做了什么"的数据对，然后训练神经网络学会像人一样动作。好比"看着师傅做一遍，然后自己照着做"。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🏋️</span>
+      <h4>强化学习 (RL)</h4>
+      <p>让机器人在仿真环境中自己试错——做对了给奖励，做错了扣分。经过几百万次尝试，自然找到最优策略。Sim-to-Real 就是把仿真中学到的策略搬到真机。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">👁️</span>
+      <h4>VLA（视觉-语言-动作）</h4>
+      <p>融合视觉理解 + 语言指令 + 动作输出的多模态大模型。你说"帮我拿杯子"，它看到杯子、理解你的意图、规划抓取轨迹并执行。Pi0、SmolVLA 都是 VLA。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🎮</span>
+      <h4>Sim-to-Real（仿真到真机）</h4>
+      <p>在虚拟环境（Isaac Sim、ManiSkill3）中训练策略，再把训练好的模型直接部署到真实机器人上。优点是仿真中可以跑几百万次尝试而不损坏真机。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">📦</span>
+      <h4>LeRobotDataset</h4>
+      <p>LeRobot 定义的标准数据集格式：MP4 存摄像头视频，Parquet 存关节角度/动作/状态。统一格式让不同团队的机器人数据可以互相训练。</p>
+    </div>
+    <div class="card">
+      <span class="emoji">🤝</span>
+      <h4>遥操作 (Teleoperation)</h4>
+      <p>人操作 Leader 臂（主臂），Follower 臂（从臂）实时跟随。这是最直观的数据采集方式——人类通过"手把手"教学，把技能传授给机器人。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 4. 生态全景 ═══════════ -->
+<section>
+  <h2><span class="icon">🌳</span> LeRobot 生态全景</h2>
+  <p class="lead">SO-101 不是孤立存在的。它运行在 Hugging Face LeRobot 构建的完整生态之上，这是一套"数据→模型→硬件"的全链路工具链。</p>
+
+  <div class="workflow">
+    <div class="workflow-step">
+      <div class="step-num">1</div>
+      <h4>连接硬件</h4>
+      <p>通过统一的 Robot 类驱动 SO-101 或其他 20+ 款机器人</p>
+    </div>
+    <div class="workflow-step">
+      <div class="step-num">2</div>
+      <h4>采集数据</h4>
+      <p>遥操作录制 episodes，存为 LeRobotDataset 格式</p>
+    </div>
+    <div class="workflow-step">
+      <div class="step-num">3</div>
+      <h4>上传 Hub</h4>
+      <p>数据集上传 Hugging Face Hub，与世界共享</p>
+    </div>
+    <div class="workflow-step">
+      <div class="step-num">4</div>
+      <h4>训练模型</h4>
+      <p>一条命令训练 ACT / Diffusion / Pi0 / TDMPC……</p>
+    </div>
+    <div class="workflow-step">
+      <div class="step-num">5</div>
+      <h4>评估 / 部署</h4>
+      <p>在仿真或真机上运行策略，验证效果</p>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <h4>🤯 关键洞察</h4>
+    <p>LeRobot 的核心价值在于<strong>标准化</strong>：不管你是用 SO-101 还是 Unitree G1 人形机器人，数据接口、训练脚本、评估流程都一致。这意味着 SO-101 上训练的策略，迁移到其他平台时只需改机器人配置。这种"硬件无关"设计大幅降低了 AI 机器人的入门门槛。</p>
+  </div>
+
+  <h3>LeRobot 原生支持的模型一览</h3>
+  <p>所有以下模型均可通过 <code>lerobot-train</code> 或 <code>lerobot-eval</code> 一条命令在 SO-101 上运行：</p>
+
+  <table class="model-table">
+    <thead>
+      <tr>
+        <th>类别</th>
+        <th>模型</th>
+        <th>一句话解释</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag">🤝 模仿学习</span></td>
+        <td>ACT</td>
+        <td>Action Chunking Transformer——把连续动作"打包"预测，减少累积误差，精细操作首选</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🤝 模仿学习</span></td>
+        <td>Diffusion</td>
+        <td>扩散策略——从噪声逐步"去噪"生成平滑动作轨迹，擅长多模态动作分布</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🤝 模仿学习</span></td>
+        <td>VQ-BeT</td>
+        <td>将动作离散化为"行为 token"，像语言模型一样预测下一个行为</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🏋️ 强化学习</span></td>
+        <td>TDMPC</td>
+        <td>学会预测未来（世界模型），然后在"想象中"规划最优动作</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🏋️ 强化学习</span></td>
+        <td>HIL-SERL</td>
+        <td>人类在环强化学习——训练过程中人可纠正、引导机器人行为</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🧠 VLA</span></td>
+        <td>Pi0 / Pi0Fast / Pi0.5</td>
+        <td>Physical Intelligence 开发的通用机器人基础模型，看过很多机器人数据，泛化能力强</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🧠 VLA</span></td>
+        <td>GR00T N1.5</td>
+        <td>NVIDIA 的通用机器人基础模型，擅长多任务泛化和零样本迁移</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🧠 VLA</span></td>
+        <td>SmolVLA</td>
+        <td>轻量级 VLA 模型，可以在消费级 GPU 上运行，适合入门和实时推理</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🧠 VLA</span></td>
+        <td>MolmoAct2</td>
+        <td>结合 Molmo 视觉语言模型的动作版本，支持开放词汇指令跟随</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🌍 世界模型</span></td>
+        <td>VLA-JEPA</td>
+        <td>Yann LeCun 的 JEPA 范式在机器人领域的实现——学习物理世界的抽象表征</td>
+      </tr>
+      <tr>
+        <td><span class="tag">🏆 奖励模型</span></td>
+        <td>SARM / TOPReward</td>
+        <td>自动判断机器人动作"好不好"，替代人类手动设计奖励函数</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════ 5. 项目实战 ═══════════ -->
+<section>
+  <h2><span class="icon">🔥</span> 已落地的 AI 结合项目</h2>
+  <p class="lead">以下是从 GitHub 和社区中收集的真实项目，每个都有明确的 AI 技术点。标⭐数为 GitHub Stars，反映项目热度。</p>
+
+  <div class="project-list">
+
+    <!-- 1. Squint -->
+    <div class="project-card">
+      <div class="header">
+        <span>📦</span>
+        <a href="https://github.com/aalmuzairee/squint" target="_blank">Squint — 快速视觉强化学习</a>
+        <span class="stars">⭐ 80</span>
+        <span class="tag">RL</span>
+        <span class="tag green">Sim-to-Real</span>
+        <span class="tag orange">PyTorch</span>
+      </div>
+      <p class="desc">基于 PyTorch 的快速视觉强化学习框架，在 ManiSkill3 仿真器中训练策略后直接迁移到 SO-101 真机。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>该项目展示了 RL 领域最难的"Sim-to-Real 迁移"——仿真中的像素和物理与现实世界存在差异（Sim-to-Real Gap）。Squint 通过领域随机化（在仿真中随机改变光照、纹理、物理参数）让模型学会不依赖特定环境特征，从而在真机上也能正常工作。训练完成后，模型通过摄像头看到真机场景，输出关节角度动作，实现"看→决策→动作"的闭环。
+      </div>
+    </div>
+
+    <!-- 2. isaac -->
+    <div class="project-card">
+      <div class="header">
+        <span>🏔️</span>
+        <a href="https://github.com/MuammerBay/isaac_so_arm101" target="_blank">isaac_so_arm101 — NVIDIA Isaac Lab 集成</a>
+        <span class="stars">⭐ 280</span>
+        <span class="tag">NVIDIA</span>
+        <span class="tag green">RL</span>
+        <span class="tag cyan">仿真</span>
+      </div>
+      <p class="desc">在 NVIDIA Isaac Sim + Isaac Lab 中为 SO-ARM100/101 搭建完整仿真环境，支持 RL 训练和数据采集。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>Isaac Lab 是 NVIDIA 的机器人 RL 框架，底层使用 PhysX 物理引擎提供高保真仿真。该项目为 SO-101 构建了 URDF 模型、碰撞体、关节限位、相机参数等完整数字孪生。用户可以在仿真中运行 <strong>PPO / SAC / TDMPC</strong> 等 RL 算法，训练策略后再零样本迁移到真机。配套中文教程系列是中文社区最完整的 SO-101 + Isaac Sim 学习资料。
+      </div>
+    </div>
+
+    <!-- 3. Isaac Teleop -->
+    <div class="project-card">
+      <div class="header">
+        <span>🎮</span>
+        <a href="https://github.com/liorbenhorin/lerobot_so101_teleop" target="_blank">Isaac Lab Teleop — 仿真数据采集</a>
+        <span class="stars">⭐ 63</span>
+        <span class="tag">数据采集</span>
+        <span class="tag green">Isaac Lab</span>
+      </div>
+      <p class="desc">在 Isaac Lab 中搭建 SO-101 仿真遥操作环境，采集示教演示数据用于模仿学习。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>真机采集数据容易受硬件磨损、电机发热、布线限制。该项目在 Isaac Lab 中实现了<strong>仿真遥操作</strong>——你用操纵杆或键盘在虚拟环境中控制机械臂，系统自动录制"视觉观察→关节动作"的数据对。这些数据可以用来训练模仿学习模型，而不会占用真机。同时，仿真数据可以低成本大量生成，大幅扩展训练数据规模。
+      </div>
+    </div>
+
+    <!-- 4. EmbodiedFX -->
+    <div class="project-card">
+      <div class="header">
+        <span>🇨🇳</span>
+        <a href="https://github.com/EmbodiedFX/LeRobot-SO101" target="_blank">EmbodiedFX — 全流程中文教程</a>
+        <span class="stars">⭐ 7</span>
+        <span class="tag">入门</span>
+        <span class="tag orange">教程</span>
+        <span class="tag cyan">中英双语</span>
+      </div>
+      <p class="desc">从 SO-101 组装、数据采集、模型微调到真机推理的完整教程，中英双语。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>这是 SO-101 入门的最佳起点。教程涵盖：①硬件组装与校准 ②遥操作数据采集（录制 50 个 episodes 的抓取演示）③用采集的数据微调 ACT 模型（Action Chunking Transformer）④将训练好的模型部署到真机让机械臂自主执行任务。整个过程不涉及复杂理论，适合第一次接触机器人 AI 的开发者。
+      </div>
+    </div>
+
+    <!-- 5. 语音 + SmolVLA -->
+    <div class="project-card">
+      <div class="header">
+        <span>🎤</span>
+        <a href="https://github.com/fouad1233/SO101_Speech_controlled_robotic_arm_with_smolvla" target="_blank">语音控制 + SmolVLA</a>
+        <span class="stars">⭐ 3</span>
+        <span class="tag">VLA</span>
+        <span class="tag green">语音</span>
+        <span class="tag pink">多模态</span>
+      </div>
+      <p class="desc">语音指令控制 SO-101 机械臂，使用 SmolVLA 视觉-语言-动作模型理解自然语言并生成动作。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>这是 VLA（Vision-Language-Action）模型在低成本机器人上的典型应用。工作流：①语音输入（麦克风）→ ②ASR 语音识别转文字 → ③SmolVLA 模型接收"摄像头图像 + 文字指令" → ④输出关节动作序列。SmolVLA 是 LeRobot 中体积最小、速度最快的 VLA 模型，它本质上是把<strong>视觉语言模型（VLM）的推理能力与动作生成头联合微调</strong>的结果，让模型学会"看到场景 → 理解指令 → 规划动作"的端到端映射。
+      </div>
+    </div>
+
+    <!-- 6. 视觉伺服 -->
+    <div class="project-card">
+      <div class="header">
+        <span>👁️</span>
+        <a href="https://github.com/XWen1024/LeRobot_SO101_Visual_Servo" target="_blank">视觉伺服抓取系统</a>
+        <span class="stars">⭐ 3</span>
+        <span class="tag">计算机视觉</span>
+        <span class="tag green">YOLO-World</span>
+        <span class="tag orange">闭环控制</span>
+      </div>
+      <p class="desc">SO-101 六轴机械臂视觉伺服抓取系统，YOLO-World 开放词汇检测 + PySide6 GUI。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>"视觉伺服"（Visual Servoing）指的是<strong>视觉反馈闭环控制</strong>——摄像头持续拍摄目标物体，实时计算机械臂末端与目标的偏差，控制算法不断调整关节角度直到抓取成功。与"看一眼然后盲抓"不同，伺服控制可以在目标移动时动态跟踪。该项目使用 YOLO-World（开放词汇目标检测模型）识别任意物体——你不用事先训练检测器，直接在 GUI 中输入"red cube"它就能找到。
+      </div>
+    </div>
+
+    <!-- 7. Claude + 袜子 -->
+    <div class="project-card">
+      <div class="header">
+        <span>🧦</span>
+        <a href="https://github.com/mfzeidan/arm01" target="_blank">Claude Vision + 袜子分拣</a>
+        <span class="stars">🌟 新</span>
+        <span class="tag">LLM + 机器人</span>
+        <span class="tag green">Claude Vision</span>
+      </div>
+      <p class="desc">用 Claude Vision 视觉识别袜子颜色/种类，SO-101 执行分拣操作。展示了 LLM 视觉能力与低成本机器人的结合。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>这是一个"大语言模型作为机器人'大脑'"的典型架构：①Claude Vision 拍摄当前场景并理解（"左边是红袜子，右边是蓝袜子"）②LLM 根据识别结果做出决策（"红袜子放到 A 区"）③将决策传给 SO-101 执行抓取和放置。与传统端到端模型不同，LLM 充当了<strong>符号推理层</strong>，可以处理开放词汇和复杂逻辑判断，而不需要为每种新物体重新训练。
+      </div>
+    </div>
+
+    <!-- 8. AWS -->
+    <div class="project-card">
+      <div class="header">
+        <span>☁️</span>
+        <a href="https://github.com/IgnacioSanchezAlvarado/lerobot-aws-iot-greengrass" target="_blank">AWS IoT 云集成</a>
+        <span class="stars">⭐ 1</span>
+        <span class="tag">IoT</span>
+        <span class="tag green">AWS</span>
+        <span class="tag cyan">MQTT</span>
+      </div>
+      <p class="desc">通过 AWS IoT Greengrass v2 将 SO-101 接入云端，伺服遥测数据通过 MQTT 实时流式传输。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>在工业场景中，远程监控机器人状态是一个刚需。该项目在 SO-101 上运行 AWS Greengrass 边缘运行时，将关节角度、电流、温度等遥测数据通过 MQTT 协议持续发送到 AWS 云。用户可以在云端仪表盘实时查看机械臂状态，也可以从云下发指令。这种边缘-云架构是<strong>工业 4.0 中机器人物联网（IoRT）</strong>的缩影。
+      </div>
+    </div>
+
+    <!-- 9. ETH -->
+    <div class="project-card">
+      <div class="header">
+        <span>🎓</span>
+        <a href="https://github.com/fedecomi04/RL_LeRobot_pickandplace" target="_blank">ETH — 强化学习抓取课程项目</a>
+        <span class="stars">⭐ 1</span>
+        <span class="tag">RL</span>
+        <span class="tag green">Squint</span>
+        <span class="tag orange">ETH Zurich</span>
+      </div>
+      <p class="desc">ETH 机器人学习课程（Spring 2026）项目，基于 Squint + SO-101 实现视觉强化学习抓取。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>顶尖大学课程项目，展示了 SO-101 进入学术教育领域的能力。项目基于 Squint（前面的第 1 个项目）搭建自定义 RL 环境、设计奖励函数、部署策略到真机。评估场景分三个难度：单物体抓取 → 分割场景（区分多个物体）→ 4 立方体高密度场景。这种渐进式评估是 RL 研究的标准方法论——先验证基础能力，再增加复杂度。
+      </div>
+    </div>
+
+    <!-- 10. 轨迹规划器 -->
+    <div class="project-card">
+      <div class="header">
+        <span>🌐</span>
+        <a href="https://github.com/gleargaf/points-de-passage" target="_blank">Web 轨迹规划器</a>
+        <span class="stars">⭐ 2</span>
+        <span class="tag">Web</span>
+        <span class="tag green">3D 可视化</span>
+        <span class="tag cyan">轨迹规划</span>
+      </div>
+      <p class="desc">浏览器中 3D 可视化 SO-101 + 积木块场景，通过点击定义路径点，自动生成机器人轨迹。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>这本质上是一个<strong>运动规划前端</strong>：用户在 3D 场景中点击设置机械臂需要经过的路径点（waypoints），系统自动执行逆运动学（IK）求解和插值，生成平滑的关节轨迹。逆运动学解决"末端想要到某个位置，每个关节应该转多少度"的问题，是机器人学中最经典的问题之一。Web 端实现让教学演示无需安装任何软件。
+      </div>
+    </div>
+
+    <!-- 11. ROS2 -->
+    <div class="project-card">
+      <div class="header">
+        <span>🔧</span>
+        <a href="https://github.com/harzyzy/lododo-arm" target="_blank">lododo-arm — ROS2 智能机械臂系统</a>
+        <span class="stars">⭐ 12</span>
+        <span class="tag">ROS2</span>
+        <span class="tag green">Humble</span>
+      </div>
+      <p class="desc">基于 ROS2 Humble 的完整机械臂系统，将 SO-101 接入 ROS2 生态，支持标准消息通信和组件复用。</p>
+      <div class="detail">
+        <strong>🔬 技术拆解：</strong>ROS2（Robot Operating System 2）是机器人领域的"Linux"——一套标准的分布式通信框架。该项目为 SO-101 实现了 ROS2 驱动节点，发布 <code>/joint_states</code>（关节状态）、订阅 <code>/joint_commands</code>（关节指令），使 SO-101 可以与 ROS2 生态中的导航、SLAM、MoveIt2 运动规划等数千个已有包无缝配合。这对于教学和研究来说意义重大，学生可以直接使用 ROS2 的标准工具链操作 SO-101。
+      </div>
+    </div>
+
+    <!-- 12. Date-Sensei -->
+    <div class="project-card">
+      <div class="header">
+        <span>💘</span>
+        <a href="https://github.com/MeghanaM4/date-sensei" target="_blank">Date-Sensei — 趣味创意</a>
+        <span class="stars">⭐ 1</span>
+        <span class="tag pink">创意</span>
+        <span class="tag orange">AMD</span>
+      </div>
+      <p class="desc">一个会帮你约会助攻的机械臂！用 SO-101 + AMD 魔法实现趣味互动。</p>
+      <div class="detail">
+        <strong>💡 说明：</strong>尽管看起来是趣味项目，但它展示了 SO-101 的<strong>可编程表达性</strong>——开发者可以通过精确控制关节角度、速度和时序，让机械臂做出有"情感"的动作（招手、递物、比心）。这在教育、展示、人机交互研究中有实际意义：如何让机器人动作看起来更自然、更有意图感，是一个活跃的研究方向。
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ 6. 快速上手 ═══════════ -->
+<section>
+  <h2><span class="icon">🚀</span> 快速上手：从零到第一次自主抓取</h2>
+  <p class="lead">以下是推荐的学习路径，从硬件组装到 AI 模型部署，逐步深入。</p>
+
+  <h3>🟢 阶段一：硬件准备与基础连接</h3>
+  <pre>
+<span class="hl-comment"># 1. 安装 LeRobot</span>
+pip install lerobot
+
+<span class="hl-comment"># 2. 验证安装和可用机器人</span>
+lerobot-info
+
+<span class="hl-comment"># 3. 连接 SO-101 并测试</span>
+python -c "
+from lerobot.robots.so100 import SO100Robot
+robot = SO100Robot()
+robot.connect()
+obs = robot.get_observation()
+print('关节角度:', obs['joint_angles'])
+robot.disconnect()
+"</pre>
+
+  <h3>🟡 阶段二：数据采集</h3>
+  <pre>
+<span class="hl-comment"># 遥操作并录制数据</span>
+lerobot record \
+  --robot-type so100 \
+  --fps 30 \
+  --episodes 50 \
+  --root data/my_dataset
+
+<span class="hl-comment"># 可视化采集的数据</span>
+lerobot visualize --dataset-path data/my_dataset</pre>
+
+  <div class="highlight-box orange">
+    <h4>💡 数据采集要点</h4>
+    <p>每个 episode 就是一次"从初始状态到任务完成"的完整演示。建议采集 <strong>30-50 个 episodes</strong>，涵盖不同的初始位置和物体摆放方式。数据质量直接影响模型表现——动作要平滑、轨迹要一致、失败重录。</p>
+  </div>
+
+  <h3>🔵 阶段三：训练策略</h3>
+  <pre>
+<span class="hl-comment"># 训练 ACT 模型（模仿学习）</span>
+lerobot train \
+  --policy.type act \
+  --dataset.repo-id your-username/so101-pick-place \
+  --training.training_steps 50000 \
+  --training.output_dir ./outputs/act_policy</pre>
+
+  <div class="highlight-box green">
+    <h4>🤔 为什么要选 ACT？</h4>
+    <p><strong>ACT（Action Chunking Transformer）</strong> 是 LeRobot 中最成熟的模仿学习模型之一。它的核心思想是"一次预测未来 N 步动作"而不是"看一步动一步"，这样可以平滑动作轨迹、减少抖动。对于 SO-101 上常见的抓取和放置任务，ACT 通常是最佳起点。</p>
+  </div>
+
+  <h3>🔴 阶段四：真机推理</h3>
+  <pre>
+<span class="hl-comment"># 将训练好的模型部署到 SO-101 真机</span>
+lerobot eval \
+  --policy.path ./outputs/act_policy \
+  --env.type real \
+  --robot.type so100 \
+  --eval.n_episodes 10</pre>
+
+  <p>机器人现在应该能从摄像机看到目标物体→推理出动作序列→自主完成抓取任务了！</p>
+
+  <div class="highlight-box">
+    <h4>📚 推荐学习资源</h4>
+    <p>
+      • <strong><a href="https://zihao-ai.feishu.cn/wiki/space/7589642043471924447" style="color:var(--accent);" target="_blank">子豪兄中文教程</a></strong> — 最完整的中文 SO-101 教学，从组装到部署<br>
+      • <strong><a href="https://huggingface.co/docs/lerobot/index" style="color:var(--accent);" target="_blank">LeRobot 官方文档</a></strong> — API 参考和完整指南<br>
+      • <strong><a href="https://discord.gg/q8Dzzpym3f" style="color:var(--accent);" target="_blank">LeRobot Discord</a></strong> — 英文社区，开发者聚集<br>
+      • <strong><a href="https://huggingface.co/spaces/lerobot/robot-learning-tutorial" style="color:var(--accent);" target="_blank">Robotics Learning Tutorial</a></strong> — Hugging Face 的免费交互式课程
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════ 7. 常见问题 ═══════════ -->
+<section>
+  <h2><span class="icon">❓</span> 常见问题</h2>
+  <p class="lead">初学者最常问的问题，这里一次性回答。</p>
+
+  <div style="display:flex;flex-direction:column;gap:1rem;">
+    <div class="highlight-box">
+      <h4>🤔 我不会机器人学，能上手吗？</h4>
+      <p>可以。LeRobot 的设计目标就是降低门槛。你只需要基本的 Python 知识，逆运动学、控制理论等经典机器人学概念都被封装好了。从遥操作采集数据开始，不需要自己写控制算法。</p>
+    </div>
+    <div class="highlight-box orange">
+      <h4>💰 SO-101 全套多少钱？</h4>
+      <p>SO-101 套件（含主臂+从臂）约 ¥2000 人民币左右。一台普通电脑（建议有 NVIDIA GPU）即可运行训练。相比工业机械臂动辄十几万元的成本，这是最经济的 AI 机器人实验平台。</p>
+    </div>
+    <div class="highlight-box green">
+      <h4>🎯 我可以用 SO-101 做什么课题？</h4>
+      <p>常见方向：①模仿学习（学人类演示做任务）②Sim-to-Real 迁移（仿真训练→真机部署）③VLA 模型评测（对比各类 VLA 在小规模场景的表现）④人机交互（语音/手势控制机器人）⑤机器人数据集构建（采集高质量开源数据）⑥ROS2 集成开发。</p>
+    </div>
+    <div class="highlight-box">
+      <h4>💻 需要什么电脑配置？</h4>
+      <p>数据采集：任意电脑就行。训练 ACT/Diffusion：建议 NVIDIA GPU（8GB+ 显存）。训练 VLA 模型（Pi0、GR00T）：建议 24GB+ 显存（如 RTX 3090/4090）。轻量模型 SmolVLA 可在低配 GPU 上运行。也可以在云端训练，然后将模型下载到本地推理。</p>
+    </div>
+    <div class="highlight-box orange">
+      <h4>🌍 SO-101 和 SO-100 有什么区别？代码通用吗？</h4>
+      <p>SO-101 是 SO-100 的改进版本，在结构件强度、伺服性能上有优化。LeRobot 代码中两者基本通用，配置文件名常以 so100 命名但同样适用于 SO-101。社区项目多数也同时标注两者兼容。</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+  <p>基于 Hugging Face LeRobot 社区和 GitHub 开源项目整理 · 最后更新：2026 年 6 月</p>
+  <p style="margin-top:0.3rem;">开源项目 — 欢迎 <a href="https://github.com/huggingface/lerobot" style="color:var(--accent);" target="_blank">⭐ Star LeRobot</a></p>
+</footer>
+
+</body>
+</html>

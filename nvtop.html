@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nvtop 完全指南 — GPU 监控教程</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+    --cyan: #39d2c0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Segoe UI', 'Noto Sans SC', 'PingFang SC', sans-serif;
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 2.6em;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--text-dim);
+    font-size: 1.1em;
+    max-width: 600px;
+    margin: 12px auto 0;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.85em;
+    color: var(--text-dim);
+    margin-top: 16px;
+  }
+
+  /* Layout */
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+  section { margin-bottom: 48px; }
+
+  h2 {
+    font-size: 1.6em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .num {
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 0.7em;
+    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  h3 {
+    font-size: 1.15em;
+    font-weight: 600;
+    margin: 24px 0 10px;
+    color: var(--accent);
+  }
+  h4 {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 16px 0 6px;
+    color: var(--green);
+  }
+
+  p { margin-bottom: 12px; color: var(--text); }
+  .dim { color: var(--text-dim); font-size: 0.92em; }
+
+  /* Terminal-style blocks */
+  .term {
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85em;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 16px 0;
+    position: relative;
+  }
+  .term .bar { display: flex; align-items: center; gap: 1px; margin: 4px 0; }
+  .term .bar-fill {
+    height: 18px;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .term .bar-label {
+    min-width: 50px;
+    text-align: right;
+    padding-right: 8px;
+    color: var(--text-dim);
+  }
+  .term .bar-val {
+    min-width: 40px;
+    padding-left: 8px;
+    font-weight: 600;
+  }
+  .hl-green { background: var(--green); }
+  .hl-yellow { background: var(--yellow); }
+  .hl-red { background: var(--red); }
+  .hl-blue { background: var(--accent); }
+  .hl-cyan { background: var(--cyan); }
+  .hl-purple { background: var(--purple); }
+  .hl-orange { background: var(--orange); }
+
+  /* nvtop mockup */
+  .mockup {
+    background: #0a0e14;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.82em;
+  }
+  .mockup-header {
+    background: var(--bg3);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-dim);
+  }
+  .mockup-body { padding: 12px 16px; }
+  .mockup .gpu-name { color: var(--accent); font-weight: 600; }
+  .mockup .label { color: var(--text-dim); }
+  .mockup .val { color: var(--text); }
+  .mockup .unit { color: var(--text-dim); font-size: 0.9em; }
+  .mockup .warn { color: var(--yellow); }
+  .mockup .crit { color: var(--red); }
+  .mockup .ok { color: var(--green); }
+  .mockup table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .mockup th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 0.9em;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 8px;
+  }
+  .mockup td {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(48,54,61,0.4);
+  }
+  .mockup tr:hover td { background: rgba(88,166,255,0.05); }
+
+  /* Info cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card .icon {
+    font-size: 1.5em;
+    margin-bottom: 6px;
+  }
+  .card h4 {
+    margin: 0 0 6px;
+    font-size: 1em;
+  }
+  .card p {
+    font-size: 0.9em;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* Tips */
+  .tip {
+    background: rgba(57,210,192,0.08);
+    border: 1px solid rgba(57,210,192,0.3);
+    border-left: 3px solid var(--cyan);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 0.93em;
+  }
+  .tip strong { color: var(--cyan); }
+  .warn-box {
+    background: rgba(210,153,34,0.08);
+    border: 1px solid rgba(210,153,34,0.3);
+    border-left: 3px solid var(--yellow);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 0.93em;
+  }
+  .warn-box strong { color: var(--yellow); }
+  .danger-box {
+    background: rgba(248,81,73,0.08);
+    border: 1px solid rgba(248,81,73,0.3);
+    border-left: 3px solid var(--red);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 0.93em;
+  }
+  .danger-box strong { color: var(--red); }
+
+  code {
+    background: var(--bg3);
+    color: var(--orange);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Color legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.9em; }
+  .legend-dot {
+    width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+  }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85em;
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 40px 20px; }
+    .hero h1 { font-size: 1.8em; }
+    .container { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>nvtop 完全指南</h1>
+  <p>GPU 实时监控工具详解 — 从界面布局到实战排查，看懂每一块数据的含义</p>
+  <span class="badge">适用于 NVIDIA / AMD / Intel GPU  ·  Linux 系统  ·  类似 htop 但为 GPU 设计</span>
+</div>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">1</span> nvtop 是什么？</h2>
+<p><strong>nvtop</strong>（Neat Video TOP）是 Linux 下的 GPU 进程监控工具，类似 <code>htop</code> 但专为 GPU 设计。它实时展示：</p>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="icon">📊</div>
+    <h4>GPU 利用率</h4>
+    <p>SM (Streaming Multiprocessor) 占用率，反映计算核心有多忙</p>
+  </div>
+  <div class="card">
+    <div class="icon">🧠</div>
+    <h4>显存占用</h4>
+    <p>VRAM 使用量，AI 训练/推理的关键瓶颈</p>
+  </div>
+  <div class="card">
+    <div class="icon">🌡️</div>
+    <h4>温度与风扇</h4>
+    <p>GPU 核心温度、风扇转速，判断散热是否正常</p>
+  </div>
+  <div class="card">
+    <div class="icon">⚡</div>
+    <h4>功耗与频率</h4>
+    <p>当前功耗、核心/显存频率，是否达到性能天花板</p>
+  </div>
+  <div class="card">
+    <div class="icon">📋</div>
+    <h4>进程列表</h4>
+    <p>哪些进程在使用 GPU，每人占了多少显存和算力</p>
+  </div>
+  <div class="card">
+    <div class="icon">🔗</div>
+    <h4>PCIe 带宽</h4>
+    <p>当前 PCIe 链路速度、宽度，判断是否带宽不足</p>
+  </div>
+</div>
+
+<div class="tip">
+  <strong>💡 安装：</strong> Ubuntu 下直接 <code>sudo apt install nvtop</code>，然后运行 <code>nvtop</code> 即可。支持 NVIDIA / AMD / Intel 三种 GPU。
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">2</span> 主界面全貌</h2>
+
+<p>打开 nvtop 后，你会看到一个分多栏的全屏 TUI 界面。下面以你机器上的 RTX 2060 SUPER 为例，逐一标注各区块：</p>
+
+<div class="mockup">
+  <div class="mockup-header">
+    <span>nvtop ─ NVIDIA GeForce RTX 2060 SUPER</span>
+    <span class="label">2026-06-30 16:00:00</span>
+  </div>
+  <div class="mockup-body">
+    <div class="gpu-name">[0] GeForce RTX 2060 SUPER  <span class="label">| PCIe Gen 3 ×16 @ 16 GT/s</span></div>
+    <div style="margin: 4px 0 2px;"><span class="label">GPU 利用率</span></div>
+    <div style="display:flex; align-items:center; gap:2px;">
+      <span class="label" style="min-width:40px;text-align:right;">100%</span>
+      <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;overflow:hidden;display:flex;">
+        <div style="width:10%;height:100%;background:#3fb950;"></div>
+        <div style="width:5%;height:100%;background:#d29922;"></div>
+        <div style="width:85%;height:100%;background:#21262d;"></div>
+      </div>
+      <span class="val" style="min-width:40px;padding-left:6px;">10%</span>
+    </div>
+    <div style="margin: 8px 0 2px;"><span class="label">显存占用</span></div>
+    <div style="display:flex; align-items:center; gap:2px;">
+      <span class="label" style="min-width:40px;text-align:right;">8192MB</span>
+      <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;overflow:hidden;display:flex;">
+        <div style="width:94%;height:100%;background:#58a6ff;"></div>
+        <div style="width:6%;height:100%;background:#21262d;"></div>
+      </div>
+      <span class="val" style="min-width:40px;padding-left:6px;">7706 MiB</span>
+    </div>
+    <div style="margin: 8px 0 2px;"><span class="label">温度 &amp; 风扇 &amp; 功耗</span></div>
+    <div style="display:flex; gap:24px; font-size:1.1em; padding:4px 0;">
+      <span><span class="label">🌡️ </span><span class="ok">51°C</span></span>
+      <span><span class="label">🌀 </span>52%</span>
+      <span><span class="label">⚡ </span><span class="ok">49.88 W</span> <span class="unit">/ 175 W</span></span>
+    </div>
+    <div style="margin: 4px 0 2px;"><span class="label">时钟频率</span></div>
+    <div style="display:flex; gap:24px; font-size:0.95em; padding:2px 0;">
+      <span><span class="label">GPU </span>1470 MHz <span class="unit">(最高 2100 MHz)</span></span>
+      <span><span class="label">显存 </span>6801 MHz <span class="unit">(最高 7001 MHz)</span></span>
+    </div>
+
+    <table>
+      <tr><th>PID</th><th>类型</th><th>SM%</th><th>MEM%</th><th>显存</th><th>命令</th></tr>
+      <tr><td>2240</td><td>G</td><td>4%</td><td>0%</td><td class="dim">—</td><td>Xorg</td></tr>
+      <tr><td>2442</td><td>G</td><td>4%</td><td>0%</td><td class="dim">—</td><td>gnome-shell</td></tr>
+      <tr><td>41134</td><td>G</td><td class="dim">—</td><td class="dim">—</td><td class="dim">—</td><td>Hermes</td></tr>
+      <tr><td>121154</td><td class="warn">C</td><td class="dim">—</td><td class="dim">—</td><td><span class="ok">7192 MiB</span></td><td>python3.11 (unsloth)</td></tr>
+    </table>
+    <div style="margin-top:6px;color:var(--text-dim);font-size:0.85em;">
+      G=Graphics(图形) · C=Compute(计算)  ·  按 F5 排序  ·  按 F9 杀进程
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">3</span> 各区域详细解读</h2>
+
+<!-- 3.1 GPU 利用率 -->
+<h3>3.1 GPU 利用率条 — SM 占用率</h3>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="icon">🟢</div>
+    <h4 style="color:var(--green);">绿色 — 计算负载</h4>
+    <p>SM (Streaming Multiprocessor) 正在执行 CUDA kernel。AI 训练时应尽可能高。</p>
+  </div>
+  <div class="card">
+    <div class="icon">🟡</div>
+    <h4 style="color:var(--yellow);">黄色 — 显存/内存操作</h4>
+    <p>SM 在等待显存或系统内存数据。可能受带宽限制。</p>
+  </div>
+  <div class="card">
+    <div class="icon">⚫</div>
+    <h4 style="color:var(--text-dim);">灰色 — 空闲</h4>
+    <p>SM 空闲中。如果是训练过程中频繁出现，可能有 CPU 瓶颈。</p>
+  </div>
+</div>
+
+<div class="term">
+  <div class="bar">
+    <span class="bar-label">GPU util</span>
+    <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;display:flex;">
+      <div class="bar-fill hl-green" style="width:10%;"></div>
+      <div class="bar-fill hl-yellow" style="width:5%;"></div>
+      <div class="bar-fill" style="width:85%;background:#21262d;"></div>
+    </div>
+    <span class="bar-val" style="color:var(--green);">10%</span>
+  </div>
+  <div class="dim" style="margin-top:4px;">
+    ↑ 绿色 = 计算中 · 黄色 = 内存等待 · 灰色 = 空闲
+  </div>
+</div>
+
+<div class="tip">
+  <strong>🔍 诊断：</strong> 训练时 GPU-Util 在 90%+ 说明 GPU 充分利用。如果经常掉到 50% 以下，可能是 CPU 预处理跟不上（DataLoader 瓶颈），调大 <code>num_workers</code> 或检查 CPU 负载。
+</div>
+
+<!-- 3.2 显存占用 -->
+<h3>3.2 显存占用条 — VRAM</h3>
+
+<p>蓝色的进度条表示当前 GPU 显存使用量。**这是 AI 工作最关键的数据**。</p>
+
+<div class="term">
+  <div class="bar">
+    <span class="bar-label">VRAM</span>
+    <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;display:flex;">
+      <div class="bar-fill hl-blue" style="width:94%;"></div>
+      <div class="bar-fill" style="width:6%;background:#21262d;"></div>
+    </div>
+    <span class="bar-val" style="color:var(--accent);">7706 / 8192 MiB</span>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">显存占比</th>
+    <th style="text-align:left;padding:6px;">状态</th>
+    <th style="text-align:left;padding:6px;">建议</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">&lt; 70%</td>
+    <td style="color:var(--green);">✅ 健康</td>
+    <td style="color:var(--text-dim);">正常</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">70% ~ 90%</td>
+    <td style="color:var(--yellow);">⚠️ 偏高</td>
+    <td style="color:var(--text-dim);">注意不要继续增加</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">90% ~ 97%</td>
+    <td style="color:var(--orange);">🔶 危险</td>
+    <td style="color:var(--text-dim);">可能随时 OOM</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;">&gt; 97%</td>
+    <td style="color:var(--red);">🔴 OOM 边缘</td>
+    <td style="color:var(--text-dim);">减少 batch size 或启用梯度检查点</td>
+  </tr>
+</table>
+
+<div class="danger-box">
+  <strong>🚨 CUDA Out of Memory：</strong> 当显存占满时，PyTorch 会抛出 <code>CUDA out of memory</code> 错误，训练/推理直接崩溃。此时 nvtop 的显存条会显示全满（红色或黄色警告）。解决方案：减小 batch size、启用 gradient checkpointing、使用混合精度训练。
+</div>
+
+<!-- 3.3 温度与功耗 -->
+<h3>3.3 温度 / 风扇 / 功耗</h3>
+
+<div class="mockup">
+  <div class="mockup-body">
+    <div style="display:flex; gap:32px; font-size:1.1em;">
+      <span><span class="label">🌡️ 温度 </span><span class="ok">51°C</span></span>
+      <span><span class="label">🌀 风扇 </span>52%</span>
+      <span><span class="label">⚡ 功耗 </span><span class="ok">49.88 W</span> <span class="unit">/ 175 W</span></span>
+    </div>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">指标</th>
+    <th style="text-align:left;padding:6px;">含义</th>
+    <th style="text-align:left;padding:6px;">正常范围</th>
+    <th style="text-align:left;padding:6px;">异常</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">🌡️ 温度</td>
+    <td style="color:var(--text-dim);">GPU 核心温度</td>
+    <td style="color:var(--green);">30~75°C</td>
+    <td style="color:var(--red);">> 85°C 降频，> 90°C 警报</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">🌀 风扇</td>
+    <td style="color:var(--text-dim);">风扇转速百分比</td>
+    <td>0~100%</td>
+    <td style="color:var(--yellow);">持续 100% 但温度仍高 = 散热问题</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;">⚡ 功耗</td>
+    <td style="color:var(--text-dim);">当前功耗 / 功耗上限</td>
+    <td>空闲 &lt; 50W</td>
+    <td style="color:var(--yellow);">持续撞功耗墙 = 可能电源不足或温度过高</td>
+  </tr>
+</table>
+
+<div class="warn-box">
+  <strong>🔆 温度异常排查：</strong> 如果发现温度过高（>85°C）且 GPU 频率下降：<br>
+  ① 检查机箱风道是否堵塞<br>
+  ② 用 <code>nvidia-smi -q -d THERMAL</code> 查看详细温度阈值<br>
+  ③ 如果 GPU 利用率低但温度高，可能是挖矿病毒<br>
+  ④ 可手动设功耗上限：<code>sudo nvidia-smi -pl 150</code>（降低到 150W 降温）
+</div>
+
+<!-- 3.4 时钟频率 -->
+<h3>3.4 时钟频率 — GPU 核心 &amp; 显存</h3>
+
+<div class="term">
+  <span class="label">GPU 核心: </span><span class="val">1470 MHz</span> <span class="unit">(最高 2100 MHz)</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <span class="label">显存: </span><span class="val">6801 MHz</span> <span class="unit">(最高 7001 MHz)</span>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">场景</th>
+    <th style="text-align:left;padding:6px;">核心频率</th>
+    <th style="text-align:left;padding:6px;">显存频率</th>
+    <th style="text-align:left;padding:6px;">说明</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">🟢 空闲</td><td>300~600 MHz</td><td>405 MHz</td>
+    <td style="color:var(--text-dim);">省电模式</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">🟡 轻度负载</td><td>1000~1500 MHz</td><td>5001~6801 MHz</td>
+    <td style="color:var(--text-dim);">推理、小模型</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;">🔴 满载</td><td>1900~2100 MHz</td><td>7001 MHz</td>
+    <td style="color:var(--text-dim);">训练时应达到的范围</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <strong>💡 频率与功耗的关系：</strong> 显卡不会永远跑在最高频率。它受三个限制：<strong>温度墙</strong>（>85°C 降频）、<strong>功耗墙</strong>（达到 TDP 上限降频）、<strong>电压墙</strong>（达到最大电压）。训练时如果频率比最高值低很多，说明撞到了其中一堵墙。
+</div>
+
+<!-- 3.5 PCIe -->
+<h3>3.5 PCIe 链路信息</h3>
+
+<div class="term">
+  <span class="label">PCIe Gen 3 ×16 @ 16 GT/s</span>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">参数</th>
+    <th style="text-align:left;padding:6px;">含义</th>
+    <th style="text-align:left;padding:6px;">你的机器</th>
+    <th style="text-align:left;padding:6px;">带宽</th>
+  </tr>
+  <tr>
+    <td style="padding:6px;">Gen</td>
+    <td style="color:var(--text-dim);">PCIe 代际</td>
+    <td>Gen 3</td>
+    <td>~1 GB/s per lane</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;">Width</td>
+    <td style="color:var(--text-dim);">通道数</td>
+    <td>×16</td>
+    <td>~16 GB/s 总带宽</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <strong>💡 PCIe 对 AI 的影响：</strong> RTX 2060 SUPER 跑在 PCIe 3.0 ×16（16 GB/s），对于单卡训练和推理完全够用。PCIe 瓶颈通常只出现在多卡通信（NCCL）或频繁的 CPU↔GPU 数据传输时。
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">4</span> 进程列表详解</h2>
+
+<p>nvtop 下半部分是进程列表，显示哪些程序正在使用 GPU：</p>
+
+<div class="mockup">
+  <div class="mockup-body">
+    <table>
+      <tr><th style="width:60px;">PID</th><th style="width:50px;">类型</th><th style="width:50px;">SM%</th><th style="width:55px;">MEM%</th><th style="width:85px;">显存</th><th>命令</th></tr>
+      <tr style="background:rgba(63,185,80,0.05);">
+        <td>2240</td><td><span class="ok">G</span></td><td>4%</td><td>0%</td><td class="dim">—</td><td>Xorg</td>
+      </tr>
+      <tr style="background:rgba(63,185,80,0.05);">
+        <td>2442</td><td><span class="ok">G</span></td><td>4%</td><td>0%</td><td class="dim">—</td><td>gnome-shell</td>
+      </tr>
+      <tr style="background:rgba(63,185,80,0.05);">
+        <td>41134</td><td><span class="ok">G</span></td><td class="dim">—</td><td class="dim">—</td><td class="dim">—</td><td>Hermes</td>
+      </tr>
+      <tr style="background:rgba(248,81,73,0.05);">
+        <td>121154</td><td><span class="warn">C</span></td><td class="dim">—</td><td class="dim">—</td><td><span style="color:var(--orange);font-weight:600;">7192 MiB</span></td><td>python3.11 (pip install unsloth)</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<h3>列的含义</h3>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;width:80px;">列</th>
+    <th style="text-align:left;padding:6px;">含义</th>
+    <th style="text-align:left;padding:6px;">解读</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>PID</code></td>
+    <td>进程 ID</td>
+    <td style="color:var(--text-dim);">可用于 <code>kill -9 PID</code> 杀掉占显存的进程</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>类型</code></td>
+    <td>G = Graphics<br>C = Compute</td>
+    <td style="color:var(--text-dim);"><span class="ok">G</span> = 图形/显示（桌面、浏览器） · <span class="warn">C</span> = 计算（CUDA、训练）<br>类型 C 才是真正跑 AI 的进程</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>SM%</code></td>
+    <td>SM 占用率</td>
+    <td style="color:var(--text-dim);">计算单元使用百分比，AI 训练应在 90%+</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>MEM%</code></td>
+    <td>显存控制器占用率</td>
+    <td style="color:var(--text-dim);">显存带宽使用率，高 = 数据搬运频繁</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>显存</code></td>
+    <td>该进程占用的 VRAM</td>
+    <td style="color:var(--text-dim);">最重要的列！看到 7GB+ 就知道谁在吃显存</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;"><code>命令</code></td>
+    <td>进程名称</td>
+    <td style="color:var(--text-dim);">能看出是哪个程序在用 GPU</td>
+  </tr>
+</table>
+
+<div class="warn-box">
+  <strong>🔍 实践：</strong> 如果 nvtop 里看到一个进程占了很多显存但你认不出来，可以用 <code>ps -p PID -o pid,user,cmd --no-headers</code> 查看完整命令行。如果发现不是你自己启动的进程，可能就是挖矿病毒。
+</div>
+
+<h3>内建操作快捷键</h3>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">快捷键</th>
+    <th style="text-align:left;padding:6px;">功能</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>F5</code></td>
+    <td>切换进程排序方式（按内存/按SM/按PID）</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>F9</code></td>
+    <td>杀掉选中的进程（发送 SIGTERM）</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>F10</code></td>
+    <td>退出 nvtop</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;"><code>↑ ↓</code></td>
+    <td>在进程列表中上下移动</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;"><code>q</code></td>
+    <td>退出 nvtop</td>
+  </tr>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">5</span> 实战：用 nvtop 诊断常见问题</h2>
+
+<h3>场景 1：训练很慢，GPU 利用率上不去</h3>
+<div class="mockup">
+  <div class="mockup-body">
+    <div><span class="label">GPU 利用率</span></div>
+    <div style="display:flex;align-items:center;gap:2px;">
+      <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;display:flex;">
+        <div style="width:20%;height:100%;background:#3fb950;"></div>
+        <div style="width:5%;height:100%;background:#d29922;"></div>
+        <div style="width:75%;height:100%;background:#21262d;"></div>
+      </div>
+      <span style="min-width:40px;padding-left:6px;color:var(--yellow);font-weight:600;">25%</span>
+    </div>
+    <div style="margin-top:8px;color:var(--text-dim);font-size:0.9em;">
+      CPU 占用率 ≈ 100%  →  <strong style="color:var(--yellow);">CPU 瓶颈</strong>
+    </div>
+  </div>
+</div>
+<p><strong>诊断：</strong> 训练时 GPU 利用率只有 20-30%，但 CPU 跑满。说明 CPU 来不及给 GPU 喂数据（DataLoader 瓶颈）。</p>
+<p><strong>解决：</strong> ① 增大 <code>DataLoader(num_workers=4或8)</code> ② 使用 <code>pin_memory=True</code> ③ 检查是否用了过多的 CPU 预处理</p>
+
+<h3>场景 2：CUDA Out of Memory</h3>
+<div class="mockup">
+  <div class="mockup-body">
+    <div><span class="label">显存占用</span></div>
+    <div style="display:flex;align-items:center;gap:2px;">
+      <div style="flex:1;height:16px;background:#1a2332;border-radius:2px;display:flex;">
+        <div style="width:100%;height:100%;background:#f85149;"></div>
+      </div>
+      <span style="min-width:40px;padding-left:6px;color:var(--red);font-weight:600;">8192 MiB</span>
+    </div>
+    <div style="margin-top:8px;color:var(--text-dim);font-size:0.9em;">
+      🔴 显存条全红，训练报错 <code>CUDA out of memory</code>
+    </div>
+  </div>
+</div>
+<p><strong>诊断：</strong> 模型 + 优化器状态 + batch 数据超过了 8GB 显存。</p>
+<p><strong>解决优先级：</strong></p>
+<ol style="margin-left:20px;color:var(--text-dim);">
+  <li style="margin-bottom:4px;">减小 <code>batch_size</code>（最简单）</li>
+  <li style="margin-bottom:4px;">启用 <code>gradient_checkpointing</code>（用计算换显存）</li>
+  <li style="margin-bottom:4px;">启用混合精度 <code>torch.cuda.amp</code>（显存减半）</li>
+  <li style="margin-bottom:4px;">使用 4-bit 量化 QLoRA</li>
+  <li style="margin-bottom:4px;">检查是否有其他进程占着显存（nvidia-smi 或 nvtop 里杀掉）</li>
+</ol>
+
+<h3>场景 3：GPU 温度过高，频率上不去</h3>
+<div class="mockup">
+  <div class="mockup-body">
+    <div style="display:flex;gap:24px;">
+      <span><span class="label">🌡️ </span><span style="color:var(--red);font-weight:600;">88°C</span></span>
+      <span><span class="label">🌀 </span>100%</span>
+      <span><span class="label">⚡ </span><span style="color:var(--yellow);">175 W</span> <span class="unit">/ 175 W</span></span>
+      <span><span class="label">🔧 </span><span style="color:var(--red);font-weight:600;">1470 MHz</span> <span class="unit">(最高 2100 MHz)</span></span>
+    </div>
+    <div style="margin-top:8px;color:var(--text-dim);font-size:0.9em;">
+      温度 88°C 触发降频，核心频率从 2100 MHz 掉到 1470 MHz
+    </div>
+  </div>
+</div>
+<p><strong>诊断：</strong> 温度超 85°C 触发降频保护，性能腰斩。</p>
+<p><strong>解决：</strong> ① 清理机箱灰尘 ② 改善风道 ③ 降低功耗上限 <code>sudo nvidia-smi -pl 150</code> ④ 用 <code>nvidia-smi -q -d THERMAL</code> 查看详细的温度阈值</p>
+
+<h3>场景 4：未知进程吃显存</h3>
+<p>在 nvtop 进程列表里看到有不认识的进程占着几 GB 显存：</p>
+<div class="term">
+  <span class="label">在 nvtop 里选中该进程 → 按 <code>F9</code> → 确认杀进程</span><br>
+  <span class="dim">或用命令行: <code>kill -9 &lt;PID&gt;</code></span><br>
+  <span class="dim">然后 <code>nvidia-smi</code> 确认显存已释放</span>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">6</span> 实用命令速查</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>🚀 启动 nvtop</h4>
+    <code>nvtop</code>
+    <p class="dim">全屏交互界面</p>
+  </div>
+  <div class="card">
+    <h4>📊 切换 GPU</h4>
+    <code>nvtop -d /dev/dri/renderD128</code>
+    <p class="dim">多 GPU 时选设备</p>
+  </div>
+  <div class="card">
+    <h4>🔍 查看详细 GPU 信息</h4>
+    <code>nvidia-smi -q</code>
+    <p class="dim">比 nvtop 更全的硬件参数</p>
+  </div>
+  <div class="card">
+    <h4>📈 实时刷新</h4>
+    <code>watch -n 1 nvidia-smi</code>
+    <p class="dim">不用 nvtop 时的简单替代</p>
+  </div>
+  <div class="card">
+    <h4>⚡ 限制功耗</h4>
+    <code>sudo nvidia-smi -pl 150</code>
+    <p class="dim">降低功耗墙，降温降噪</p>
+  </div>
+  <div class="card">
+    <h4>📋 进程占用详情</h4>
+    <code>nvidia-smi pmon -c 1</code>
+    <p class="dim">每个进程的 SM/MEM 占用</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">7</span> nvtop vs nvidia-smi 对比</h2>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr style="border-bottom:2px solid var(--border);">
+    <th style="text-align:left;padding:8px;">特性</th>
+    <th style="text-align:left;padding:8px;">nvtop</th>
+    <th style="text-align:left;padding:8px;">nvidia-smi</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">界面</td>
+    <td style="color:var(--green);">✅ TUI 实时交互</td>
+    <td style="color:var(--yellow);">⚠️ 文本输出 / watch</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">GPU 利用率图形</td>
+    <td style="color:var(--green);">✅ 彩色动态条</td>
+    <td style="color:var(--red);">❌ 只有百分比数字</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">SM vs MEM 区分</td>
+    <td style="color:var(--green);">✅ 绿/黄双色</td>
+    <td style="color:var(--red);">❌ 只有 GPU-Util</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">进程管理</td>
+    <td style="color:var(--green);">✅ 交互式杀进程 (F9)</td>
+    <td style="color:var(--red);">❌ 只能手动 kill</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">AMD/Intel GPU</td>
+    <td style="color:var(--green);">✅ 支持</td>
+    <td style="color:var(--red);">❌ NVIDIA 专用</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:8px;">历史趋势</td>
+    <td style="color:var(--yellow);">⚠️ 仅有当前</td>
+    <td style="color:var(--red);">❌ 无</td>
+  </tr>
+  <tr>
+    <td style="padding:8px;">批量脚本</td>
+    <td style="color:var(--red);">❌ 不适合</td>
+    <td style="color:var(--green);">✅ <code>--query-gpu=</code> 可解析</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <strong>💡 两者结合使用：</strong> nvtop 适合日常交互监控，nvidia-smi 适合脚本采集数据。例如定时采集 GPU 指标：
+  <br><code>nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,memory.used --format=csv -l 5 &gt; gpu_log.csv</code>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<h2><span class="num">8</span> 你的 RTX 2060 SUPER 当前状态解读</h2>
+
+<p>从你刚才截图时的数据来看：</p>
+
+<div class="mockup">
+  <div class="mockup-body">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div><span class="label">GPU 利用率</span><br><span class="ok">10%</span></div>
+      <div><span class="label">显存占用</span><br><span style="color:var(--orange);font-weight:600;">7,706 / 8,192 MiB (94%)</span></div>
+      <div><span class="label">温度</span><br><span class="ok">51°C</span></div>
+      <div><span class="label">功耗</span><br><span class="ok">49.88 W / 175 W</span></div>
+      <div><span class="label">核心频率</span><br>1,470 MHz</div>
+      <div><span class="label">显存频率</span><br>6,801 MHz</div>
+    </div>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;">
+  <tr style="border-bottom:1px solid var(--border);">
+    <th style="text-align:left;padding:6px;">指标</th>
+    <th style="text-align:left;padding:6px;">值</th>
+    <th style="text-align:left;padding:6px;">判断</th>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">GPU-Util 10%</td><td>偏低</td>
+    <td style="color:var(--green);">✅ 正常 — 当前在装包，没有跑训练</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">VRAM 94%</td><td>7,706 MiB</td>
+    <td style="color:var(--orange);">⚠️ 偏高 — python3.11（pip install unsloth）占了 ~7.2GB，应该是在下载/缓存中</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">温度 51°C</td><td>正常</td>
+    <td style="color:var(--green);">✅ 健康 — GPU 几乎空闲</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(48,54,61,0.4);">
+    <td style="padding:6px;">功耗 50W</td><td>正常</td>
+    <td style="color:var(--green);">✅ 空闲功耗</td>
+  </tr>
+  <tr>
+    <td style="padding:6px;">进程</td><td>python3.11</td>
+    <td style="color:var(--yellow);">⚠️ pip install 占着 7.2GB 显存但不计算，装完就会释放</td>
+  </tr>
+</table>
+
+<div class="warn-box">
+  <strong>⚠️ 注意：</strong> 你的 7,706 MiB 显存占用中有 ~7.2 GB 被 pip install 进程占着。这是因为 pip 在下载 CUDA 相关的 wheel 包时会解析依赖并加载 CUDA 库，导致显存被占用。装完后需要杀掉这个进程或重启来释放显存。
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section style="margin-top:48px;">
+<h2><span class="num">附录</span> 数据盘上的 nvtop 日志</h2>
+<p>如果你想把 GPU 监控数据持久化保存到数据盘进行分析：</p>
+<div class="term">
+<span class="dim"># 每 5 秒记录一次 GPU 状态到 CSV</span><br>
+nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used,temperature.gpu,power.draw \<br>
+&nbsp;&nbsp;--format=csv -l 5 &gt; /media/hyl/DataDisk/gpu_monitor.csv
+</div>
+</section>
+
+</div>
+
+<div class="footer">
+  本教程基于 nvtop 实际运行数据编写 &nbsp;·&nbsp; 适用于 Ubuntu 24.04 + RTX 2060 SUPER
+  <br><span class="dim">用 <code>nvtop</code> 命令启动 &nbsp;·&nbsp; <code>q</code> 退出 &nbsp;·&nbsp; <code>F5</code> 排序 &nbsp;·&nbsp; <code>F9</code> 杀进程</span>
+</div>
+
+</body>
+</html>

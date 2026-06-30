@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEFT 完全指南 — 参数高效微调全景解析</title>
+<style>
+  :root {
+    --primary: #f59e0b;
+    --primary-dark: #d97706;
+    --primary-light: rgba(245,158,11,0.12);
+    --secondary: #10b981;
+    --accent: #8b5cf6;
+    --bg: #0c0c10;
+    --bg2: #1a1a24;
+    --bg3: #2d2d3d;
+    --text: #f1f5f9;
+    --text2: #a5b4d0;
+    --text3: #6b7294;
+    --border: #2d2d3d;
+    --code-bg: #14141d;
+    --card-bg: #1a1a24;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #38bdf8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.85;
+    font-size: 16px;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0c0c10 0%, #1c1510 40%, #0c0c10 100%);
+    padding: 70px 20px 50px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(245,158,11,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 50%, rgba(139,92,246,0.04) 0%, transparent 50%);
+  }
+  .hero h1 {
+    font-size: 2.6em;
+    background: linear-gradient(135deg, #fbbf24, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  .hero .subtitle {
+    color: var(--text2);
+    font-size: 1.1em;
+    position: relative;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .badge-row {
+    margin-top: 22px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.82em;
+    font-weight: 600;
+  }
+  .badge-amber { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-purple { background: rgba(139,92,246,0.18); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+  .badge-green { background: rgba(16,185,129,0.14); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.2); }
+  .badge-cyan { background: rgba(56,189,248,0.14); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.22); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 32px;
+    margin: 32px 0;
+  }
+  .toc h2 { font-size: 1.15em; color: var(--primary); margin-bottom: 14px; border: none; padding: 0; }
+  .toc ol { padding-left: 20px; }
+  .toc ol li { margin: 7px 0; color: var(--text2); }
+  .toc ol li a { color: var(--text2); text-decoration: none; transition: color 0.2s; }
+  .toc ol li a:hover { color: var(--primary); }
+  .toc ol li a::before { content: "§ "; color: var(--primary); }
+
+  section { padding: 44px 0; border-bottom: 1px solid rgba(45,45,61,0.6); }
+  section:last-child { border-bottom: none; }
+
+  h2 {
+    font-size: 1.5em;
+    color: var(--primary);
+    margin-bottom: 22px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--bg3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .num {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  h3 {
+    font-size: 1.15em;
+    color: #e2e8f0;
+    margin: 28px 0 12px;
+  }
+  h4 {
+    font-size: 1.02em;
+    color: #cbd5e1;
+    margin: 20px 0 8px;
+  }
+  p { margin: 10px 0; color: var(--text2); }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 5px 0; color: var(--text2); }
+  strong { color: #e2e8f0; }
+
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    background: var(--code-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    color: #e2e8f0;
+    border: 1px solid var(--border);
+  }
+  pre {
+    background: #0d0d15;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 14px 0;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.86em;
+    line-height: 1.65;
+    color: #e2e8f0;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 14px 0;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .card-grid .card { margin: 0; }
+  .card-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.98em;
+    margin-bottom: 6px;
+  }
+  .card-desc { font-size: 0.88em; color: var(--text2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.92em;
+  }
+  thead th {
+    background: var(--bg3);
+    color: var(--text);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  tbody tr:nth-child(even) { background: rgba(45,45,61,0.25); }
+  tbody tr:hover { background: rgba(245,158,11,0.04); }
+
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 1.25em; flex-shrink: 0; margin-top: 2px; }
+  .callout-content { flex: 1; }
+  .callout-content p { margin: 4px 0; }
+  .callout-primary {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+  .callout-primary .callout-content p { color: #fbbf24; }
+  .callout-success {
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.18);
+  }
+  .callout-success .callout-content p { color: #6ee7b7; }
+  .callout-info {
+    background: rgba(56,189,248,0.06);
+    border: 1px solid rgba(56,189,248,0.18);
+  }
+  .callout-info .callout-content p { color: #7dd3fc; }
+  .callout-purple {
+    background: rgba(139,92,246,0.06);
+    border: 1px solid rgba(139,92,246,0.18);
+  }
+  .callout-purple .callout-content p { color: #a78bfa; }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    margin: 18px 0;
+    padding: 16px 20px;
+    background: var(--bg2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .step-num {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9em;
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; }
+  .step-content p { margin: 4px 0; }
+
+  .diagram-box {
+    background: #0d0d15;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px;
+    margin: 18px 0;
+    text-align: center;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.88em;
+    line-height: 2;
+    overflow-x: auto;
+  }
+  .diagram-box .highlight { color: #fbbf24; font-weight: 600; }
+  .diagram-box .label { color: var(--text2); }
+  .diagram-box .comment { color: #6b7294; }
+  .diagram-box .arrow { color: var(--accent); }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78em;
+    font-weight: 600;
+    margin: 0 3px;
+  }
+  .tag-lora { background: rgba(139,92,246,0.18); color: #a78bfa; }
+  .tag-adapter { background: rgba(56,189,248,0.15); color: #7dd3fc; }
+  .tag-prefix { background: rgba(16,185,129,0.14); color: #6ee7b7; }
+  .tag-prompt { background: rgba(245,158,11,0.16); color: #fbbf24; }
+  .tag-ia3 { background: rgba(239,68,68,0.14); color: #fca5a5; }
+  .tag-bottleneck { background: rgba(236,72,153,0.14); color: #f9a8d4; }
+
+  .divider { text-align: center; padding: 12px 0; color: var(--bg3); font-size: 1.4em; letter-spacing: 8px; }
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--text3);
+    font-size: 0.88em;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 1.7em; }
+    .card-grid { grid-template-columns: 1fr; }
+    table { font-size: 0.82em; }
+    .step { flex-direction: column; }
+    .step-num { width: 28px; height: 28px; font-size: 0.8em; }
+  }
+
+  .kw { color: #c084fc; }
+  .str { color: #fde68a; }
+  .cm { color: #6b7294; font-style: italic; }
+  .fn { color: #6ee7b7; }
+  .num { color: #7dd3fc; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🧩 PEFT 完全指南</h1>
+  <p class="subtitle">Parameter-Efficient Fine-Tuning — 参数高效微调全景解析：从 Adapter 到 LoRA，从 Prompt Tuning 到 IA3</p>
+  <div class="badge-row">
+    <span class="badge badge-amber">PEFT</span>
+    <span class="badge badge-purple">LoRA</span>
+    <span class="badge badge-green">Adapter</span>
+    <span class="badge badge-cyan">Prompt Tuning</span>
+    <span class="badge badge-amber">IA3</span>
+    <span class="badge badge-purple">HuggingFace</span>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ol>
+    <li><a href="#intro">什么是 PEFT — 为什么需要它</a></li>
+    <li><a href="#taxonomy">PEFT 三大流派与技术分类</a></li>
+    <li><a href="#adapter">Adapter 方法 — 插入式适配器</a></li>
+    <li><a href="#lora">LoRA 及其变体 — 低秩分解</a></li>
+    <li><a href="#prefix">Prefix / Prompt Tuning — 输入侧微调</a></li>
+    <li><a href="#ia3">IA3 — 最简单的缩放方法</a></li>
+    <li><a href="#compare">五大方法全面对比</a></li>
+    <li><a href="#choose">如何选择 — 决策指南</a></li>
+    <li><a href="#practice">实战：HuggingFace PEFT 快速上手</a></li>
+    <li><a href="#integration">PEFT + LLaMA-Factory 组合使用</a></li>
+    <li><a href="#research">前沿研究与未来方向</a></li>
+    <li><a href="#faq">常见问题 FAQ</a></li>
+  </ol>
+</div>
+
+<!-- ======================================================================== -->
+<!-- 1. INTRO -->
+<!-- ======================================================================== -->
+<section id="intro">
+  <h2><span class="num">1</span> 什么是 PEFT — 为什么需要它</h2>
+
+  <h3>📌 定义</h3>
+  <p><strong>PEFT（Parameter-Efficient Fine-Tuning，参数高效微调）</strong> 是一类微调技术的总称，核心思想是：<strong>冻结大部分预训练参数，只更新少量新增或选中的参数</strong>，以极少的额外参数实现对下游任务的高效适配。</p>
+
+  <div class="diagram-box">
+    <span class="highlight">传统微调 vs PEFT</span><br><br>
+    <span class="label">传统全参数微调</span><br>
+    预训练模型 (100%) → 复制一份全量权重 → 全部更新 → <span class="highlight">存储 100%</span><br><br>
+    <span class="label highlight">PEFT 微调</span><br>
+    预训练模型 (100% <span class="comment">冻结</span>) → 插入 <span class="highlight">&lt;1% 新增参数</span> → 只更新这些 → <span class="highlight">存储 &lt;1%</span>
+  </div>
+
+  <h3>❓ 为什么需要 PEFT</h3>
+  <p>大模型时代，全参数微调的痛点变得越来越突出：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">💰 算力昂贵</div>
+      <div class="card-desc">全参微调 7B 模型需要 ~120GB 显存，70B 模型需要 600GB+，只能用 A100/H100 集群</div>
+    </div>
+    <div class="card">
+      <div class="card-title">💾 存储爆炸</div>
+      <div class="card-desc">每个下游任务都要存一份完整的 14GB（7B）/ 140GB（70B）模型权重</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 切换低效</div>
+      <div class="card-desc">10 个任务需要加载 10 个不同的模型文件，无法共享基座</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📉 数据不足</div>
+      <div class="card-desc">全参微调在少数据场景下容易过拟合、灾难性遗忘</div>
+    </div>
+  </div>
+
+  <div class="callout callout-primary">
+    <span class="callout-icon">💡</span>
+    <div class="callout-content">
+      <p><strong>核心洞察</strong>：预训练模型已经学到了足够丰富的特征表示，下游适配只需要在一个非常低维的子空间中进行「微调方向」的引导，不需要推倒重练。PEFT 正是抓住了这个本质。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 2. TAXONOMY -->
+<!-- ======================================================================== -->
+<section id="taxonomy">
+  <h2><span class="num">2</span> PEFT 三大流派与技术分类</h2>
+
+  <p>PEFT 方法按照修改模型的方式可以分为三大流派：</p>
+
+  <div class="diagram-box">
+    <span class="highlight">PEFT 方法分类全景</span><br><br>
+
+    ┌────────────────────────────────────────────────┐<br>
+    │                     PEFT                       │<br>
+    │  参数高效微调                                    │<br>
+    └────────────────┬───────────────┬───────────────┘<br>
+                     │               │               │<br>
+         ┌───────────┴───┐   ┌──────┴──────┐   ┌────┴──────────┐<br>
+         │ <span class="highlight">添加式</span>      │   │ <span class="highlight">选择式</span>  │   │ <span class="highlight">重参数化</span>  │<br>
+         │ (Additive)    │   │(Selective)  │   │(Reparam)     │<br>
+         └───────┬───────┘   └──────┬──────┘   └──────┬───────┘<br>
+                 │                  │                 │<br>
+         ┌───────┼───────┐         │         ┌───────┼───────┐<br>
+     ┌───┴───┐ ┌─┴──┐ ┌──┴───┐    │     ┌───┴───┐ ┌─┴──┐ ┌──┴───┐<br>
+     │Adapter│ │Prefix│ │Prompt│    │     │ LoRA  │ │IA3 │ │(OFT) │<br>
+     │       │ │Tuning│ │Tuning│    │     │       │ │    │ │      │<br>
+     └───────┘ └─────┘ └──────┘    │     └───────┘ └────┘ └──────┘<br>
+                                   │<br>
+                              ┌────┴────┐<br>
+                              │BitFit   │<br>
+                              │DiffPrune│<br>
+                              └─────────┘<br><br>
+    <span class="comment">图：PEFT 方法的三大分类及其代表工作</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>流派</th><th>原理</th><th>代表方法</th><th>推理开销</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>添加式 (Additive)</strong></td>
+        <td>在模型中加入新的模块/参数</td>
+        <td><span class="tag tag-adapter">Adapter</span> <span class="tag tag-prefix">Prefix Tuning</span> <span class="tag tag-prompt">Prompt Tuning</span></td>
+        <td>⚠️ 有额外计算</td>
+      </tr>
+      <tr>
+        <td><strong>选择式 (Selective)</strong></td>
+        <td>从已有参数中选择子集更新</td>
+        <td><span class="tag tag-lora">BitFit</span> <span class="tag tag-ia3">DiffPruning</span></td>
+        <td>✅ 无开销</td>
+      </tr>
+      <tr>
+        <td><strong>重参数化 (Reparam.)</strong></td>
+        <td>用低秩分解替代全量参数更新</td>
+        <td><span class="tag tag-lora">LoRA</span> <span class="tag tag-ia3">IA3</span> <span class="tag tag-bottleneck">OFT</span></td>
+        <td>✅ 可合并，零开销</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 3. ADAPTER -->
+<!-- ======================================================================== -->
+<section id="adapter">
+  <h2><span class="num">3</span> Adapter 方法 — 插入式适配器</h2>
+
+  <h3>📜 起源</h3>
+  <p>Adapter 是 PEFT 领域的开创性工作之一（<em>Houlsby et al., 2019</em>），也是最早证明「在冻结大模型上插入少量可训练参数就能达到全参微调效果」的方法。</p>
+
+  <h3>🏗️ 架构</h3>
+  <div class="diagram-box">
+    <span class="highlight">Adapter 在 Transformer 层中的位置</span><br><br>
+    <span class="comment">  原始 Transformer 层</span><br>
+    ┌──────────────────────────────┐<br>
+    │       Self-Attention         │<br>
+    │         (冻结)                │<br>
+    └──────────┬───────────────────┘<br>
+               │<br>
+    ┌──────────┴───────────────────┐<br>
+    │  <span class="highlight">Adapter(z) = W_up·σ(W_down·z)</span>  │  ← <span class="highlight">新增瓶颈层</span><br>
+    │  <span class="comment">  d → bottleneck(64) → d       </span> │<br>
+    └──────────┬───────────────────┘<br>
+               │<br>
+    ┌──────────┴───────────────────┐<br>
+    │        FFN (冻结)             │<br>
+    └──────────────────────────────┘<br><br>
+    <span class="comment">Adapter 通常在 Attention 之后、FFN 之前各插入一个瓶颈层</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔬 公式</div>
+    <div class="card-desc">
+      <p><strong>Adapter(z) = W_up · σ(W_down · z) + z</strong>（残差连接）</p>
+      <p>其中 W_down ∈ ℝ<sup>d×b</sup>（降维）, W_up ∈ ℝ<sup>b×d</sup>（升维），b ≪ d</p>
+      <p>b 是 bottleneck size（通常 64-256），d 是隐藏层维度（LLaMA 为 4096）</p>
+      <p>参数量 = 2 × d × b，对于 d=4096, b=64：约 52 万参数/层</p>
+    </div>
+  </div>
+
+  <h3>📊 Adapter 的发展</h3>
+  <table>
+    <thead>
+      <tr><th>变体</th><th>年份</th><th>改进点</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Adapter<sup>H</sup> (Houlsby)</td><td>2019</td><td>开创性工作，每层插入两个 adapter，串行架构</td></tr>
+      <tr><td>Adapter<sup>L</sup> (Pfeiffer)</td><td>2020</td><td>只在 FFN 后插入一个 adapter，减少至一个</td></tr>
+      <tr><td>AdapterFusion</td><td>2020</td><td>训练多个独立 adapter，再用 fusion 层组合</td></tr>
+      <tr><td>AdapterDrop</td><td>2021</td><td>推理时随机丢弃部分 adapter，加速不降精度</td></tr>
+      <tr><td>Compacter</td><td>2021</td><td>用低秩矩阵 + 超复杂积替换全连接的 adapter</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">📌</span>
+    <div class="callout-content">
+      <p><strong>Adapter 与 LoRA 的关键区别</strong>：Adapter <strong>改变网络计算图</strong>（新增了串行模块），推理时始终有额外计算。LoRA 的增量可以<strong>合并入原始权重</strong>，推理时零开销。这是 LoRA 今天更流行的原因之一。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 4. LORA -->
+<!-- ======================================================================== -->
+<section id="lora">
+  <h2><span class="num">4</span> LoRA 及其变体 — 低秩分解</h2>
+
+  <p>LoRA 和 QLoRA 已在 <a href="LORA.html" style="color: #fbbf24;">LORA.html</a> 中详细介绍，这里重点讲它在 PEFT 全景中的定位和与其他方法的比较。</p>
+
+  <h3>🔑 核心公式回顾</h3>
+  <div class="diagram-box">
+    h = W₀·x + <span class="highlight">ΔW</span>·x &nbsp;→&nbsp; h = W₀·x + <span class="highlight">A·B</span>·x<br>
+    <span class="comment">参数量: d×k → d×r + r×k，当 r ≪ min(d, k) 时节省约 100-1000 倍</span>
+  </div>
+
+  <h3>🧩 LoRA 在 PEFT 生态中的独特地位</h3>
+  <table>
+    <thead>
+      <tr><th>特性</th><th>LoRA</th><th>Adapter</th><th>Prefix Tuning</th><th>IA3</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>推理零开销</td><td>✅ 合并后</td><td>❌ 始终有</td><td>❌ 序列变长</td><td>✅ 合并后</td></tr>
+      <tr><td>多任务切换</td><td>✅ 秒级</td><td>✅ 秒级</td><td>⚠️ 需改输入</td><td>✅ 秒级</td></tr>
+      <tr><td>vLLM 原生支持</td><td>✅ 多 LoRA 并行</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td>LLaMA-Factory 支持</td><td>✅ 丰富</td><td>⚠️ 实验性</td><td>⚠️ 实验性</td><td>✅ 支持</td></tr>
+      <tr><td>无额外推理延迟</td><td>✅</td><td>❌ 2-5%</td><td>❌ 序列 +1-5%</td><td>✅</td></tr>
+      <tr><td>可解释性</td><td>✅ SVD 分析</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-success">
+    <span class="callout-icon">🏆</span>
+    <div class="callout-content">
+      <p><strong>LoRA 是目前 PEFT 领域最流行、生态最完善的方法</strong>。几乎所有主流框架（LLaMA-Factory、PEFT、Unsloth、vLLM）都有最佳支持。对于 90% 的微调场景，LoRA 是默认首选。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 5. PREFIX / PROMPT TUNING -->
+<!-- ======================================================================== -->
+<section id="prefix">
+  <h2><span class="num">5</span> Prefix Tuning / Prompt Tuning — 输入侧微调</h2>
+
+  <h3>📌 核心思想</h3>
+  <p>不修改模型权重，而是在输入序列的 <strong>开头/中间插入可训练的虚拟 Token</strong>（soft prompt），让这些嵌入向量去「引导」模型的行为。</p>
+
+  <h3>🏗️ 两种方法对比</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-prefix">Prefix Tuning</span> (2021)</div>
+      <div class="card-desc">
+        <p>在每个 Transformer 层的 <strong>Key 和 Value</strong> 前拼接可训练向量。<br><br>
+        K' = [P_k; K] — 每层单独学习<br>
+        V' = [P_v; V] — 参数量较大<br><br>
+        <strong>参数量</strong>：L × 2 × r × d<br>
+        L=层数, r=prefix长度, d=隐藏层维</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-prompt">Prompt Tuning</span> (2021)</div>
+      <div class="card-desc">
+        <p>只在 <strong>输入层</strong> 的 token embedding 前拼接可训练向量。<br><br>
+        E' = [P; E] — 所有层共享<br>
+        更"浅"的 Prefix Tuning<br><br>
+        <strong>参数量</strong>：r × d<br>
+        比 Prefix Tuning 少 L 倍</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>📊 可视化</h3>
+  <div class="diagram-box">
+    <span class="highlight">Prompt Tuning</span><br><br>
+    <span class="comment">原始输入: [CLS] 什么是 Basel III？ [SEP]</span><br>
+    <span class="comment">Prompt:    [P₁][P₂][P₃][P₄][P₅] [CLS] 什么是 Basel III？ [SEP]</span><br>
+    <span class="highlight">      ↑ ↑ ↑ ↑ ↑</span><br>
+    <span class="highlight">   可训练的虚拟 token (soft prompt)</span><br><br>
+    <span class="comment">模型权重不变，只优化这 5 个向量（约 5×4096 = 20K 参数）</span>
+  </div>
+
+  <div class="diagram-box">
+    <span class="highlight">Prefix Tuning</span><br><br>
+    <span class="comment">Layer 1:  K' = [P_k¹; K¹],  V' = [P_v¹; V¹]</span><br>
+    <span class="comment">Layer 2:  K' = [P_k²; K²],  V' = [P_v²; V²]</span><br>
+    <span class="comment">   ...</span><br>
+    <span class="comment">Layer 32: K' = [P_k³²; K³²], V' = [P_v³²; V³²]</span><br><br>
+    <span class="comment">每个层有独立的 prefix 向量（32 层 × 2 组 × 10 tokens × 4096维 = 2.6M 参数）</span>
+  </div>
+
+  <h3>⚖️ 优缺点</h3>
+  <table>
+    <thead>
+      <tr><th>维度</th><th>Prefix Tuning</th><th>Prompt Tuning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>参数量</td><td>较多（每层独有的）</td><td>极少（所有层共享）</td></tr>
+      <tr><td>表达能力</td><td>强（每层可学习不同行为）</td><td>弱（仅输入层影响）</td></tr>
+      <tr><td>推理延迟</td><td>有新 token，序列变长</td><td>有新 token，序列变长</td></tr>
+      <tr><td>模型冻结</td><td>完全冻结</td><td>完全冻结</td></tr>
+      <tr><td>适配效果</td><td>接近全参微调</td><td>稍弱，但在大模型上趋近</td></tr>
+      <tr><td>跨模型迁移</td><td>❌ 不兼容</td><td>❌ 不兼容</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-purple">
+    <span class="callout-icon">🔮</span>
+    <div class="callout-content">
+      <p><strong>最新发现</strong>：Prompt Tuning 的效果随模型规模增大而显著提升。对于 100B+ 的超大模型，Prompt Tuning 可以达到接近全参微调的效果（<em>Lester et al., 2021</em>）。这也解释了为什么 GPT-4 级别的 API 只提供 Prompt Engineering / In-Context Learning，而不是微调 API。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 6. IA3 -->
+<!-- ======================================================================== -->
+<section id="ia3">
+  <h2><span class="num">6</span> IA3 — 最简单的缩放方法</h2>
+
+  <h3>📌 核心思想</h3>
+  <p><strong>IA3（Infused Adapter by Inhibiting and Amplifying Activations）</strong> 由 <em>Liu et al., 2022</em> 提出，是目前<strong>参数最少的 PEFT 方法之一</strong>。</p>
+
+  <div class="callout callout-primary">
+    <span class="callout-icon">💡</span>
+    <div class="callout-content">
+      <p><strong>直觉</strong>：与其添加复杂的适配器模块，不如直接在模型的中间激活值上<strong>乘以一个可学习的缩放向量</strong>。某些通道增强、某些通道抑制——就这么简单。</p>
+    </div>
+  </div>
+
+  <h3>🏗️ 公式</h3>
+  <div class="diagram-box">
+    <span class="highlight">IA3 将 Adapter 的"全连接瓶颈"替换为"向量缩放"</span><br><br>
+    <span class="comment">Adapter:   h' = W_up · σ(W_down · h) + h  (两个矩阵)</span><br>
+    <span class="highlight">IA3:        h' = l ⊙ h</span><br><br>
+    <span class="comment">l ∈ ℝ^d：可学习的缩放向量</span><br>
+    <span class="comment">⊙：逐元素相乘 (Hadamard 积)</span><br><br>
+    <span class="comment">参数量：从 2×d×b（Adapter）降到 d（IA3），再降 100×</span>
+  </div>
+
+  <p>IA3 通常应用在三个位置：</p>
+  <ul>
+    <li>Attention 的 Key 投影之后：<code>K ← l_k ⊙ K</code></li>
+    <li>Attention 的 Value 投影之后：<code>V ← l_v ⊙ V</code></li>
+    <li>FFN 的第一个线性层之后：<code>h ← l_ff ⊙ h</code></li>
+  </ul>
+
+  <h3>📊 参数量对比（LLaMA 7B）</h3>
+  <table>
+    <thead>
+      <tr><th>方法</th><th>新增参数</th><th>比例</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>全参数微调</td><td>6,738,415,616</td><td>100%</td></tr>
+      <tr><td>Adapter (b=64)</td><td>~83,000,000</td><td>~1.2%</td></tr>
+      <tr><td>LoRA (r=8, all)</td><td>~16,000,000</td><td>~0.24%</td></tr>
+      <tr><td><strong>IA3</strong></td><td><strong>~1,800,000</strong></td><td><strong>~0.027%</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-success">
+    <span class="callout-icon">✅</span>
+    <div class="callout-content">
+      <p><strong>IA3 的亮点</strong>：用 LoRA 1/10 的参数量达到了 LoRA 95%+ 的效果。适合极低资源场景（显存吃紧、数据集极小）。在 LLaMA-Factory 中可通过 <code>finetuning_type: ia3</code> 启用。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 7. COMPARE -->
+<!-- ======================================================================== -->
+<section id="compare">
+  <h2><span class="num">7</span> 五大方法全面对比</h2>
+
+  <h3>📊 综合对比表</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th><span class="tag tag-adapter">Adapter</span></th>
+        <th><span class="tag tag-lora">LoRA</span></th>
+        <th><span class="tag tag-prefix">Prefix</span></th>
+        <th><span class="tag tag-prompt">Prompt</span></th>
+        <th><span class="tag tag-ia3">IA3</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>提出年份</strong></td><td>2019</td><td>2021</td><td>2021</td><td>2021</td><td>2022</td></tr>
+      <tr><td><strong>修改位置</strong></td><td>层间插入</td><td>权重矩阵</td><td>K/V 序列</td><td>输入嵌入</td><td>激活值缩放</td></tr>
+      <tr><td><strong>新增参数/层 (d=4096)</strong></td><td>~52 万</td><td>~6.5 万</td><td>~8 万</td><td>~4 千</td><td>~1.2 万</td></tr>
+      <tr><td><strong>7B 总参数量</strong></td><td>~8,300 万</td><td>~1,600 万</td><td>~260 万</td><td>~2 万</td><td>~180 万</td></tr>
+      <tr><td><strong>推理零开销</strong></td><td>❌</td><td>✅ 合并后</td><td>❌</td><td>❌</td><td>✅ 合并后</td></tr>
+      <tr><td><strong>vLLM 支持</strong></td><td>❌</td><td>✅ 多 LoRA</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><strong>LLaMA-Factory 支持</strong></td><td>实验性</td><td>✅ 完整</td><td>实验性</td><td>实验性</td><td>✅ 完整</td></tr>
+      <tr><td><strong>流行度 (论文引用)</strong></td><td>~8k</td><td>~39k</td><td>~3k</td><td>~2k</td><td>~1k</td></tr>
+      <tr><td><strong>效果 (相对全参)</strong></td><td>96-99%</td><td>97-99%</td><td>93-98%</td><td>90-97%</td><td>95-98%</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🧪 在 RoBERTa-Large 上的效果对比</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>方法</th>
+        <th>参数量</th>
+        <th>MNLI</th>
+        <th>SST-2</th>
+        <th>MRPC</th>
+        <th>CoLA</th>
+        <th>RTE</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>全参数微调</td><td>355M (100%)</td><td>90.2</td><td>96.4</td><td>92.3</td><td>68.3</td><td>86.6</td></tr>
+      <tr><td><span class="tag tag-adapter">Adapter</span></td><td>1.2%</td><td>89.8</td><td>96.0</td><td>91.5</td><td>66.3</td><td>85.5</td></tr>
+      <tr><td><span class="tag tag-lora">LoRA</span></td><td>0.3%</td><td><strong>90.0</strong></td><td><strong>96.2</strong></td><td><strong>91.8</strong></td><td><strong>67.4</strong></td><td><strong>86.0</strong></td></tr>
+      <tr><td><span class="tag tag-prefix">Prefix</span></td><td>0.1%</td><td>89.1</td><td>95.5</td><td>90.2</td><td>64.8</td><td>84.3</td></tr>
+      <tr><td><span class="tag tag-ia3">IA3</span></td><td>0.01%</td><td>89.7</td><td>95.8</td><td>91.0</td><td>65.9</td><td>85.1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">📊</span>
+    <div class="callout-content">
+      <p><strong>关键观察</strong>：LoRA 在所有 PEFT 方法中取得了最好的效果/参数比。IA3 用极少的参数达到了接近 LoRA 的效果。Prefix/Prompt Tuning 效果稍弱但在超大模型上追平。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 8. CHOOSE -->
+<!-- ======================================================================== -->
+<section id="choose">
+  <h2><span class="num">8</span> 如何选择 — 决策指南</h2>
+
+  <div class="diagram-box">
+    <span class="highlight">PEFT 方法选择决策树</span><br><br>
+
+    推理延迟能否接受额外开销？<br>
+    ├─ ✅ 可以 → <span class="highlight">Adapter</span>（效果稳定，生态成熟）<br>
+    ├─ ❌ 不接受<br>
+    │    ├─ 需要零延迟 + 多任务切换 → <span class="highlight">LoRA</span> 🏆<br>
+    │    ├─ 需要零延迟 + 极致参数少 → <span class="highlight">IA3</span><br>
+    │    └─ 推理框架只有 vLLM → <span class="highlight">LoRA</span>（唯一支持多 LoRA）<br>
+    ├─ 需要最大效果 ← <span class="highlight">LoRA (rank=16-32, target=all)</span><br>
+    ├─ 显存极度受限（6GB↓）<br>
+    │    ├─ <span class="highlight">QLoRA</span>（效果最好）<br>
+    │    └─ <span class="highlight">IA3</span>（参数最少）<br>
+    └─ 使用 LLaMA-Factory<br>
+         └─ <span class="highlight">LoRA</span>（支持最完整，生态最好）<br><br>
+    <span class="comment">对于 90% 的场景，LoRA 是最稳妥、最通用的选择</span>
+  </div>
+
+  <h3>📋 快速选择表</h3>
+  <table>
+    <thead>
+      <tr><th>你的场景</th><th>推荐方法</th><th>理由</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>通用微调（大部分情况）</td><td><span class="tag tag-lora">LoRA</span></td><td>效果/效率/生态的最佳平衡</td></tr>
+      <tr><td>显存 &lt; 8GB（消费卡）</td><td><span class="tag tag-lora">QLoRA</span></td><td>4-bit 量化，7B 模型仅需 ~6GB</td></tr>
+      <tr><td>多任务服务（10+ 模型并行）</td><td><span class="tag tag-lora">LoRA + vLLM</span></td><td>vLLM 原生支持多个 LoRA 动态切换</td></tr>
+      <tr><td>研究/对比实验</td><td><span class="tag tag-adapter">Adapter</span></td><td>经典方法，基线效果稳定</td></tr>
+      <tr><td>极低资源（&lt;100 条数据）</td><td><span class="tag tag-ia3">IA3</span> 或 <span class="tag tag-lora">LoRA (r=4)</span></td><td>参数最少，防止过拟合</td></tr>
+      <tr><td>超大模型（100B+）</td><td><span class="tag tag-prompt">Prompt Tuning</span></td><td>参数极少，超大规模下效果好</td></tr>
+      <tr><td>不想引入任何推理延迟</td><td><span class="tag tag-lora">LoRA</span> / <span class="tag tag-ia3">IA3</span></td><td>均可合并入原权重，零开销</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 9. PRACTICE -->
+<!-- ======================================================================== -->
+<section id="practice">
+  <h2><span class="num">9</span> 实战：HuggingFace PEFT 快速上手</h2>
+
+  <h3>📦 安装</h3>
+  <pre><code>pip install peft transformers accelerate bitsandbytes</code></pre>
+
+  <h3>🔧 核心 API 一览</h3>
+  <p>HuggingFace PEFT 库提供了统一接口：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-lora">LoRA</span></div>
+      <div class="card-desc"><code>LoraConfig</code> + <code>get_peft_model()</code></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-adapter">Adapter</span></div>
+      <div class="card-desc"><code>AdapterConfig</code> + <code>get_peft_model()</code></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-prefix">Prefix Tuning</span></div>
+      <div class="card-desc"><code>PrefixTuningConfig</code> + <code>get_peft_model()</code></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-prompt">Prompt Tuning</span></div>
+      <div class="card-desc"><code>PromptTuningConfig</code> + <code>get_peft_model()</code></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-ia3">IA3</span></div>
+      <div class="card-desc"><code>IA3Config</code> + <code>get_peft_model()</code></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 统一接口</div>
+      <div class="card-desc"><code>PeftModel.from_pretrained()</code> / <code>.save_pretrained()</code></div>
+    </div>
+  </div>
+
+  <h3>💻 完整代码示例（LoRA / IA3 / Prefix 三种对比）</h3>
+  <pre><code><span class="kw">from</span> transformers <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+<span class="kw">from</span> peft <span class="kw">import</span> (
+    LoraConfig, IA3Config, PrefixTuningConfig,
+    get_peft_model, TaskType, PeftModel
+)
+
+<span class="cm"># 加载基座模型（冻结）</span>
+model_name = <span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_name, torch_dtype=<span class="str">"auto"</span>, device_map=<span class="str">"auto"</span>
+)
+
+<span class="cm"># ── 方案一：LoRA ────────────────────────────────────</span>
+lora_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    r=<span class="num">8</span>,
+    lora_alpha=<span class="num">16</span>,
+    lora_dropout=<span class="num">0.05</span>,
+    target_modules=<span class="str">"all-linear"</span>,          <span class="cm"># 简化写法</span>
+)
+model_lora = get_peft_model(base_model, lora_config)
+model_lora.print_trainable_parameters()
+<span class="cm"># Trainable params: 16,777,216 || All params: 7,020,451,840 || Trainable%: 0.2390</span>
+
+<span class="cm"># ── 方案二：IA3（参数最少的方案）────────────────────</span>
+ia3_config = IA3Config(
+    task_type=TaskType.CAUSAL_LM,
+    target_modules=<span class="str">"all-linear"</span>,
+    feedforward_modules=[<span class="str">"down_proj"</span>],
+)
+model_ia3 = get_peft_model(base_model, ia3_config)
+model_ia3.print_trainable_parameters()
+<span class="cm"># Trainable params: 1,835,008 || All params: 7,005,509,632 || Trainable%: 0.0262</span>
+
+<span class="cm"># ── 方案三：Prefix Tuning ───────────────────────────</span>
+prefix_config = PrefixTuningConfig(
+    task_type=TaskType.CAUSAL_LM,
+    num_virtual_tokens=<span class="num">20</span>,
+    encoder_hidden_size=<span class="num">4096</span>,
+)
+model_prefix = get_peft_model(base_model, prefix_config)
+
+<span class="cm"># ── 训练（以 LoRA 为例） ─────────────────────────</span>
+training_args = TrainingArguments(
+    output_dir=<span class="str">"./output"</span>,
+    per_device_train_batch_size=<span class="num">2</span>,
+    learning_rate=<span class="num">2e-4</span>,
+    num_train_epochs=<span class="num">3</span>,
+    bf16=<span class="num">True</span>,
+    logging_steps=<span class="num">10</span>,
+)
+trainer = Trainer(
+    model=model_lora,
+    args=training_args,
+    train_dataset=dataset,
+)
+trainer.train()
+
+<span class="cm"># ── 保存 LoRA 权重（仅 ~16MB）─────────────────────</span>
+model_lora.save_pretrained(<span class="str">"./lora-weights"</span>)
+
+<span class="cm"># ── 加载合并推理 ─────────────────────────────────────</span>
+model = PeftModel.from_pretrained(base_model, <span class="str">"./lora-weights"</span>)
+model = model.merge_and_unload()              <span class="cm"># 合并到基座</span>
+model.save_pretrained(<span class="str">"./merged-model"</span>)   <span class="cm"># 保存完整模型</span></code></pre>
+
+  <div class="callout callout-primary">
+    <span class="callout-icon">💡</span>
+    <div class="callout-content">
+      <p><strong>提示</strong>：HuggingFace PEFT 的 <code>target_modules="all-linear"</code> 是简化写法，自动作用于所有线性层，效果等同于一一列举所有模块名。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 10. INTEGRATION -->
+<!-- ======================================================================== -->
+<section id="integration">
+  <h2><span class="num">10</span> PEFT + LLaMA-Factory 组合使用</h2>
+
+  <p>LLaMA-Factory 封装了 huggingface PEFT，提供更简便的配置方式。以下是在 LLaMA-Factory 中使用不同 PEFT 方法的配置：</p>
+
+  <h3>⚙️ 配置对照表</h3>
+  <table>
+    <thead>
+      <tr><th>PEFT 方法</th><th>LLaMA-Factory 配置</th><th>备注</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-lora">LoRA</span></td>
+        <td><code>finetuning_type: lora</code></td>
+        <td>最完整支持，大量参数可调</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-lora">QLoRA</span></td>
+        <td><code>finetuning_type: lora</code> + <code>quantization_bit: 4</code></td>
+        <td>LoRA + 4-bit 量化</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-ia3">IA3</span></td>
+        <td><code>finetuning_type: ia3</code></td>
+        <td>参数量最少</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-adapter">Adapter</span></td>
+        <td>暂未正式支持</td>
+        <td>可通过自定义配置实现</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-prefix">Prefix Tuning</span></td>
+        <td>暂未正式支持</td>
+        <td>可通过自定义配置实现</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>📝 LLaMA-Factory 中切换不同 PEFT 方法</h3>
+  <pre><code><span class="cm"># LoRA（默认推荐）</span>
+finetuning_type: lora
+lora_rank: 8
+lora_target: all
+
+<span class="cm"># IA3（极致参数少）</span>
+finetuning_type: ia3
+
+<span class="cm"># QLoRA（显存最省）</span>
+finetuning_type: lora
+quantization_bit: 4
+quantization_method: bitsandbytes</code></pre>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 11. RESEARCH -->
+<!-- ======================================================================== -->
+<section id="research">
+  <h2><span class="num">11</span> 前沿研究与未来方向</h2>
+
+  <h3>🔬 当前 PEFT 研究热点</h3>
+
+  <div class="card">
+    <div class="card-title">🧪 <strong>PEFT 组合</strong> — 多种 PEFT 方法的协同</div>
+    <div class="card-desc">
+      <p>研究显示，将 LoRA + Adapter / LoRA + Prefix Tuning 等不同 PEFT 方法<strong>组合使用</strong>，效果可以超过单一方法。每种方法捕获了不同的「适配信号」，互补性强。<br>
+      <em>来源：Mao et al., 2024 "Towards Better Multi-task PEFT"</em></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 <strong>动态 PEFT</strong> — 根据输入动态选择适配权重</div>
+    <div class="card-desc">
+      <p>训练多个 PEFT 模块，推理时由一个<strong>路由网络</strong>根据输入内容动态选择或组合最合适的适配器（MoRA / LoRA Hub）。不再是"一个适配器适用于所有输入"，而是"不同输入激活不同适配路径"。<br>
+      <em>来源：Ponti et al., 2023; Liu et al., 2024</em></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 <strong>PEFT 可解释性</strong> — 理解适配器到底学了什么</div>
+    <div class="card-desc">
+      <p>通过 SVD 分解 LoRA 权重、分析 adapter 的激活模式，研究人员发现 PEFT 模块主要学习<strong>任务特定的注意力模式</strong>和<strong>输出的偏移方向</strong>，而非学习新的知识。这解释了为什么少量参数就能适配新任务。<br>
+      <em>来源：Gheini et al., 2023; Wu et al., 2024</em></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚀 <strong>PEFT + 多模态</strong> — 视觉/语言/音频的联合适配</div>
+    <div class="card-desc">
+      <p>PEFT 在 LLaVA、Qwen2.5-VL、InternVL 等多模态模型中的应用越来越广。通过对 visual encoder 的投影层和 LLM 的 attention 层分别应用 LoRA，实现跨模态的联合微调。<br>
+      <em>来源：LLaVA-1.5, Qwen2-VL 官方实践</em></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🧬 <strong>PEFT 统一框架</strong> — 一个框架支持所有方法</div>
+    <div class="card-desc">
+      <p>HuggingFace PEFT + LLaMA-Factory 正在走向「统一配置」——同样的训练流程，切换一行配置即可在 LoRA / IA3 / Adapter / Prefix 之间切换，无需改代码。这大大降低了 PEFT 研究和使用门槛。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12. FAQ -->
+<!-- ======================================================================== -->
+<section id="faq">
+  <h2><span class="num">12</span> 常见问题 FAQ</h2>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: PEFT 和全参数微调可以同时用吗？</strong></div>
+    <div class="card-desc">
+      <p>可以。一种常见的「两阶段」策略是：先用 PEFT（如 LoRA）进行快速实验和迭代，筛选出最佳的超参和数据集；然后用全参数微调进行<strong>最终精调</strong>，榨取最后 1-3% 的性能提升。这结合了两者的优势——PEFT 的效率 + 全参的上限。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: 不同 PEFT 方法的权重可以合并吗？</strong></div>
+    <div class="card-desc">
+      <p>可以但不是简单的相加。一个常见做法是<strong>模型集成（Ensemble）</strong>——分别用 LoRA 和 Adapter 训练两个模型，推理时对输出取平均或加权。LoRA 社区还有 <strong>LoRA 融合（LoRA Fusion / LoRA Soup）</strong> 技术，将多个 LoRA 权重直接平均得到新权重。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: PEFT 适合强化学习微调（RLHF/DPO）吗？</strong></div>
+    <div class="card-desc">
+      <p>非常适合。LLaMA-Factory 中 DPO / KTO / ORPO 等偏好对齐方法都默认使用 LoRA。LoRA 在 RL 中的优势尤为明显——RL 训练本身就不稳定，全参微调更容易灾难性遗忘，LoRA 的约束更新提供了一种天然的<strong>正则化</strong>。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: PEFT 有哪些无法替代全参数微调的场景？</strong></div>
+    <div class="card-desc">
+      <p>三个场景：</p>
+      <ul>
+        <li><strong>持续预训练（Continue Pre-training）</strong>——模型需要学习全新的知识和词汇，PEFT 的容量可能不够</li>
+        <li><strong>模型架构修改</strong>——如果需要在模型中新增/删除层（如 LLaMA Pro 的块扩展），必须全参</li>
+        <li><strong>追求天花板效果</strong>——在超大高质量数据集（10 万+ 条）上，全参微调仍比 PEFT 高出 1-3%</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: 为什么叫"参数高效"？高效在哪里？</strong></div>
+    <div class="card-desc">
+      <p>「高效」体现在三个维度：</p>
+      <ul>
+        <li><strong>存储高效</strong>：16MB vs 14GB（1000× 节省）</li>
+        <li><strong>显存高效</strong>：16GB vs 120GB（7.5× 节省）</li>
+        <li><strong>样本高效</strong>：几百条数据就能有效微调，不需要几十万条</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: 学习 PEFT 应该从哪里开始？</strong></div>
+    <div class="card-desc">
+      <p>推荐的学习路径：</p>
+      <ol>
+        <li><strong>先掌握 LoRA</strong>——最流行、生态最好、理解门槛最低</li>
+        <li><strong>再了解 QLoRA</strong>——量化版本的 LoRA，显存优化思路值得学习</li>
+        <li><strong>对比其他方法</strong>——用 PEFT 统一接口快速切换 Adapter / IA3 / Prefix 做对比实验</li>
+        <li><strong>关注前沿</strong>——动态 PEFT、多模态 PEFT、PEFT 组合</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<div class="divider">✦ ✦ ✦</div>
+
+<div style="text-align:center; padding: 30px 0;">
+  <p style="font-size: 1.1em; color: #e2e8f0;">🧩 PEFT — 让每个开发者都能微调大模型</p>
+  <p style="color: var(--text2); margin-top: 10px;">
+    从 Adapter 到 LoRA，从 IA3 到 Prompt Tuning，<br>
+    PEFT 生态正在用 <strong>&lt;1% 的参数量</strong> 重新定义大模型微调的成本边界。
+  </p>
+  <p style="color: var(--text3); margin-top: 16px; font-size: 0.9em;">
+    📖 核心论文：
+    <a href="https://arxiv.org/abs/1902.00751" style="color: #fbbf24;">Adapter (2019)</a>
+    &nbsp;·&nbsp; <a href="https://arxiv.org/abs/2106.09685" style="color: #fbbf24;">LoRA (2021)</a>
+    &nbsp;·&nbsp; <a href="https://arxiv.org/abs/2104.08691" style="color: #fbbf24;">Prefix Tuning (2021)</a>
+    &nbsp;·&nbsp; <a href="https://arxiv.org/abs/2205.05638" style="color: #fbbf24;">IA3 (2022)</a>
+    <br>
+    🛠️ 框架：
+    <a href="https://github.com/huggingface/peft" style="color: #fbbf24;">HuggingFace PEFT</a>
+    &nbsp;·&nbsp; <a href="https://github.com/hiyouga/LLaMA-Factory" style="color: #fbbf24;">LLaMA-Factory</a>
+  </p>
+</div>
+
+</div>
+
+<footer>
+  <p>PEFT 完全指南 — 参数高效微调全景解析 | 2025</p>
+  <p style="margin-top: 4px;">教学文档 — 覆盖 Adapter / LoRA / QLoRA / Prefix Tuning / Prompt Tuning / IA3 六大方法</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoRA 微调完全指南 — 原理、使用与实战</title>
+<style>
+  :root {
+    --primary: #a855f7;
+    --primary-dark: #7c3aed;
+    --primary-light: rgba(168,85,247,0.12);
+    --secondary: #06b6d4;
+    --bg: #0c0a1d;
+    --bg2: #1a1730;
+    --bg3: #2d2a4a;
+    --text: #f1f5f9;
+    --text2: #a5b4d0;
+    --text3: #6b7294;
+    --border: #2d2a4a;
+    --code-bg: #141126;
+    --card-bg: #1a1730;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #38bdf8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.85;
+    font-size: 16px;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    background: linear-gradient(135deg, #0c0a1d 0%, #1e1035 40%, #0c0a1d 100%);
+    padding: 70px 20px 50px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(168,85,247,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 50%, rgba(6,182,212,0.04) 0%, transparent 50%);
+  }
+  .hero h1 {
+    font-size: 2.6em;
+    background: linear-gradient(135deg, #c084fc, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  .hero .subtitle {
+    color: var(--text2);
+    font-size: 1.1em;
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .badge-row {
+    margin-top: 22px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.82em;
+    font-weight: 600;
+  }
+  .badge-purple { background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+  .badge-cyan { background: rgba(6,182,212,0.14); color: #67e8f9; border: 1px solid rgba(6,182,212,0.22); }
+  .badge-green { background: rgba(74,222,128,0.12); color: #86efac; border: 1px solid rgba(74,222,128,0.2); }
+  .badge-orange { background: rgba(251,191,36,0.12); color: #fde68a; border: 1px solid rgba(251,191,36,0.2); }
+
+  /* ===== CONTAINER ===== */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  /* ===== TOC ===== */
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 32px;
+    margin: 32px 0;
+  }
+  .toc h2 { font-size: 1.15em; color: var(--primary); margin-bottom: 14px; border: none; padding: 0; }
+  .toc ol { padding-left: 20px; }
+  .toc ol li { margin: 7px 0; color: var(--text2); }
+  .toc ol li a { color: var(--text2); text-decoration: none; transition: color 0.2s; }
+  .toc ol li a:hover { color: var(--primary); }
+  .toc ol li a::before { content: "§ "; color: var(--primary); }
+
+  /* ===== SECTIONS ===== */
+  section { padding: 44px 0; border-bottom: 1px solid rgba(45,42,74,0.6); }
+  section:last-child { border-bottom: none; }
+
+  h2 {
+    font-size: 1.5em;
+    color: var(--primary);
+    margin-bottom: 22px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--bg3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .num {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  h3 {
+    font-size: 1.15em;
+    color: #e2e8f0;
+    margin: 28px 0 12px;
+  }
+  h4 {
+    font-size: 1.02em;
+    color: #cbd5e1;
+    margin: 20px 0 8px;
+  }
+  p { margin: 10px 0; color: var(--text2); }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 5px 0; color: var(--text2); }
+  strong { color: #e2e8f0; }
+
+  /* ===== CODE ===== */
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    background: var(--code-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    color: #e2e8f0;
+    border: 1px solid var(--border);
+  }
+  pre {
+    background: #0d0a1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 14px 0;
+    position: relative;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.86em;
+    line-height: 1.65;
+    color: #e2e8f0;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #141126;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    margin-top: 14px;
+  }
+  .code-header + pre { border-radius: 0 0 10px 10px; margin-top: 0; border-top: none; }
+  .code-lang { font-size: 0.76em; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
+  .code-copy { font-size: 0.76em; color: var(--text3); cursor: pointer; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 14px 0;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .card-grid .card { margin: 0; }
+  .card-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.98em;
+    margin-bottom: 6px;
+  }
+  .card-desc { font-size: 0.88em; color: var(--text2); }
+
+  /* ===== TABLES ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.92em;
+  }
+  thead th {
+    background: var(--bg3);
+    color: var(--text);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  tbody tr:nth-child(even) { background: rgba(45,42,74,0.25); }
+  tbody tr:hover { background: rgba(168,85,247,0.04); }
+
+  /* ===== CALLOUT ===== */
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 1.25em; flex-shrink: 0; margin-top: 2px; }
+  .callout-content { flex: 1; }
+  .callout-content p { margin: 4px 0; }
+  .callout-content p:first-child { margin-top: 0; }
+  .callout-content p:last-child { margin-bottom: 0; }
+  .callout-primary {
+    background: rgba(168,85,247,0.08);
+    border: 1px solid rgba(168,85,247,0.2);
+  }
+  .callout-primary .callout-content p { color: #c084fc; }
+  .callout-success {
+    background: rgba(74,222,128,0.06);
+    border: 1px solid rgba(74,222,128,0.18);
+  }
+  .callout-success .callout-content p { color: #86efac; }
+  .callout-warning {
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.18);
+  }
+  .callout-warning .callout-content p { color: #fde68a; }
+  .callout-danger {
+    background: rgba(248,113,113,0.06);
+    border: 1px solid rgba(248,113,113,0.18);
+  }
+  .callout-danger .callout-content p { color: #fca5a5; }
+  .callout-info {
+    background: rgba(56,189,248,0.06);
+    border: 1px solid rgba(56,189,248,0.18);
+  }
+  .callout-info .callout-content p { color: #7dd3fc; }
+
+  /* ===== STEPS ===== */
+  .step {
+    display: flex;
+    gap: 16px;
+    margin: 18px 0;
+    padding: 16px 20px;
+    background: var(--bg2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .step-num {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9em;
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; }
+  .step-content p { margin: 4px 0; }
+
+  /* ===== MATH ===== */
+  .math-block {
+    background: #0d0a1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 14px 0;
+    text-align: center;
+    font-size: 1.1em;
+    color: #c084fc;
+    line-height: 2;
+  }
+  .math-block .highlight {
+    color: #22d3ee;
+    font-weight: 600;
+  }
+  .math-block .small {
+    font-size: 0.85em;
+    color: var(--text2);
+    display: block;
+    margin-top: 8px;
+  }
+
+  /* ===== DIVIDER ===== */
+  .divider { text-align: center; padding: 12px 0; color: var(--bg3); font-size: 1.4em; letter-spacing: 8px; }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--text3);
+    font-size: 0.88em;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 1.7em; }
+    .card-grid { grid-template-columns: 1fr; }
+    table { font-size: 0.82em; }
+    .step { flex-direction: column; }
+    .step-num { width: 28px; height: 28px; font-size: 0.8em; }
+    .math-block { font-size: 0.95em; padding: 14px 16px; }
+  }
+
+  /* ===== SYNTAX ===== */
+  .kw { color: #c084fc; }
+  .str { color: #fde68a; }
+  .cm { color: #6b7294; font-style: italic; }
+  .fn { color: #86efac; }
+  .num { color: #67e8f9; }
+  .prop { color: #7dd3fc; }
+  .tag { color: #fca5a5; }
+
+  /* ===== DIAGRAM ===== */
+  .diagram-box {
+    background: #0d0a1a;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px;
+    margin: 18px 0;
+    text-align: center;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.88em;
+    line-height: 2;
+    overflow-x: auto;
+  }
+  .diagram-box .arrow { color: var(--primary); }
+  .diagram-box .label { color: var(--text2); }
+  .diagram-box .highlight-box { color: #22d3ee; font-weight: 600; }
+  .diagram-box .comment { color: #6b7294; }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <h1>🧩 LoRA 微调完全指南</h1>
+  <p class="subtitle">Low-Rank Adaptation — 从数学原理到工程实战，彻底理解大模型高效微调的核心技术</p>
+  <div class="badge-row">
+    <span class="badge badge-purple">LoRA / QLoRA</span>
+    <span class="badge badge-cyan">PEFT</span>
+    <span class="badge badge-green">LLaMA-Factory</span>
+    <span class="badge badge-orange">ACL 2024</span>
+    <span class="badge badge-purple">39,000+ 引用</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===== TOC ===== -->
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ol>
+    <li><a href="#intro">LoRA 是什么 — 核心思想</a></li>
+    <li><a href="#math">数学原理 — 低秩分解</a></li>
+    <li><a href="#why">为什么 LoRA 有效</a></li>
+    <li><a href="#parameters">LoRA 核心参数详解</a></li>
+    <li><a href="#variants">LoRA 的变体家族</a></li>
+    <li><a href="#qlo">QLoRA — 4-bit 量化的极致优化</a></li>
+    <li><a href="#usage">LoRA 使用方法（三步走）</a></li>
+    <li><a href="#lora-vs-full">LoRA vs 全参数微调</a></li>
+    <li><a href="#production">生产环境最佳实践</a></li>
+    <li><a href="#pitfalls">常见陷阱与调试</a></li>
+    <li><a href="#advanced">进阶：合并、部署与多 LoRA</a></li>
+    <li><a href="#faq">常见问题 FAQ</a></li>
+  </ol>
+</div>
+
+<!-- ======================================================================== -->
+<!-- 1. INTRO -->
+<!-- ======================================================================== -->
+<section id="intro">
+  <h2><span class="num">1</span> LoRA 是什么 — 核心思想</h2>
+
+  <h3>📌 一句话概括</h3>
+  <p><strong>LoRA（Low-Rank Adaptation，低秩适配）</strong> 是一种<strong>参数高效微调（PEFT）</strong>方法。它在不修改原始模型权重的前提下，向模型中注入少量可训练的低秩矩阵，仅更新这些新增参数即可完成微调。</p>
+
+  <div class="diagram-box">
+    <span class="label">传统微调：</span><br>
+    <span class="comment">冻结前</span>  W (16GB) <span class="arrow">→</span> W' (16GB)  <span class="comment">← 改全部参数，存一整套新权重</span><br><br>
+    <span class="label highlight-box">LoRA 微调：</span><br>
+    <span class="comment">冻结</span>  W (16GB)  <span class="comment">不动</span>  +  <span class="highlight-box">A·B</span> (<span class="highlight-box">~16MB</span>)  <span class="comment">← 只存一个小增量矩阵</span><br>
+    <span class="arrow">h = W·x + A·B·x</span><br>
+    <span class="label">存储节省: <span class="highlight-box">~1000×</span></span>
+  </div>
+
+  <h3>🧠 直觉理解</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">📐 降维打击</div>
+      <div class="card-desc">把「全尺寸」的权重更新矩阵 ΔW（如 4096×4096）分解为两个「瘦小」矩阵 A×B（如 4096×8 + 8×4096），参数量从 1600 万降到 6.5 万</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔒 冻结基座</div>
+      <div class="card-desc">原始模型权重 W 完全冻结，不参与梯度更新。只需要优化 0.1%-1% 的新增参数</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧩 即插即用</div>
+      <div class="card-desc">LoRA 权重独立于基座模型存储。可以训练多个 LoRA 模块（金融版、法律版、医疗版）自由切换</div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚡ 显存友好</div>
+      <div class="card-desc">不需要保存优化器状态（Adam 的动量和方差）的完整副本，显存需求从 120GB（全参 7B）降到 16GB（LoRA）</div>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">📌</span>
+    <div class="callout-content">
+      <p><strong>生态地位</strong>：LoRA 论文（<em>Hu et al., ICLR 2022</em>）已有 <strong>39,000+ 次引用</strong>，是 PEFT 领域引用最高的方法之一。几乎所有主流微调框架（LLaMA-Factory、HuggingFace PEFT、Unsloth）都将 LoRA 作为默认方案。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 2. MATH -->
+<!-- ======================================================================== -->
+<section id="math">
+  <h2><span class="num">2</span> 数学原理 — 低秩分解</h2>
+
+  <h3>🔢 公式推导</h3>
+
+  <div class="math-block">
+    <strong>全参数微调</strong><br>
+    h = <strong>W₀</strong>·x + <strong>ΔW</strong>·x<br>
+    <span class="small">W₀ ∈ ℝ<sup>d×k</sup>（冻结），ΔW ∈ ℝ<sup>d×k</sup>（全参数训练）</span>
+  </div>
+
+  <div class="math-block">
+    <strong>LoRA 微调</strong><br>
+    h = <strong>W₀</strong>·x + <strong>A·B</strong>·x<br>
+    <span class="small">W₀ ∈ ℝ<sup>d×k</sup>（冻结），A ∈ ℝ<sup>d×r</sup>，B ∈ ℝ<sup>r×k</sup>，r ≪ min(d, k)</span>
+  </div>
+
+  <p>关键在于 <strong>A·B 的秩 ≤ r</strong>，而 r 通常取 4-32，远小于 d 和 k（通常是 4096 级别）。</p>
+
+  <div class="callout callout-primary">
+    <span class="callout-icon">🧮</span>
+    <div class="callout-content">
+      <p><strong>参数量对比</strong>（以 LLaMA 7B 的 QKV 投影为例）：</p>
+      <p>d = 4096, k = 4096, r = 8</p>
+      <p>ΔW 参数量: 4096 × 4096 = <strong>16,777,216</strong>（全参）</p>
+      <p>A·B 参数量: 4096×8 + 8×4096 = <strong>65,536</strong>（LoRA）</p>
+      <p><strong>节省因子: 256×</strong></p>
+    </div>
+  </div>
+
+  <h3>🔡 初始化策略</h3>
+  <p>LoRA 的初始化方式对训练收敛有重要影响：</p>
+  <table>
+    <thead>
+      <tr><th>矩阵</th><th>初始化方法</th><th>原因</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>A</strong>（降维，d→r）</td><td>随机高斯初始化（Kaiming Uniform）</td><td>打破对称性，让不同神经元学习不同特征</td></tr>
+      <tr><td><strong>B</strong>（升维，r→k）</td><td><strong>全零初始化</strong></td><td>确保训练开始时 A·B = 0，输出等于原始模型输出，不破坏已有能力</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🔀 缩放因子 α</h3>
+  <p>LoRA 前向传播的完整形式为：</p>
+  <div class="math-block">
+    h = W₀·x + <span class="highlight">(α / r)</span> · A·B · x<br>
+    <span class="small">α 是超参数，通常设为 r × 2，不随 r 增加而增加，使学习率对 r 的选择更鲁棒</span>
+  </div>
+
+  <p>这个缩放因子 α/r 在推理时可以合并到 A·B 中：</p>
+  <div class="math-block">
+    W<sub>merged</sub> = W₀ + (α / r) · A·B<br>
+    <span class="small">合并后推理速度 = 原始模型速度，零额外延迟</span>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 3. WHY -->
+<!-- ======================================================================== -->
+<section id="why">
+  <h2><span class="num">3</span> 为什么 LoRA 有效</h2>
+
+  <h3>🔬 背后的关键研究发现</h3>
+
+  <div class="card">
+    <div class="card-title">🧬 1. 模型的"本征维度"很低</div>
+    <div class="card-desc">
+      <p>LoRA 论文（Hu et al., 2021）发现预训练语言模型的<strong>本征维度（Intrinsic Dimension）</strong>非常低——这意味着模型的参数虽多（千亿级），但真正有效的「自由度」远小于参数数量。只需要在低维子空间中微调即可覆盖绝大多数有效的模型适配方向。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎯 2. 模型更新的"方向偏好"集中在少数子空间</div>
+    <div class="card-desc">
+      <p>后续研究（<em>Aghajanyan et al., 2021; GAIA, 2023</em>）通过 SVD 分解分析发现，全参微调产生的 ΔW 矩阵的奇异值分布呈现<strong>长尾分布</strong>——前 r 个奇异值占了总能量的 90%+，剩余的约 99.9% 的奇异值几乎为零。LoRA 正是抓住了这个前 r 个主要方向。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 3. LoRA 聚焦于注意力机制的更新</div>
+    <div class="card-desc">
+      <p>实验表明，仅对 Self-Attention 层的 Q 和 V 投影应用 LoRA 即可达到接近全参微调的效果。这是因为注意力层是模型<strong>行为改变</strong>的关键部位——改变注意力模式比改变 FFN 知识更能影响模型的输出风格和能力。现代实践倾向于将 LoRA 应用到 <strong>所有线性层</strong>（all），以获得最佳效果。</p>
+    </div>
+  </div>
+
+  <h3>📊 效果量化</h3>
+  <table>
+    <thead>
+      <tr><th>指标</th><th>全参数微调</th><th>LoRA (r=8, all)</th><th>LoRA 占比</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>MMLU 得分（LLaMA 7B → Alpaca）</td><td>42.3</td><td>41.8</td><td><strong>98.8%</strong></td></tr>
+      <tr><td>GSM8K（数学推理）</td><td>14.6</td><td>14.2</td><td><strong>97.3%</strong></td></tr>
+      <tr><td>HumanEval（代码生成）</td><td>12.8</td><td>12.4</td><td><strong>96.9%</strong></td></tr>
+      <tr><td>训练显存（7B）</td><td>~120 GB</td><td>~16 GB</td><td><strong>13.3%</strong></td></tr>
+      <tr><td>存储空间</td><td>~14 GB</td><td>~16 MB</td><td><strong>0.1%</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-success">
+    <span class="callout-icon">✅</span>
+    <div class="callout-content">
+      <p>LoRA 以 <strong>0.1%</strong> 的参数量和 <strong>13%</strong> 的显存，达到了全参数微调 <strong>97%+</strong> 的效果——这就是它成为行业标准的原因。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 4. PARAMETERS -->
+<!-- ======================================================================== -->
+<section id="parameters">
+  <h2><span class="num">4</span> LoRA 核心参数详解</h2>
+
+  <h3>⚙️ 完整的 LoRA 参数配置</h3>
+  <pre><code># LLaMA-Factory LoRA 配置示例
+finetuning_type: lora
+
+# ── LoRA 核心参数 ──────────────────────────────
+lora_rank: 8              # r —— 秩，核心参数
+lora_alpha: 16            # α —— 缩放因子（通常 = 2× rank）
+lora_dropout: 0.05        # Dropout 概率
+lora_target: all          # 目标模块（all / q_proj,v_proj / custom）
+loraplus_lr_ratio: null   # LoRA+ 学习率比例（默认 null，启用可加速）
+use_dora: false           # Weight-Decomposed LoRA
+use_rslora: false         # Rank-Stabilized LoRA
+
+# ── 训练参数（LoRA 特有的调优）────────────────────
+learning_rate: 2.0e-4     # LoRA 学习率 ≈ 全参的 10 倍
+lr_scheduler_type: cosine
+warmup_ratio: 0.05</code></pre>
+
+  <h3>🔍 参数详解</h3>
+
+  <div class="card">
+    <div class="card-title"><code>lora_rank</code> — 秩（最重要的参数）</div>
+    <div class="card-desc">
+      <p>控制 LoRA 的"容量"：</p>
+      <table>
+        <thead>
+          <tr><th>rank</th><th>参数量（7B, all）</th><th>效果</th><th>适用场景</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>4</td><td>~4 MB</td><td>中等，防止过拟合</td><td>极小数据集（&lt;100 条）</td></tr>
+          <tr><td><strong>8</strong></td><td><strong>~8 MB</strong></td><td><strong>推荐，最佳平衡</strong></td><td><strong>大多数场景 ✅</strong></td></tr>
+          <tr><td>16</td><td>~16 MB</td><td>较强表达力</td><td>复杂任务 / 大数据集</td></tr>
+          <tr><td>32</td><td>~32 MB</td><td>强，逼近全参</td><td>最大容量需求</td></tr>
+          <tr><td>64+</td><td>~64 MB+</td><td>边际收益递减</td><td>极少需要</td></tr>
+        </tbody>
+      </table>
+      <p><strong>经验法则</strong>：rank 从 8 开始，小数据集用 4-8，大数据集用 16-32。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>lora_target</code> — 目标模块</div>
+    <div class="card-desc">
+      <p>指定对哪些层应用 LoRA：</p>
+      <table>
+        <thead>
+          <tr><th>target</th><th>作用范围</th><th>参数量比</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>q_proj,v_proj</code>（经典组合）</td><td>仅 Attention 的查询和值投影</td><td>~25%</td></tr>
+          <tr><td><code>q_proj,k_proj,v_proj,o_proj</code></td><td>全部 Attention 投影</td><td>~50%</td></tr>
+          <tr><td><code>all</code>（推荐 ✅）</td><td>全部线性层（含 FFN）</td><td>100%</td></tr>
+        </tbody>
+      </table>
+      <p><strong>推荐</strong>：现代实践始终使用 <code>all</code>，参数量不大但效果明显更好。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>lora_dropout</code> — 丢弃率</div>
+    <div class="card-desc">
+      <p>在 LoRA 层前应用 Dropout 防止过拟合：<br>
+      <code>0.0</code>: 无 dropout（大数据集）<br>
+      <code>0.05</code>: 轻量防过拟合（推荐 ✅）<br>
+      <code>0.1</code>: 强防过拟合（极小数据集）<br>
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>loraplus_lr_ratio</code> — LoRA+ 学习率比</div>
+    <div class="card-desc">
+      <p>LoRA+（<em>Hayou et al., 2024</em>）提出了一个发现：矩阵 A 和矩阵 B 应该有不同的学习率。<br>
+      将 <code>loraplus_lr_ratio</code> 设为 16（即 B 的学习率是 A 的 16 倍）可加速收敛 2 倍。<br>
+      <strong>推荐</strong>：<code>loraplus_lr_ratio: 16</code></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>learning_rate</code> — LoRA 的学习率策略</div>
+    <div class="card-desc">
+      <p>LoRA 的学习率通常比全参数微调 <strong>高 10 倍</strong>：</p>
+      <table>
+        <thead>
+          <tr><th>场景</th><th>推荐学习率</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>LoRA（rank 8-16）</td><td>1e-4 到 3e-4</td></tr>
+          <tr><td>QLoRA（4-bit）</td><td>1e-4 到 2e-4</td></tr>
+          <tr><td>全参数微调</td><td>1e-5 到 5e-5</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 5. VARIANTS -->
+<!-- ======================================================================== -->
+<section id="variants">
+  <h2><span class="num">5</span> LoRA 的变体家族</h2>
+
+  <p>LoRA 催生了大量改进变体，以下是 LLaMA-Factory 中支持的主要变体：</p>
+
+  <table>
+    <thead>
+      <tr><th>变体</th><th>年份</th><th>核心改进</th><th>效果提升</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>DoRA</strong></td>
+        <td>2024</td>
+        <td>将权重分解为<strong>幅度（magnitude）</strong>和<strong>方向（direction）</strong>，LoRA 只更新方向部分，幅度单独学习</td>
+        <td>+1-3% 在多数基准上</td>
+      </tr>
+      <tr>
+        <td><strong>LoRA+</strong></td>
+        <td>2024</td>
+        <td>A 和 B 矩阵使用不同的学习率（B 的学习率是 A 的 16 倍），加速收敛</td>
+        <td>训练速度快 ~2 倍</td>
+      </tr>
+      <tr>
+        <td><strong>rsLoRA</strong></td>
+        <td>2023</td>
+        <td>修正缩放因子为 1/√r，使不同 rank 的效果可比，rank 越大效果越好</td>
+        <td>大 rank 场景稳定提升</td>
+      </tr>
+      <tr>
+        <td><strong>PiSSA</strong></td>
+        <td>2024</td>
+        <td>用 SVD 分解的<strong>主奇异分量</strong>初始化 A 和 B（而非随机）</td>
+        <td>+2-5%，收敛更快</td>
+      </tr>
+      <tr>
+        <td><strong>LoftQ</strong></td>
+        <td>2024</td>
+        <td>在 QLoRA 中交替优化量化误差和 LoRA 初始化</td>
+        <td>QLoRA 场景 +1-2%</td>
+      </tr>
+      <tr>
+        <td><strong>OFT</strong></td>
+        <td>2023</td>
+        <td>用正交矩阵替换低秩矩阵，保持特征空间的距离</td>
+        <td>特定任务效果好</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div class="callout-content">
+      <p><strong>推荐组合</strong>：大多数场景用 <code>LoRA (rank=8, all, alpha=16, dropout=0.05)</code> 即可。如果追求极致效果，可以尝试 <code>LoRA+</code>（加速）+ <code>DoRA</code>（提点）。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 6. QLoRA -->
+<!-- ======================================================================== -->
+<section id="qlo">
+  <h2><span class="num">6</span> QLoRA — 4-bit 量化的极致优化</h2>
+
+  <h3>📦 什么是 QLoRA</h3>
+  <p><strong>QLoRA（Quantized LoRA）</strong> 由 <em>Dettmers et al., 2023</em> 提出，在 LoRA 的基础上进一步引入了模型权重的 <strong>4-bit 量化</strong>，将显存需求再降低 4 倍。</p>
+
+  <h3>🏗️ 架构</h3>
+  <div class="diagram-box">
+    <span class="highlight-box">基座模型（4-bit NormalFloat）</span><br>
+    ┌────────────────────────────┐<br>
+    │  W_4bit  &lt;-  NF4 量化     │  ← 4-bit 存储，节省 75% 显存<br>
+    │  ┌─────────────────┐      │<br>
+    │  │  W_4bit · x  →  │      │<br>
+    │  │  + (α/r)·A·B·x  │      │  ← LoRA 增量（16-bit 精度）<br>
+    │  │  dequantize     │      │  ← 计算时反量化为 bf16<br>
+    │  └─────────────────┘      │<br>
+    └────────────────────────────┘<br>
+    <span class="highlight-box">LoRA 适配器（16-bit bf16）</span><br>
+    <span class="comment">精度：前向用 4-bit 存储 + 16-bit 计算 | 反向只更新 LoRA</span>
+  </div>
+
+  <h3>📊 QLoRA 的核心技术贡献</h3>
+
+  <table>
+    <thead>
+      <tr><th>技术</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>NF4 量化</strong></td><td>NormalFloat 4-bit——为神经网络权重分布（零中心、钟型）量身定制的量化方法，比均匀量化误差小 30%</td></tr>
+      <tr><td><strong>双重量化</strong></td><td>对量化常数再做一次量化，额外节省 0.5 bit/参数</td></tr>
+      <tr><td><strong>分页优化器</strong></td><td>当 GPU 显存溢出时，将优化器状态换入 CPU 内存，避免 OOM</td></tr>
+    </tbody>
+  </table>
+
+  <h3>💾 显存需求对比（7B 模型）</h3>
+  <table>
+    <thead>
+      <tr><th>方法</th><th>模型精度</th><th>训练显存</th><th>适用 GPU</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>全参数微调</td><td>bf16</td><td>~120 GB</td><td>2×A100 (80GB)</td></tr>
+      <tr><td>LoRA</td><td>bf16</td><td>~16 GB</td><td>RTX 4090 / A10</td></tr>
+      <tr><td><strong>QLoRA (4-bit)</strong></td><td>NF4</td><td><strong>~6 GB</strong></td><td><strong>RTX 2060 / DGX Spark ✅</strong></td></tr>
+      <tr><td>QLoRA (4-bit, 70B)</td><td>NF4</td><td>~48 GB</td><td>单卡 A100 (80GB)</td></tr>
+    </tbody>
+  </div>
+
+  <div class="callout callout-success">
+    <span class="callout-icon">🚀</span>
+    <div class="callout-content">
+      <p><strong>QLoRA 的意义</strong>：让一块 <strong>8GB 显存</strong> 的消费级 GPU 也能微调 <strong>70 亿参数</strong> 的大模型，将大模型微调的硬件门槛从 <strong>万美元级</strong> 降到了 <strong>千元级</strong>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 7. USAGE -->
+<!-- ======================================================================== -->
+<section id="usage">
+  <h2><span class="num">7</span> LoRA 使用方法（三步走）</h2>
+
+  <h3>📥 第一步：安装与加载</h3>
+
+  <h4>使用 HuggingFace PEFT（原生方式）</h4>
+  <pre><code><span class="cm"># 安装</span>
+pip install peft transformers accelerate bitsandbytes
+
+<span class="cm"># 加载基座模型并应用 LoRA</span>
+<span class="kw">from</span> transformers <span class="kw">import</span> AutoModelForCausalLM
+<span class="kw">from</span> peft <span class="kw">import</span> LoraConfig, get_peft_model, TaskType
+
+model = AutoModelForCausalLM.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>)
+
+lora_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    r=<span class="num">8</span>,
+    lora_alpha=<span class="num">16</span>,
+    lora_dropout=<span class="num">0.05</span>,
+    target_modules=[<span class="str">"q_proj"</span>, <span class="str">"k_proj"</span>, <span class="str">"v_proj"</span>, <span class="str">"o_proj"</span>,
+                    <span class="str">"gate_proj"</span>, <span class="str">"up_proj"</span>, <span class="str">"down_proj"</span>],
+)
+
+model = get_peft_model(model, lora_config)
+<span class="fn">print</span>(model.print_trainable_parameters())
+<span class="cm"># Trainable params: 8,388,608 || All params: 7,003,674,624 || Trainable%: 0.1198</span></code></pre>
+
+  <h4>使用 LLaMA-Factory（推荐，零代码）</h4>
+  <pre><code><span class="cm"># 命令行</span>
+llamafactory-cli train config/train_qwen_qlora.yaml
+
+<span class="cm"># 或 Web UI</span>
+llamafactory-cli webui</code></pre>
+
+  <p>LLaMA-Factory 的 YAML 配置：</p>
+  <pre><code>finetuning_type: lora
+quantization_bit: 4           <span class="cm"># 启用 QLoRA</span>
+lora_target: all
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05</code></pre>
+
+  <h3>🏋️ 第二步：训练</h3>
+  <pre><code><span class="kw">from</span> transformers <span class="kw">import</span> TrainingArguments, Trainer
+
+training_args = TrainingArguments(
+    output_dir=<span class="str">"./qwen-lora-financial"</span>,
+    per_device_train_batch_size=<span class="num">2</span>,
+    gradient_accumulation_steps=<span class="num">4</span>,
+    learning_rate=<span class="num">2e-4</span>,
+    num_train_epochs=<span class="num">5</span>,
+    bf16=<span class="num">True</span>,
+    logging_steps=<span class="num">10</span>,
+    save_strategy=<span class="str">"epoch"</span>,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+)
+
+trainer.train()</code></pre>
+
+  <h3>💾 第三步：保存与加载</h3>
+  <pre><code><span class="cm"># 保存 LoRA 权重（仅 ~16MB，不是 ~14GB）</span>
+model.save_pretrained(<span class="str">"./lora-weights"</span>)
+
+<span class="cm"># 加载 LoRA 权重</span>
+<span class="kw">from</span> peft <span class="kw">import</span> PeftModel
+
+base_model = AutoModelForCausalLM.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>)
+model = PeftModel.from_pretrained(base_model, <span class="str">"./lora-weights"</span>)
+
+<span class="cm"># 推理</span>
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>)
+inputs = tokenizer(<span class="str">"什么是 LPR 利率？"</span>, return_tensors=<span class="str">"pt"</span>)
+outputs = model.generate(**inputs, max_new_tokens=<span class="num">256</span>)</code></pre>
+
+  <div class="callout callout-warning">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-content">
+      <p><strong>重要</strong>：加载 LoRA 权重时，基座模型必须与训练时的基座模型<strong>完全一致</strong>（同一个模型名、同一次下载）。不同的 checkpoint 或微调版本不兼容。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 8. COMPARISON -->
+<!-- ======================================================================== -->
+<section id="lora-vs-full">
+  <h2><span class="num">8</span> LoRA vs 全参数微调</h2>
+
+  <h3>⚖️ 全面对比</h3>
+  <table>
+    <thead>
+      <tr><th>维度</th><th>全参数微调</th><th>LoRA</th><th>QLoRA</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>训练参数量</strong></td><td>100%（70 亿）</td><td>~0.1%-1%</td><td>~0.1%-1%</td></tr>
+      <tr><td><strong>训练显存（7B）</strong></td><td>~120 GB</td><td>~16 GB</td><td><strong>~6 GB</strong></td></tr>
+      <tr><td><strong>存储空间</strong></td><td>~14 GB</td><td>~16 MB</td><td>~16 MB</td></tr>
+      <tr><td><strong>训练速度（相对）</strong></td><td>1×（基线）</td><td>~2-3× 更快</td><td>~1.5-2× 更快</td></tr>
+      <tr><td><strong>推理速度</strong></td><td>基线</td><td>与基线相同（合并后）</td><td>与基线相同</td></tr>
+      <tr><td><strong>多任务能力</strong></td><td>每个任务一个完整模型</td><td>一个基座 + N 个 LoRA</td><td>一个基座 + N 个 LoRA</td></tr>
+      <tr><td><strong>切换任务</strong></td><td>加载不同模型文件</td><td>秒级切换 LoRA 权重</td><td>秒级切换 LoRA 权重</td></tr>
+      <tr><td><strong>模型效果（相对）</strong></td><td>100%</td><td>97-99%</td><td>96-98%</td></tr>
+      <tr><td><strong>过拟合风险</strong></td><td>低（大数据集时）</td><td>较低（参数量少）</td><td>较低</td></tr>
+      <tr><td><strong>硬件门槛</strong></td><td>A100/H100 (80GB)</td><td>RTX 3090/4090</td><td><strong>RTX 2060 8GB ✅</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>📈 何时选哪个</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">✅ 用 LoRA/QLoRA</div>
+      <div class="card-desc">
+        • 消费级 GPU 训练（RTX 2060-4090）<br>
+        • 数据集 &lt; 10 万条<br>
+        • 需要快速迭代多个领域模型<br>
+        • 需要同时服务多个任务<br>
+        • 微调 7B-70B 级别模型
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">✅ 用全参数微调</div>
+      <div class="card-desc">
+        • 拥有 A100/H100 集群<br>
+        • 数据集 &gt; 10 万条<br>
+        • 需要最高精度（0.5-1% 都关键）<br>
+        • 从头预训练/持续预训练<br>
+        • 微调小模型（&lt;1B）
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 9. PRODUCTION -->
+<!-- ======================================================================== -->
+<section id="production">
+  <h2><span class="num">9</span> 生产环境最佳实践</h2>
+
+  <h3>📋 参数推荐速查表</h3>
+  <table>
+    <thead>
+      <tr><th>场景</th><th>rank</th><th>target</th><th>lr</th><th>dropout</th><th>quant</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>极小数据集（&lt;100 条）</td><td>4</td><td>all</td><td>1e-4</td><td>0.1</td><td>4-bit ✅</td></tr>
+      <tr><td>小数据集（100-1k）</td><td>8</td><td>all</td><td>2e-4</td><td>0.05</td><td>4-bit ✅</td></tr>
+      <tr><td>中等数据集（1k-10k）</td><td>8-16</td><td>all</td><td>2e-4</td><td>0.05</td><td>可选</td></tr>
+      <tr><td>大数据集（10k+）</td><td>16-32</td><td>all</td><td>1e-4</td><td>0.0</td><td>可选</td></tr>
+      <tr><td>代码/SFT 微调</td><td>16</td><td>all</td><td>2e-4</td><td>0.05</td><td>可选</td></tr>
+      <tr><td>RLHF/DPO 偏好对齐</td><td>8</td><td>all</td><td>1e-5</td><td>0.0</td><td>可选</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🌟 黄金建议</h3>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <p><strong>从 rank=8 开始</strong> — 80% 的场景 rank=8 就足够。只在效果不达标时升到 16-32。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <p><strong>target=all 是最优选择</strong> — 不要只用 q_proj,v_proj。对所有线性层应用 LoRA 带来的参数量增加很小但效果提升明显。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <p><strong>学习率用 2e-4</strong> — 这是 LoRA 最常用的学习率。如果 loss 震荡，降到 1e-4；如果收敛太慢，升到 3e-4。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <p><strong>训练轮数 3-5 轮</strong> — LoRA 更容易过拟合，不需要像全参那样训 10+ 轮。监控验证 loss，在验证 loss 不再下降时停止。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <p><strong>训练后合并权重</strong> — 推理时 LoRA 可以合并入基座权重，推理速度 = 原始模型速度。LLaMA-Factory 的 <code>llamafactory-cli export</code> 会自动完成合并。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 10. PITFALLS -->
+<!-- ======================================================================== -->
+<section id="pitfalls">
+  <h2><span class="num">10</span> 常见陷阱与调试</h2>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 1：rank 太高导致过拟合</strong></p>
+      <p><strong>现象</strong>：训练 loss 很低，但评估 loss 或实际对话效果很差。</p>
+      <p><strong>原因</strong>：rank 过大（32+）+ 数据太少，LoRA 把噪声也学进去了。</p>
+      <p><strong>解决</strong>：降 rank（4-8）、增 dropout（0.1）、降学习率。</p>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 2：基座模型不匹配</strong></p>
+      <p><strong>现象</strong>：加载 LoRA 权重时报 shape mismatch 错误。</p>
+      <p><strong>原因</strong>：基座模型版本不同（如 Qwen2.5 vs Qwen2）或从不同来源下载的 checkpoint 不一样。</p>
+      <p><strong>解决</strong>：保存 LoRA 时同时记录 base_model_name_or_path，加载时用完全相同的模型 ID 和下载来源。</p>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 3：LoRA 权重未合并，推理速度慢</strong></p>
+      <p><strong>现象</strong>：推理时每步都要额外计算 A·B，速度变慢 2-3 倍。</p>
+      <p><strong>解决</strong>：用 <code>model = model.merge_and_unload()</code> 或 LLaMA-Factory 的 export 命令合并权重。合并后推理速度与原始模型一致。</p>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 4：α/r 缩放因子设置不当</strong></p>
+      <p><strong>现象</strong>：rank 从 8 改为 16 后效果反而下降。</p>
+      <p><strong>原因</strong>：保持 α=16 不变时增大 rank，LoRA 更新幅度缩小了。</p>
+      <p><strong>解决</strong>：增大 rank 时也等比增大 α（α = 2×rank），或使用 <code>use_rslora: true</code>。</p>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 5：QLoRA 下 bitsandbytes 版本不匹配</strong></p>
+      <p><strong>现象</strong>：4-bit 量化时报错或加载失败。</p>
+      <p><strong>原因</strong>：bitsandbytes 版本与 CUDA/PyTorch 版本不兼容。</p>
+      <p><strong>解决</strong>：匹配 CUDA 版本安装 <code>pip install bitsandbytes --index-url https://download.pytorch.org/whl/cu124</code></p>
+    </div>
+  </div>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">🔥</span>
+    <div class="callout-content">
+      <p><strong>陷阱 6：灾难性遗忘（Catastrophic Forgetting）</strong></p>
+      <p><strong>现象</strong>：模型在目标任务上变好了，但丢失了原有的通用能力。</p>
+      <p><strong>原因</strong>：LoRA 虽然参数少但仍然会过拟合到新任务。</p>
+      <p><strong>解决</strong>：在训练数据中混入 20-30% 的原始通用数据；降低学习率；减少训练轮数。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 11. ADVANCED -->
+<!-- ======================================================================== -->
+<section id="advanced">
+  <h2><span class="num">11</span> 进阶：合并、部署与多 LoRA</h2>
+
+  <h3>🔗 合并 LoRA 权重到基座模型</h3>
+  <pre><code><span class="cm"># 方法 1：合并并卸载 LoRA（推理时零额外开销）</span>
+model = model.merge_and_unload()
+model.save_pretrained(<span class="str">"./merged-model"</span>)
+tokenizer.save_pretrained(<span class="str">"./merged-model"</span>)
+
+<span class="cm"># 方法 2：使用 LLaMA-Factory 导出（自动优化）</span>
+llamafactory-cli export config/export_ollama.yaml</code></pre>
+
+  <h3>🎭 多 LoRA 动态切换（服务架构）</h3>
+  <p>用 vLLM 部署时，支持<strong>多个 LoRA 权重并行加载</strong>：</p>
+  <pre><code><span class="cm"># 启动 vLLM 服务，加载多个 LoRA</span>
+python -m vllm.entrypoints.openai.api_server \
+    --model Qwen/Qwen2.5-7B-Instruct \
+    --enable-lora \
+    --max-lora-rank 32 \
+    --lora-modules \
+        financial=/path/to/financial-lora \
+        legal=/path/to/legal-lora \
+        medical=/path/to/medical-lora
+
+<span class="cm"># 客户端请求时选择 LoRA</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "financial",
+    "messages": [{"role": "user", "content": "什么是 Basel III？"}]
+  }'</span></code></pre>
+
+  <h3>🦙 合并后部署到 Ollama</h3>
+  <pre><code><span class="cm"># 1. 在 LLaMA-Factory 中导出为 GGUF</span>
+llamafactory-cli export config/export_ollama.yaml
+
+<span class="cm"># 2. 创建 Ollama 模型</span>
+ollama create qwen-financial -f output/qwen-financial-gguf/Modelfile
+
+<span class="cm"># 3. 直接运行</span>
+ollama run qwen-financial
+
+<span class="cm"># 4. 或通过 API 调用</span>
+curl http://localhost:11434/api/chat \
+  -d <span class="str">'{"model": "qwen-financial", "messages": [{"role": "user", "content": "什么是金融风险管理？"}]}'</span></code></pre>
+
+  <h3>📂 推荐的项目文件结构</h3>
+  <pre><code>project/
+├── base_model/          ← 基座模型（只读，可共享）
+├── data/
+│   ├── train.json       ← 训练数据
+│   └── eval.json        ← 评估数据
+├── config/
+│   └── train.yaml       ← LLaMA-Factory 配置
+├── lora_weights/
+│   ├── financial/       ← 金融 LoRA（~16MB）
+│   ├── legal/           ← 法律 LoRA
+│   └── medical/         ← 医疗 LoRA
+├── merged/
+│   └── financial-gguf/  ← 合并后 GGUF 模型
+└── scripts/
+    ├── train.sh
+    ├── export.sh
+    └── serve.sh</code></pre>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12. FAQ -->
+<!-- ======================================================================== -->
+<section id="faq">
+  <h2><span class="num">12</span> 常见问题 FAQ</h2>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: LoRA 和 Adapter 有什么区别？</strong></div>
+    <div class="card-desc">
+      <p>Adapter 在 Transformer 层之间插入新的 bottleneck 层，<strong>改变模型架构</strong>（推理时需要串行计算 adapter）。LoRA 则是<strong>并行</strong>地向现有权重添加低秩更新，不改变模型架构。因此 LoRA 合并后推理无额外开销，而 Adapter 始终有。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: LoRA 权重可以跨基座模型使用吗？</strong></div>
+    <div class="card-desc">
+      <p><strong>不可以</strong>。LoRA 权重与基座模型严格绑定——它记录了「在 W₀ 的基础上加多少偏差」，换了 W₀ 就没有意义了。就像一个补丁只适用于特定版本的程序，换了不同版本强行打补丁会报错或产生错误结果。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: LoRA 能用于多模态模型（如 Qwen2.5-VL）吗？</strong></div>
+    <div class="card-desc">
+      <p>完全可以。LLaMA-Factory 支持对 <strong>LLaVA、Qwen2.5-VL、InternVL</strong> 等视觉语言模型应用 LoRA。视觉模型的 visual encoder 的线性投影层也可以作为 <code>lora_target</code> 的一部分来微调。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: LoRA 的 rank 设为 0 会怎样？</strong></div>
+    <div class="card-desc">
+      <p>rank=0 意味着 A 和 B 矩阵的维度为 0，不添加任何可训练参数。此时相当于<strong>零样本评估</strong>——模型不做任何微调，直接推理。这在实验中有用——可以作为基线对比验证 LoRA 是否真正发挥了作用。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: 一张 8GB 的 RTX 2060 能微调多大的模型？</strong></div>
+    <div class="card-desc">
+      <p>用 QLoRA 4-bit：</p>
+      <ul>
+        <li><strong>7B 模型</strong>（如 Qwen2.5-7B、LLaMA 3-8B）→ ✅ 没问题（~6GB）</li>
+        <li><strong>14B 模型</strong>（如 Qwen2.5-14B）→ ⚠️ 勉强可试（~12GB，需更小 batch）</li>
+        <li><strong>30B+ 模型</strong>→ ❌ 显存不够</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><strong>Q: LoRA 训练需要多少数据？</strong></div>
+    <div class="card-desc">
+      <p>LoRA 在<strong>少数据场景</strong>下特别有优势：</p>
+      <ul>
+        <li><strong>10-100 条</strong>：可以看到领域适应效果（如本教程）</li>
+        <li><strong>100-1000 条</strong>：效果明显，大多数场景够用</li>
+        <li><strong>1k-10k 条</strong>：接近全参数微调的效果</li>
+        <li><strong>10k+ 条</strong>：可以考虑全参数或更大的 rank</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<div class="divider">✦ ✦ ✦</div>
+
+<div style="text-align:center; padding: 30px 0;">
+  <p style="font-size: 1.1em; color: #e2e8f0;">🧩 LoRA — 让大模型微调从「奢侈品」变成「日用品」</p>
+  <p style="color: var(--text2); margin-top: 10px;">
+    从数学原理到工程实践，从单卡实验到生产部署，<br>
+    LoRA 以 <strong>0.1% 的参数量</strong> 撬动了 <strong>97%+ 的效果</strong>。
+  </p>
+  <p style="color: var(--text3); margin-top: 16px; font-size: 0.9em;">
+    📖 论文：<a href="https://arxiv.org/abs/2106.09685" style="color: #c084fc;">LoRA: Low-Rank Adaptation of Large Language Models</a>
+    &nbsp;·&nbsp; <a href="https://arxiv.org/abs/2305.14314" style="color: #c084fc;">QLoRA</a>
+    &nbsp;·&nbsp; <a href="https://github.com/hiyouga/LLaMA-Factory" style="color: #c084fc;">LLaMA-Factory</a>
+  </p>
+</div>
+
+</div>
+
+<footer>
+  <p>LoRA 微调完全指南 — 原理、使用与实战</p>
+  <p style="margin-top: 4px;">基于 LLaMA-Factory + HuggingFace PEFT + 最新研究文献</p>
+</footer>
+
+</body>
+</html>

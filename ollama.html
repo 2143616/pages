@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ollama 完全指南 — 本地大模型部署与运行</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #24243a;
+    --border: #2e2e48;
+    --text: #e4e4f0;
+    --text-muted: #8888aa;
+    --accent: #7c6ff7;
+    --accent-light: #a995ff;
+    --green: #4ade80;
+    --orange: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Nav */
+  nav.top-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,15,19,0.85); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 60px;
+  }
+  nav.top-nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.25rem; }
+  nav.top-nav .logo span { color: var(--accent-light); }
+  nav.top-nav .logo small { font-weight: 400; font-size: 0.75rem; color: var(--text-muted); }
+  nav.top-nav .nav-links a {
+    color: var(--text-muted); text-decoration: none; font-size: 0.875rem;
+    margin-left: 1.5rem; transition: color 0.2s;
+  }
+  nav.top-nav .nav-links a:hover { color: var(--accent-light); }
+
+  /* Hero */
+  .hero {
+    text-align: center; padding: 5rem 2rem 3rem;
+    background: linear-gradient(180deg, rgba(124,111,247,0.08) 0%, transparent 100%);
+  }
+  .hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent-light), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { margin-top: 1rem; font-size: 1.15rem; color: var(--text-muted); max-width: 640px; margin-inline: auto; }
+  .hero .badge {
+    display: inline-block; margin-top: 1.5rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 0.4rem 1rem; border-radius: 999px; font-size: 0.8rem; color: var(--text-muted);
+  }
+  .hero .badge strong { color: var(--green); }
+
+  /* Layout */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 2rem; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.5rem 2rem; margin: 2rem 0;
+  }
+  .toc h2 { font-size: 1rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .toc ol { columns: 2; column-gap: 2rem; }
+  .toc ol li { break-inside: avoid; margin-bottom: 0.4rem; font-size: 0.9rem; }
+  .toc ol li a { color: var(--accent-light); text-decoration: none; }
+  .toc ol li a:hover { text-decoration: underline; }
+
+  /* Sections */
+  section { margin: 3rem 0; }
+  section h2 {
+    font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;
+    padding-bottom: 0.5rem; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  section h2 .emoji { font-size: 1.5rem; }
+  section h3 {
+    font-size: 1.2rem; font-weight: 600; margin: 1.5rem 0 0.75rem;
+    color: var(--accent-light);
+  }
+  section h4 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.5rem; color: var(--text); }
+  section p { margin-bottom: 1rem; color: var(--text); }
+  section ul, section ol { margin: 0.5rem 0 1rem 1.5rem; }
+  section li { margin-bottom: 0.4rem; }
+  section li strong { color: var(--accent-light); }
+
+  /* Code blocks */
+  pre {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.25rem; overflow-x: auto; margin: 0.75rem 0 1.25rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem; line-height: 1.55;
+  }
+  pre .cmd { color: var(--green); user-select: none; }
+  pre .comment { color: var(--text-muted); font-style: italic; }
+  code.inline {
+    background: var(--surface2); color: var(--accent-light); padding: 0.15em 0.5em;
+    border-radius: 4px; font-size: 0.85em; font-family: 'JetBrains Mono', monospace;
+  }
+  code.output { color: var(--blue); }
+
+  /* Cards */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.25rem; transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+  .card p { font-size: 0.875rem; color: var(--text-muted); margin: 0; }
+
+  /* Info / Warning boxes */
+  .info-box {
+    background: rgba(96,165,250,0.08); border-left: 3px solid var(--blue);
+    padding: 0.75rem 1rem; border-radius: 6px; margin: 0.75rem 0 1.25rem;
+    font-size: 0.9rem;
+  }
+  .info-box strong { color: var(--blue); }
+  .warn-box {
+    background: rgba(251,191,36,0.08); border-left: 3px solid var(--orange);
+    padding: 0.75rem 1rem; border-radius: 6px; margin: 0.75rem 0 1.25rem;
+    font-size: 0.9rem;
+  }
+  .warn-box strong { color: var(--orange); }
+  .tip-box {
+    background: rgba(74,222,128,0.08); border-left: 3px solid var(--green);
+    padding: 0.75rem 1rem; border-radius: 6px; margin: 0.75rem 0 1.25rem;
+    font-size: 0.9rem;
+  }
+  .tip-box strong { color: var(--green); }
+
+  /* Table */
+  table {
+    width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+    font-size: 0.9rem;
+  }
+  thead { background: var(--surface2); }
+  th, td { padding: 0.65rem 1rem; border: 1px solid var(--border); text-align: left; }
+  th { font-weight: 600; color: var(--accent-light); }
+  tr:hover td { background: rgba(124,111,247,0.04); }
+
+  /* Footer */
+  footer {
+    text-align: center; padding: 3rem 2rem;
+    border-top: 1px solid var(--border); margin-top: 4rem;
+    color: var(--text-muted); font-size: 0.85rem;
+  }
+  footer a { color: var(--accent-light); text-decoration: none; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 2rem; }
+    .toc ol { columns: 1; }
+    nav.top-nav { padding: 0 1rem; height: 54px; }
+    nav.top-nav .nav-links a { margin-left: 0.75rem; font-size: 0.8rem; }
+    .container { padding: 0 1rem; }
+    pre { font-size: 0.78rem; padding: 0.75rem 1rem; }
+  }
+
+  /* Anchor offset */
+  .anchor-offset { scroll-margin-top: 72px; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="45" stroke="#7c6ff7" stroke-width="6"/>
+      <path d="M35 55 Q50 35 65 55" stroke="#a995ff" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <circle cx="38" cy="45" r="4" fill="#a995ff"/>
+      <circle cx="62" cy="45" r="4" fill="#a995ff"/>
+    </svg>
+    <span>Ollama <small>· 完全指南</small></span>
+  </div>
+  <div class="nav-links">
+    <a href="#install">安装</a>
+    <a href="#quickstart">快速开始</a>
+    <a href="#cli">CLI</a>
+    <a href="#modelfile">Modelfile</a>
+    <a href="#api">API</a>
+    <a href="#features">特性</a>
+    <a href="#models">模型</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1><span>Ollama</span> 完全指南</h1>
+  <p>本地运行、管理和自定义大语言模型的最简方式。<br>从单条命令到生产级部署，一篇文章全掌握。</p>
+  <div class="badge">当前版本 <strong>0.x</strong> · macOS / Windows / Linux · 开源免费</div>
+</div>
+
+<div class="container">
+
+<!-- TOC -->
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ol>
+    <li><a href="#intro">Ollama 是什么？</a></li>
+    <li><a href="#install">安装指南</a></li>
+    <li><a href="#quickstart">快速开始</a></li>
+    <li><a href="#cli">CLI 命令参考</a></li>
+    <li><a href="#modelfile">Modelfile 自定义模型</a></li>
+    <li><a href="#api">REST API 参考</a></li>
+    <li><a href="#library">官方库与集成</a></li>
+    <li><a href="#features">核心能力详解</a></li>
+    <li><a href="#models">推荐模型一览</a></li>
+    <li><a href="#advanced">高级技巧</a></li>
+    <li><a href="#faq">常见问题 (FAQ)</a></li>
+    <li><a href="#resources">参考资源</a></li>
+  </ol>
+</div>
+
+<!-- 1. Intro -->
+<section id="intro" class="anchor-offset">
+<h2><span class="emoji">🧠</span> Ollama 是什么？</h2>
+<p>
+<strong>Ollama</strong> 是一个开源的本地大语言模型（LLM）运行框架，旨在让任何人都能以最简洁的方式在本地机器上下载、运行和管理开源大模型。它将复杂的模型权重下载、推理引擎配置、显存管理、多模型切换等底层细节封装为统一的 CLI 和 REST API，让开发者可以像使用 SaaS API 一样消费本地模型。
+</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>🚀 一键运行</h4>
+    <p><code class="inline">ollama run llama3</code> — 一条命令即可下载并启动交互式对话。</p>
+  </div>
+  <div class="card">
+    <h4>📦 模型市场</h4>
+    <p>内置模型库，支持 Llama、Gemma、Mistral、Qwen、DeepSeek 等数百个主流模型。</p>
+  </div>
+  <div class="card">
+    <h4>⚡ GPU 加速</h4>
+    <p>自动检测 NVIDIA CUDA / AMD ROCm / Apple Metal，发挥硬件最佳性能。</p>
+  </div>
+  <div class="card">
+    <h4>🔌 API 兼容</h4>
+    <p>提供原生 REST API + OpenAI & Anthropic 兼容 API，无缝替换云端服务。</p>
+  </div>
+  <div class="card">
+    <h4>🛠 自定义模型</h4>
+    <p>通过 Modelfile 调整系统提示词、参数、模板，或导入 GGUF / Safetensors 模型。</p>
+  </div>
+  <div class="card">
+    <h4>🌐 跨平台</h4>
+    <p>macOS（原生 + Metal）、Windows（x64）、Linux（x64 + ARM64）、Docker 全覆盖。</p>
+  </div>
+</div>
+
+<div class="info-box">
+  <strong>💡 核心理念：</strong> Ollama 不是模型，而是一个 <strong>模型运行引擎</strong>。你可以把它理解为"本地的 Docker + Hub，但对象是大模型"。它负责下载、缓存、推理、服务暴露，你只需要选模型、写提示词。
+</div>
+</section>
+
+<!-- 2. Install -->
+<section id="install" class="anchor-offset">
+<h2><span class="emoji">📥</span> 安装指南</h2>
+
+<h3>macOS</h3>
+<p>推荐方式——下载官方安装包：</p>
+<pre>
+<a class="comment"># 方式一：官网下载 .dmg（推荐）</a>
+访问 <a href="https://ollama.com" style="color:#a995ff;">https://ollama.com</a> 点击 Download
+
+<a class="comment"># 方式二：Homebrew</a>
+brew install ollama
+
+<a class="comment"># 安装后启动服务（以后台守护进程运行）</a>
+ollama serve
+</pre>
+
+<h3>Linux</h3>
+<pre>
+<a class="comment"># 一键安装脚本（支持 x86_64 & ARM64）</a>
+curl -fsSL https://ollama.com/install.sh | sh
+
+<a class="comment"># 验证安装</a>
+ollama --version
+</pre>
+
+<div class="info-box">
+  <strong>🐧 Linux 手动安装：</strong> 如遇到网络问题，可以下载 <code class="inline">ollama-linux-amd64.tgz</code> 或 <code class="inline">ollama-linux-arm64.tgz</code> 解压到 <code class="inline">/usr/local</code>。
+</div>
+
+<h3>Windows</h3>
+<p>访问 <a href="https://ollama.com" style="color:#a995ff;">ollama.com</a> 下载 <strong>OllamaSetup.exe</strong>，运行安装程序。安装完成后 Ollama 会自动在系统托盘中运行，并提供命令行入口。</p>
+
+<div class="tip-box">
+  <strong>🪟 Windows 注意：</strong> Ollama on Windows 需要 WSL2。安装程序会自动配置。如果已有 NVIDIA GPU，确保已安装 CUDA 驱动。
+</div>
+
+<h3>Docker</h3>
+<pre>
+<a class="comment"># CPU 版</a>
+docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+
+<a class="comment"># NVIDIA GPU 版（需要 nvidia-container-toolkit）</a>
+docker run -d --gpus all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+
+<a class="comment"># AMD GPU 版</a>
+docker run -d --device /dev/kfd --device /dev/dri \
+  -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:rocm
+
+<a class="comment"># 进入容器运行模型</a>
+docker exec -it ollama ollama run gemma4
+</pre>
+
+<div class="warn-box">
+  <strong>⚠️ 数据持久化：</strong> 必须挂载 <code class="inline">-v ollama:/root/.ollama</code>，否则容器销毁后下载的模型会丢失。模型默认下载到 <code class="inline">~/.ollama/models/</code>。
+</div>
+</section>
+
+<!-- 3. Quickstart -->
+<section id="quickstart" class="anchor-offset">
+<h2><span class="emoji">⚡</span> 快速开始</h2>
+
+<h3>第一步：下载并运行模型</h3>
+<p>安装完成后，在终端中直接运行模型（Ollama 会自动下载再启动）：</p>
+<pre>
+<span class="cmd">$</span> ollama run gemma4
+<span class="comment"># ↑ 如果没有 gemma4，会自动从模型库拉取 (~2GB)</span>
+<span class="comment"># 下载完成后自动进入交互式对话模式</span>
+
+&gt;&gt;&gt; 用一句话解释什么是大语言模型？
+大语言模型是一种基于海量文本数据训练的深度学习模型，
+能够理解并生成自然语言文本，完成对话、翻译、摘要等任务。
+
+&gt;&gt;&gt; <span class="comment">/bye  <span class="comment"># 退出对话</span></span>
+</pre>
+
+<h3>第二步：一次性生成</h3>
+<pre>
+<span class="cmd">$</span> ollama run gemma4 "用 Python 写一个快速排序"
+<span class="comment"># 直接输出结果，不进入交互模式</span>
+</pre>
+
+<h3>第三步：通过 API 调用</h3>
+<pre>
+<span class="cmd">$</span> curl http://localhost:11434/api/generate -d '{
+  "model": "gemma4",
+  "prompt": "Why is the sky blue?",
+  "stream": false
+}'
+</pre>
+
+<h3>第四步：查看已下载的模型</h3>
+<pre>
+<span class="cmd">$</span> ollama list
+NAME              ID              SIZE    MODIFIED
+gemma4:latest     xxxxxxxx        2.1 GB  2 hours ago
+llama3.1:8b       yyyyyyyy        4.9 GB  5 days ago
+</pre>
+</section>
+
+<!-- 4. CLI -->
+<section id="cli" class="anchor-offset">
+<h2><span class="emoji">🖥️</span> CLI 命令参考</h2>
+
+<table>
+  <thead>
+    <tr><th>命令</th><th>说明</th><th>示例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code class="inline">serve</code></td><td>启动 Ollama 后台服务</td><td><code class="inline">ollama serve</code></td></tr>
+    <tr><td><code class="inline">run</code></td><td>运行模型（交互或一次生成）</td><td><code class="inline">ollama run llama3</code></td></tr>
+    <tr><td><code class="inline">pull</code></td><td>拉取模型但不运行</td><td><code class="inline">ollama pull qwen2.5:7b</code></td></tr>
+    <tr><td><code class="inline">push</code></td><td>推送自定义模型到仓库</td><td><code class="inline">ollama push myuser/my-model</code></td></tr>
+    <tr><td><code class="inline">list</code></td><td>列出本地已下载的模型</td><td><code class="inline">ollama list</code></td></tr>
+    <tr><td><code class="inline">ps</code></td><td>查看当前正在运行的模型</td><td><code class="inline">ollama ps</code></td></tr>
+    <tr><td><code class="inline">cp</code></td><td>复制模型</td><td><code class="inline">ollama cp llama3 my-llama</code></td></tr>
+    <tr><td><code class="inline">rm</code></td><td>删除模型</td><td><code class="inline">ollama rm llama3</code></td></tr>
+    <tr><td><code class="inline">show</code></td><td>查看模型详细信息</td><td><code class="inline">ollama show llama3 --modelfile</code></td></tr>
+    <tr><td><code class="inline">create</code></td><td>从 Modelfile 创建模型</td><td><code class="inline">ollama create mymodel -f ./Modelfile</code></td></tr>
+    <tr><td><code class="inline">help</code></td><td>帮助信息</td><td><code class="inline">ollama help run</code></td></tr>
+    <tr><td><code class="inline">version</code></td><td>显示版本号</td><td><code class="inline">ollama --version</code></td></tr>
+  </tbody>
+</table>
+
+<h3>常用参数</h3>
+<pre>
+<span class="comment"># 指定生成参数</span>
+ollama run gemma4 --temperature 0.7 --top-p 0.9 --seed 42
+
+<span class="comment"># 设置上下文长度（默认 2048，扩展至 8192）</span>
+ollama run qwen2.5:7b --num-ctx 8192
+
+<span class="comment"># 保持模型常驻内存（避免每次重新加载）</span>
+ollama run gemma4 --keep-alive 5m
+</pre>
+
+<div class="tip-box">
+  <strong>💡 环境变量：</strong>
+  设置 <code class="inline">OLLAMA_HOST=0.0.0.0:11434</code> 可让服务监听所有网卡，<br>
+  <code class="inline">OLLAMA_MODELS=/path/to/models</code> 自定义模型存储路径，<br>
+  <code class="inline">OLLAMA_NUM_PARALLEL=4</code> 同时处理多个请求，<br>
+  <code class="inline">OLLAMA_KEEP_ALIVE=5m</code> 模型闲置 5 分钟后卸载。
+</div>
+</section>
+
+<!-- 5. Modelfile -->
+<section id="modelfile" class="anchor-offset">
+<h2><span class="emoji">📜</span> Modelfile 自定义模型</h2>
+<p>
+Modelfile 是 Ollama 的模型构建配置文件，类似于 Dockerfile。你可以基于现有模型微调行为、嵌入系统提示词、调整推理参数，甚至导入全新模型。
+</p>
+
+<h3>基本结构</h3>
+<pre>
+<span class="comment"># 基于已有模型</span>
+FROM llama3.1:8b
+
+<span class="comment"># 设置系统提示词（角色设定）</span>
+SYSTEM """
+你是一个专业的 Python 编程助手。回答要简洁、准确，包含代码示例。
+"""
+
+<span class="comment"># 调整推理参数</span>
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9
+PARAMETER num_ctx 4096
+
+<span class="comment"># 设置模板（可选，通常无需修改）</span>
+TEMPLATE """
+{{ if .System }}&lt;|start_header_id|&gt;system&lt;|end_header_id|&gt;
+
+{{ .System }}&lt;|eot_id|&gt;{{ end }}
+&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;
+
+{{ .Prompt }}&lt;|eot_id|&gt;
+&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;
+
+{{ .Response }}&lt;|eot_id|&gt;
+"""
+</pre>
+
+<h3>支持的参数</h3>
+<table>
+  <thead>
+    <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code class="inline">temperature</code></td><td>0.8</td><td>采样温度，越高越随机（范围 0~2）</td></tr>
+    <tr><td><code class="inline">top_p</code></td><td>0.9</td><td>核采样阈值，控制候选词累加概率</td></tr>
+    <tr><td><code class="inline">top_k</code></td><td>40</td><td>从概率最高的 K 个 token 中采样</td></tr>
+    <tr><td><code class="inline">num_ctx</code></td><td>2048</td><td>上下文窗口大小（token 数）</td></tr>
+    <tr><td><code class="inline">repeat_penalty</code></td><td>1.1</td><td>重复惩罚系数</td></tr>
+    <tr><td><code class="inline">seed</code></td><td>随机</td><td>随机种子，设置后结果可复现</td></tr>
+    <tr><td><code class="inline">stop</code></td><td>—</td><td>停止词，遇此词停止生成</td></tr>
+    <tr><td><code class="inline">num_predict</code></td><td>128</td><td>最大生成 token 数（-1 为不限）</td></tr>
+  </tbody>
+</table>
+
+<h3>构建并运行自定义模型</h3>
+<pre>
+<span class="comment"># 创建 Modelfile, 然后:</span>
+ollama create my-python-helper -f ./Modelfile
+
+<span class="comment"># 运行自定义模型</span>
+ollama run my-python-helper "写一个斐波那契数列生成器"
+</pre>
+
+<h3>导入 GGUF 模型</h3>
+<p>从 HuggingFace 或其他来源下载的 GGUF 文件可以直接导入：</p>
+<pre>
+<span class="comment"># 方法一：从本地 GGUF 文件创建</span>
+FROM ./codellama-34b-instruct.Q5_K_M.gguf
+
+<span class="comment"># 方法二：使用 ollama create 直接导入</span>
+ollama create my-model --quantize q4_K_M -f ./Modelfile
+
+<span class="comment"># 方法三：从 HuggingFace 导入 Safetensors（需要转换）</span>
+<span class="comment"># 使用 llama.cpp 的 convert.py 转为 GGUF 格式后再用上面的方式</span>
+</pre>
+</section>
+
+<!-- 6. API -->
+<section id="api" class="anchor-offset">
+<h2><span class="emoji">🔌</span> REST API 参考</h2>
+<p>
+Ollama 启动后在 <code class="inline">http://localhost:11434</code> 提供 REST API，同时兼容 OpenAI 和 Anthropic 格式，方便直接替换。
+</p>
+
+<h3>基础端点</h3>
+<table>
+  <thead>
+    <tr><th>方法</th><th>端点</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/generate</code></td><td>文本补全（非对话模式）</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/chat</code></td><td>对话生成（支持多轮）</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/embed</code></td><td>生成文本嵌入向量</td></tr>
+    <tr><td><code class="inline">GET</code></td><td><code class="inline">/api/tags</code></td><td>列出本地所有模型</td></tr>
+    <tr><td><code class="inline">GET</code></td><td><code class="inline">/api/ps</code></td><td>查看正在运行的模型</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/show</code></td><td>查看模型详情</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/pull</code></td><td>拉取模型</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/push</code></td><td>推送模型</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/create</code></td><td>创建模型（从 Modelfile）</td></tr>
+    <tr><td><code class="inline">POST</code></td><td><code class="inline">/api/copy</code></td><td>复制模型</td></tr>
+    <tr><td><code class="inline">DELETE</code></td><td><code class="inline">/api/delete</code></td><td>删除模型</td></tr>
+    <tr><td><code class="inline">GET</code></td><td><code class="inline">/api/version</code></td><td>Ollama 版本号</td></tr>
+  </tbody>
+</table>
+
+<h3>对话示例</h3>
+<pre>
+curl http://localhost:11434/api/chat -d '{
+  "model": "gemma4",
+  "messages": [
+    {"role": "system", "content": "你是中文编程助手。"},
+    {"role": "user", "content": "用 Python 写一个二分查找"}
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0.3,
+    "num_ctx": 4096
+  }
+}'
+</pre>
+
+<h3>生成嵌入向量</h3>
+<pre>
+curl http://localhost:11434/api/embed -d '{
+  "model": "nomic-embed-text",
+  "input": "Ollama 是什么？"
+}'
+</pre>
+
+<h3>OpenAI 兼容 API</h3>
+<p>Ollama 同时暴露兼容 OpenAI 格式的端点。这意味着你可以在任何支持 OpenAI API 的工具中，只改 Base URL 即可使用本地模型：</p>
+<pre>
+<span class="comment"># OpenAI 兼容端点</span>
+curl http://localhost:11434/v1/chat/completions -d '{
+  "model": "gemma4",
+  "messages": [{"role": "user", "content": "你好！"}],
+  "stream": false
+}'
+
+<span class="comment"># 嵌入兼容端点</span>
+curl http://localhost:11434/v1/embeddings -d '{
+  "model": "nomic-embed-text",
+  "input": "Hello world"
+}'
+</pre>
+
+<div class="info-box">
+  <strong>🔑 使用场景：</strong>
+  将 VS Code 的 <strong>Cline / Continue</strong>、ChatGPT Next Web、OpenAI Python SDK、LangChain、Jupyter AI 等工具的 API Base URL 改为 <code class="inline">http://localhost:11434/v1</code>，即可零改动接入本地模型。
+</div>
+</section>
+
+<!-- 7. Libraries -->
+<section id="library" class="anchor-offset">
+<h2><span class="emoji">📚</span> 官方库与集成</h2>
+
+<h3>Python 库</h3>
+<pre>
+<span class="comment"># 安装</span>
+pip install ollama
+
+<span class="comment"># 基础流式对话</span>
+import ollama
+
+stream = ollama.chat(
+    model='gemma4',
+    messages=[{'role': 'user', 'content': '讲个笑话'}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk['message']['content'], end='', flush=True)
+
+<span class="comment"># 嵌入向量</span>
+response = ollama.embed(model='nomic-embed-text', input='你好世界')
+print(response['embeddings'][0][:5])  <span class="comment"># 前 5 维</span>
+</pre>
+
+<h3>JavaScript / TypeScript 库</h3>
+<pre>
+<span class="comment">// 安装</span>
+npm install ollama
+
+<span class="comment">// 流式对话</span>
+import ollama from 'ollama'
+
+const response = await ollama.chat({
+  model: 'gemma4',
+  messages: [{ role: 'user', content: '写一首诗' }],
+  stream: true,
+})
+for await (const part of response) {
+  process.stdout.write(part.message.content)
+}
+</pre>
+
+<h3>常见集成方案</h3>
+<table>
+  <thead>
+    <tr><th>工具 / 框架</th><th>集成方式</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>LangChain</td><td><code class="inline">from langchain_ollama import ChatOllama, OllamaEmbeddings</code></td></tr>
+    <tr><td>LlamaIndex</td><td><code class="inline">Ollama</code> 作为 LLM 和嵌入模型提供者</td></tr>
+    <tr><td>VS Code (Continue)</td><td>在 config.json 中设置 <code class="inline">"apiBase": "http://localhost:11434"</code></td></tr>
+    <tr><td>OpenAI SDK</td><td>改 <code class="inline">base_url="http://localhost:11434/v1"</code></td></tr>
+    <tr><td>Cline</td><td>设置 Provider 为 Ollama，选择本地模型</td></tr>
+    <tr><td>ChatGPT Next Web</td><td>自定义接口 → 填入 Ollama 地址</td></tr>
+    <tr><td>Jupyter AI</td><td><code class="inline">%load_ext jupyter_ai_magics; %llm --provider ollama</code></td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- 8. Features -->
+<section id="features" class="anchor-offset">
+<h2><span class="emoji">✨</span> 核心能力详解</h2>
+
+<h3>🔄 流式输出 (Streaming)</h3>
+<p>Ollama 默认使用 Server-Sent Events（SSE）流式返回结果，用户无需等待完整生成，逐 token 实时显示。在 Python 中将 <code class="inline">stream=True</code> 即可接收流式迭代器。</p>
+
+<pre>
+curl http://localhost:11434/api/chat -d '{
+  "model": "gemma4",
+  "messages": [{"role":"user","content":"写一篇 500 字短文"}],
+  "stream": true
+}'
+<span class="comment"># 返回 SSE 格式，每行一个 token</span>
+</pre>
+
+<h3>🧠 思考模型 (Thinking / Reasoning)</h3>
+<p>支持 DeepSeek-R1 等"思维链"类模型。Ollama 会自动解析模型的 <code class="inline">&lt;think&gt;...&lt;/think&gt;</code> 标记，将推理过程与最终答案分开展示：</p>
+<pre>
+ollama run deepseek-r1:7b "Solve: 1+1=?"
+
+<span class="comment">&lt;think&gt;</span>
+<span class="comment">这是一个简单算术问题。1+1 在十进制中等于 2。不需要复杂推理。</span>
+<span class="comment">&lt;/think&gt;</span>
+答案是 2。
+</pre>
+
+<h3>📐 结构化输出 (Structured Outputs)</h3>
+<p>通过 <code class="inline">format</code> 参数指定 JSON Schema，确保模型输出符合特定结构：</p>
+<pre>
+curl http://localhost:11434/api/chat -d '{
+  "model": "gemma4",
+  "messages": [{"role":"user","content":"北京天气"}],
+  "format": {
+    "type": "object",
+    "properties": {
+      "city":    {"type": "string"},
+      "temp":    {"type": "number"},
+      "weather": {"type": "string"}
+    },
+    "required": ["city", "temp"]
+  }
+}'
+<span class="comment"># 输出: {"city":"北京","temp":22,"weather":"晴"}</span>
+</pre>
+<div class="tip-box">
+  <strong>💡 适用场景：</strong> 函数调用参数解析、数据提取、表单生成等需要严格格式的场景。
+</div>
+
+<h3>👁️ 视觉理解 (Vision)</h3>
+<p>多模态模型（如 Llava、Gemma4-Vision、Qwen2-VL）可以直接输入图片进行分析：</p>
+<pre>
+<span class="comment"># CLI 方式</span>
+ollama run llava "这张图片里有什么？" --image /path/to/photo.jpg
+
+<span class="comment"># API 方式</span>
+curl http://localhost:11434/api/chat -d '{
+  "model": "llava",
+  "messages": [{
+    "role": "user",
+    "content": "描述这张图片",
+    "images": ["&lt;base64_encoded_image&gt;"]
+  }]
+}'
+</pre>
+
+<h3>🔧 工具调用 (Tool Calling / Function Calling)</h3>
+<p>支持让模型调用外部函数，实现 Agent 工作流。模型会输出工具调用请求，由应用调度执行：</p>
+<pre>
+curl http://localhost:11434/api/chat -d '{
+  "model": "gemma4",
+  "messages": [{"role":"user","content":"纽约现在几点？"}],
+  "tools": [{
+    "type": "function",
+    "function": {
+      "name": "get_current_time",
+      "description": "获取指定城市当前时间",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "city": {"type": "string"}
+        },
+        "required": ["city"]
+      }
+    }
+  }]
+}'
+</pre>
+
+<h3>🌐 联网搜索 (Web Search)</h3>
+<p>Ollama 支持通过内置的联网搜索工具，让模型在回答前检索实时信息。需要先配置搜索 API key：</p>
+<pre>
+ollama run gemma4:cloud "今天的比特币价格是多少？"
+<span class="comment"># Cloud 模型会自动联网搜索获取实时信息</span>
+</pre>
+
+<h3>📊 嵌入向量 (Embeddings)</h3>
+<p>将文本转换为语义向量，用于 RAG（检索增强生成）和语义搜索：</p>
+<pre>
+curl http://localhost:11434/api/embed -d '{
+  "model": "nomic-embed-text",
+  "input": ["文档1", "文档2", "文档3"]
+}'
+<span class="comment"># 推荐嵌入模型：nomic-embed-text, bge-m3, mxbai-embed-large</span>
+</pre>
+
+<h3>☁️ Cloud 云模式</h3>
+<p>Ollama 不仅限于本地。对于需要更大参数规模（如 70B、405B）的场景，Ollama 提供 Cloud 模式，将请求转发到云端 GPU：</p>
+<pre>
+<span class="comment"># 本地启动交互式 chat，但使用云端更大的模型</span>
+ollama run gemma4:cloud
+
+<span class="comment"># API 调用云端模型</span>
+curl https://ollama.com/api/chat -d '{
+  "model": "gemma4:cloud",
+  "messages": [{"role":"user","content":"复杂推理问题"}]
+}'
+</pre>
+</section>
+
+<!-- 9. Models -->
+<section id="models" class="anchor-offset">
+<h2><span class="emoji">📦</span> 推荐模型一览</h2>
+<p>以下是在 Ollama 上用体验极佳的模型，按使用场景分类：</p>
+
+<table>
+  <thead>
+    <tr><th>模型</th><th>大小(量化后)</th><th>适用场景</th><th>拉取命令</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Gemma 4</strong> (Google)</td><td>~2.1 GB</td><td>通用对话、编程、多语言</td><td><code class="inline">ollama pull gemma4</code></td></tr>
+    <tr><td><strong>Llama 3.1</strong> (Meta)</td><td>~4.9 GB (8B)</td><td>通用中文、英文、角色扮演</td><td><code class="inline">ollama pull llama3.1:8b</code></td></tr>
+    <tr><td><strong>Qwen 2.5</strong> (阿里)</td><td>~4.7 GB (7B)</td><td>中文最佳、编程、数学</td><td><code class="inline">ollama pull qwen2.5:7b</code></td></tr>
+    <tr><td><strong>DeepSeek R1</strong> (深度求索)</td><td>~4.7 GB (7B)</td><td>数学推理、逻辑、思维链</td><td><code class="inline">ollama pull deepseek-r1:7b</code></td></tr>
+    <tr><td><strong>Mistral</strong> (Mistral AI)</td><td>~4.1 GB (7B)</td><td>英文、代码、指令跟随</td><td><code class="inline">ollama pull mistral</code></td></tr>
+    <tr><td><strong>Phi-3 / Phi-4</strong> (Microsoft)</td><td>~2.3 GB (3.8B)</td><td>轻量级、电池友好、设备端</td><td><code class="inline">ollama pull phi3:mini</code></td></tr>
+    <tr><td><strong>Llava</strong></td><td>~4.5 GB</td><td>多模态、图片理解</td><td><code class="inline">ollama pull llava</code></td></tr>
+    <tr><td><strong>Nomic Embed Text</strong></td><td>~0.27 GB</td><td>文本嵌入、RAG 检索</td><td><code class="inline">ollama pull nomic-embed-text</code></td></tr>
+    <tr><td><strong>CodeGemma</strong> (Google)</td><td>~2.1 GB (2B)</td><td>代码补全、生成</td><td><code class="inline">ollama pull codegemma:2b</code></td></tr>
+    <tr><td><strong>Yi</strong> (零一万物)</td><td>~4.5 GB (6B)</td><td>中文长文本、创意写作</td><td><code class="inline">ollama pull yi:6b</code></td></tr>
+    <tr><td><strong>Command R+</strong> (Cohere)</td><td>~35 GB (104B)</td><td>RAG 专用、工具调用巨头</td><td><code class="inline">ollama pull command-r-plus</code></td></tr>
+    <tr><td><strong>DeepSeek R1 (大)</strong></td><td>~40 GB (70B)</td><td>强力推理、数学竞赛级</td><td><code class="inline">ollama pull deepseek-r1:70b</code></td></tr>
+  </tbody>
+</table>
+
+<div class="warn-box">
+  <strong>📌 显存参考：</strong>
+  7B 模型约需 4-6 GB VRAM（Q4 量化），13B 需 8-10 GB，70B 需 40+ GB。如果显存不足，Ollama 会自动退回到 CPU + 部分 offloading，但速度会下降。选择量化版本 <strong>Q4_K_M</strong> 是性价比最佳的平衡点。
+</div>
+</section>
+
+<!-- 10. Advanced -->
+<section id="advanced" class="anchor-offset">
+<h2><span class="emoji">🚀</span> 高级技巧</h2>
+
+<h3>🔁 并发推理</h3>
+<p>通过环境变量控制并行度，多请求共享模型显存：</p>
+<pre>
+export OLLAMA_NUM_PARALLEL=4    <span class="comment"># 最多同时处理 4 个请求</span>
+export OLLAMA_MAX_LOADED_MODELS=2 <span class="comment"># 最多同时加载 2 个不同模型</span>
+ollama serve
+</pre>
+
+<h3>📡 远程访问</h3>
+<pre>
+<span class="comment"># 监听所有网络接口（注意安全！）</span>
+export OLLAMA_HOST=0.0.0.0:11434
+ollama serve
+
+<span class="comment"># 内网其他机器即可访问</span>
+curl http://192.168.1.100:11434/api/chat -d '{...}'
+</pre>
+<div class="warn-box">
+  <strong>🔒 安全提醒：</strong> Ollama 默认没有认证机制。<code class="inline">0.0.0.0</code> 暴露到公网非常危险。建议用 Nginx 反代 +  Basic Auth，或 Tailscale / WireGuard 建 VPN 后在内网使用。
+</div>
+
+<h3>🐳 Docker Compose 生产部署</h3>
+<pre>
+<span class="comment"># docker-compose.yml</span>
+version: '3.8'
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_KEEP_ALIVE=5m
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama_data:
+</pre>
+
+<h3>📊 配合 Open WebUI 使用</h3>
+<p>Open WebUI 是一个开源的类 ChatGPT 前端，与 Ollama 完美集成：</p>
+<pre>
+docker run -d -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -v open-webui:/app/backend/data \
+  ghcr.io/open-webui/open-webui:main
+
+<span class="comment"># 访问 http://localhost:3000</span>
+<span class="comment"># 在设置中 Ollama Base URL 填写 http://host.docker.internal:11434</span>
+</pre>
+
+<h3>🔥 多 GPU 配置</h3>
+<pre>
+<span class="comment"># 指定 GPU 可见性</span>
+export CUDA_VISIBLE_DEVICES=0,1  <span class="comment"># 只用第 0、1 号 GPU</span>
+ollama serve
+
+<span class="comment"># 设置每层加载到第几块 GPU</span>
+export OLLAMA_GPU_OVERHEAD=512   <span class="comment"># 每块 GPU 预留的额外显存 (MB)</span>
+</pre>
+
+<h3>🔄 模型预拉取脚本</h3>
+<p>适合新机器初始化时批量拉取常用模型：</p>
+<pre>
+<span class="comment">#!/bin/bash</span>
+<span class="comment"># batch-pull.sh</span>
+models=("gemma4" "qwen2.5:7b" "nomic-embed-text" "deepseek-r1:7b")
+for model in "${models[@]}"; do
+  echo "Pulling $model..."
+  ollama pull "$model"
+done
+echo "All models ready."
+</pre>
+
+<h3>🧪 使用 Prompt 模板</h3>
+<p>创建 Modelfile 设定自定义角色，让模型即开即用：</p>
+<pre>
+<span class="comment"># Modelfile for "expert-coder"</span>
+FROM qwen2.5:7b
+SYSTEM """你是顶级的全栈开发专家。回答需包含：
+1. 解决问题的思路
+2. 完整可运行代码（含类型注解）
+3. 复杂度分析
+4. 测试用例
+用 markdown 格式输出。"""
+
+PARAMETER temperature 0.2
+PARAMETER num_ctx 8192
+</pre>
+</section>
+
+<!-- 11. FAQ -->
+<section id="faq" class="anchor-offset">
+<h2><span class="emoji">❓</span> 常见问题 (FAQ)</h2>
+
+<h4>Q: 模型下载速度慢/下载失败怎么办？</h4>
+<p>
+国内用户建议设置镜像源。Ollama 默认从 GitHub Releases 和 Docker Hub 下载。可以配置代理：
+</p>
+<pre>
+<span class="comment"># 设置 HTTP 代理</span>
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+ollama run gemma4
+</pre>
+
+<h4>Q: 模型加载后占用多少显存？</h4>
+<p>
+以 4-bit 量化（Q4_K_M）为例：7B ~ 4.5GB，13B ~ 8GB，34B ~ 20GB，70B ~ 42GB。上下文窗口越大，额外显存越多（约 1MB/token）。使用 <code class="inline">ollama ps</code> 查看实时显存占用。
+</p>
+
+<h4>Q: 如何在 CPU 上运行？</h4>
+<p>
+Ollama 自动检测 GPU，如果没有检测到就自动回退到 CPU。CPU 推理速度显著慢于 GPU（7B 模型约 3-8 token/s），建议使用更小的量化版本如 <code class="inline">qwen2.5:0.5b</code> 或 <code class="inline">phi3:mini</code>。
+</p>
+
+<h4>Q: 如何更新 Ollama？</h4>
+<pre>
+<span class="comment"># macOS</span>
+brew upgrade ollama
+
+<span class="comment"># Linux</span>
+curl -fsSL https://ollama.com/install.sh | sh
+
+<span class="comment"># Docker</span>
+docker pull ollama/ollama
+</pre>
+
+<h4>Q: 模型保存在哪个目录？我想迁移到其他机器。</h4>
+<pre>
+<span class="comment"># 默认目录</span>
+~/.ollama/models/
+
+<span class="comment"># 自定义目录（设置环境变量后启动 serve）</span>
+export OLLAMA_MODELS=/path/to/models
+ollama serve
+</pre>
+
+<h4>Q: Ollama 如何卸载？</h4>
+<pre>
+<span class="comment"># Linux</span>
+sudo rm /usr/local/bin/ollama
+sudo rm -r ~/.ollama        <span class="comment"># 删除模型和数据</span>
+
+<span class="comment"># macOS (Homebrew)</span>
+brew uninstall ollama
+rm -r ~/.ollama
+
+<span class="comment"># Windows</span>
+设置 → 应用 → Ollama → 卸载
+</pre>
+
+<h4>Q: 支持 Windows 的 WSL 吗？</h4>
+<p>Windows 安装程序内置了 WSL2 后端。如果已有 WSL2，也可以直接在 WSL 的 Linux 发行版中用 Linux 方式安装，性能更直观可控。</p>
+
+<h4>Q: 如何让 Ollama 开机自启？</h4>
+<pre>
+<span class="comment"># Linux (systemd)</span>
+sudo systemctl enable ollama
+sudo systemctl start ollama
+
+<span class="comment"># macOS</span>
+<span class="comment"># 安装时会自动注册 LaunchAgent</span>
+launchctl list | grep ollama
+
+<span class="comment"># Docker</span>
+<span class="comment"># docker-compose 中设置 restart: unless-stopped</span>
+</pre>
+
+<h4>Q: 报错 "llama.cpp: out of memory" 怎么办？</h4>
+<p>
+显存不足。解决方案：<br>
+① 使用更小量化的版本（如 Q3_K_M 甚至 Q2_K）<br>
+② 减小 <code class="inline">num_ctx</code>（设为 1024）<br>
+③ 使用更小的模型（如 7B → 3B）<br>
+④ 增加 <code class="inline">OLLAMA_GPU_OVERHEAD</code> 为更大的值
+</p>
+</section>
+
+<!-- 12. Resources -->
+<section id="resources" class="anchor-offset">
+<h2><span class="emoji">🔗</span> 参考资源</h2>
+
+<ul>
+  <li><strong>官方网站：</strong> <a href="https://ollama.com" target="_blank" style="color:#a995ff;">ollama.com</a> — 模型库、下载、Cloud 服务</li>
+  <li><strong>GitHub 仓库：</strong> <a href="https://github.com/ollama/ollama" target="_blank" style="color:#a995ff;">github.com/ollama/ollama</a> — 源码、Issues、Discussions</li>
+  <li><strong>官方文档：</strong> <a href="https://github.com/ollama/ollama/tree/main/docs" target="_blank" style="color:#a995ff;">GitHub docs 目录</a> — 详尽的技术参考</li>
+  <li><strong>Discord 社区：</strong> <a href="https://discord.gg/ollama" target="_blank" style="color:#a995ff;">discord.gg/ollama</a> — 实时讨论、帮助</li>
+  <li><strong>Reddit：</strong> <a href="https://reddit.com/r/ollama" target="_blank" style="color:#a995ff;">r/ollama</a> — 社区经验分享</li>
+  <li><strong>Open WebUI：</strong> <a href="https://github.com/open-webui/open-webui" target="_blank" style="color:#a995ff;">github.com/open-webui/open-webui</a> — 最佳 Ollama 前端</li>
+  <li><strong>HuggingFace Ollama 模型页：</strong> <a href="https://huggingface.co/ollama" target="_blank" style="color:#a995ff;">huggingface.co/ollama</a></li>
+</ul>
+
+<div class="info-box">
+  <strong>📝 更新记录：</strong> 本文档基于 Ollama 的最新功能编写，涵盖 Streaming、Tool Calling、Structured Outputs、Vision、Web Search、Cloud 等核心能力。内容力求准确，但 Ollama 迭代迅速，建议以官方文档为最终参考。
+</div>
+
+</div>
+
+<footer>
+  <p>用 ❤️ 和 🧠 编写 · 基于 <a href="https://ollama.com">Ollama</a> 官方文档及社区实践</p>
+  <p style="margin-top:0.5rem; font-size:0.75rem;">本文档仅供学习参考。Ollama 是 Ollama 公司的注册商标。</p>
+</footer>
+
+</body>
+</html>
