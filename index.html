@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📑 知识库 — AI/ML 学习笔记</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #181b24; --border: #262a36;
+    --accent: #6c8cff; --text: #e1e5ee; --text-dim: #8b92a5;
+    --green: #4ade80; --orange: #fb923c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+
+  h1 { font-size: 1.8rem; margin-bottom: .5rem; text-align: center; }
+  .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 2rem; font-size: .9rem; }
+
+  .doc-list { display: flex; flex-direction: column; gap: .5rem; }
+  .doc-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: .9rem 1.1rem; display: flex; align-items: center; gap: .8rem;
+    transition: all .15s; cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .doc-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .doc-card .icon { font-size: 1.3rem; flex-shrink: 0; }
+  .doc-card .info { flex: 1; }
+  .doc-card .title { font-weight: 600; font-size: .95rem; }
+  .doc-card .desc { font-size: .78rem; color: var(--text-dim); margin-top: .1rem; }
+  .doc-card .tag {
+    display: inline-block; font-size: .68rem; padding: .1rem .5rem;
+    border-radius: 999px; background: rgba(108,140,255,.1); color: var(--accent);
+    margin-left: .4rem;
+  }
+  .doc-card .size { font-size: .7rem; color: var(--text-dim); flex-shrink: 0; }
+
+  .footer { text-align: center; margin-top: 2.5rem; font-size: .78rem; color: var(--text-dim); }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 500px) {
+    h1 { font-size: 1.4rem; }
+    .doc-card { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📑 知识库</h1>
+<p class="subtitle">AI / ML 学习笔记与技术教程 · <a href="https://github.com/2143616/pages" style="color:var(--accent);text-decoration:none;">GitHub</a></p>
+
+<div class="doc-list">
+
+<a class="doc-card" href="pageindex.html">
+  <span class="icon">🌲</span>
+  <div class="info">
+    <div class="title">PageIndex 完全教学指南</div>
+    <div class="desc">Vectorless, Reasoning-based RAG 深度解析 — 代码级教学文档</div>
+  </div>
+  <span class="size">52 KB</span>
+</a>
+
+<a class="doc-card" href="模型训练.html">
+  <span class="icon">⚡</span>
+  <div class="info">
+    <div class="title">模型训练避坑指南</div>
+    <div class="desc">PyTorch 分布式训练、混合精度、梯度累积、断点续训等实战经验</div>
+  </div>
+  <span class="size">19 KB</span>
+</a>
+
+<a class="doc-card" href="LORA.html">
+  <span class="icon">🧩</span>
+  <div class="info">
+    <div class="title">LoRA 微调完全指南</div>
+    <div class="desc">Low-Rank Adaptation — 原理、实现与最佳实践</div>
+  </div>
+  <span class="size">49 KB</span>
+</a>
+
+<a class="doc-card" href="PEFT.html">
+  <span class="icon">🔧</span>
+  <div class="info">
+    <div class="title">PEFT 参数高效微调</div>
+    <div class="desc">Prefix Tuning、P-Tuning、Prompt Tuning、IA3 等全面梳理</div>
+  </div>
+  <span class="size">49 KB</span>
+</a>
+
+<a class="doc-card" href="Attention_Is_All_You_Need.html">
+  <span class="icon">🤖</span>
+  <div class="info">
+    <div class="title">Attention Is All You Need 精读</div>
+    <div class="desc">Transformer 原始论文深度解析与代码对照</div>
+  </div>
+  <span class="size">36 KB</span>
+</a>
+
+<a class="doc-card" href="ollama.html">
+  <span class="icon">🦙</span>
+  <div class="info">
+    <div class="title">Ollama 本地大模型部署</div>
+    <div class="desc">本地运行、API 调用、模型管理、自定义 Modelfile</div>
+  </div>
+  <span class="size">40 KB</span>
+</a>
+
+<a class="doc-card" href="nvtop.html">
+  <span class="icon">📊</span>
+  <div class="info">
+    <div class="title">nvtop GPU 监控指南</div>
+    <div class="desc">GPU 实时监控、进程管理、多 GPU 视角与配置</div>
+  </div>
+  <span class="size">36 KB</span>
+</a>
+
+<a class="doc-card" href="lerobot.html">
+  <span class="icon">🤖</span>
+  <div class="info">
+    <div class="title">LeRobot 开源机器人学习框架</div>
+    <div class="desc">HuggingFace 生态的机器人模仿学习与数据集工具</div>
+  </div>
+  <span class="size">41 KB</span>
+</a>
+
+<a class="doc-card" href="feed_model.html">
+  <span class="icon">📡</span>
+  <div class="info">
+    <div class="title">Feed Model 前馈网络详解</div>
+    <div class="desc">MLP、激活函数、初始化、正则化与工程实践</div>
+  </div>
+  <span class="size">22 KB</span>
+</a>
+
+</div>
+
+<div class="footer">
+  🚀 由 <a href="https://github.com/2143616/pages" target="_blank">2143616/pages</a> 驱动
+  &nbsp;·&nbsp; 共 9 篇文档 &nbsp;·&nbsp; 持续更新中
+</div>
+
+</div>
+</body>
+</html>
