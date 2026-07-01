@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FPro — 频率提示引导的图像复原 Transformer | 详细教学解读</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #181a24;
+    --border: #2a2d3a;
+    --accent: #6c8cff;
+    --accent2: #a78bfa;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --pink: #f472b6;
+    --cyan: #22d3ee;
+    --text: #e2e8f0;
+    --muted: #8892a8;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.7;
+    padding: 0;
+  }
+  /* ── header ── */
+  .hero {
+    background: linear-gradient(135deg, #0f1117 0%, #1a1f3a 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 24px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 30%, rgba(108,140,255,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+  }
+  .hero .sub {
+    margin-top: 12px;
+    font-size: 1.15rem;
+    color: var(--muted);
+    position: relative;
+  }
+  .hero .badge {
+    display: inline-block;
+    margin: 16px 6px 0;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: rgba(108,140,255,0.15);
+    border: 1px solid rgba(108,140,255,0.25);
+    color: var(--accent);
+  }
+  .hero .badge.green { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.25); color: var(--green); }
+  .hero .badge.orange { background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.25); color: var(--orange); }
+
+  /* ── layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin: 32px auto;
+    max-width: 960px;
+  }
+  .toc h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 12px; }
+  .toc ol { columns: 2 280px; column-gap: 32px; padding-left: 20px; }
+  .toc li { margin: 4px 0; }
+  .toc a { color: var(--muted); text-decoration: none; font-size: 0.92rem; }
+  .toc a:hover { color: var(--accent); }
+
+  section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin: 24px auto;
+    max-width: 960px;
+  }
+  section h2 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  section h3 {
+    font-size: 1.1rem;
+    color: var(--accent2);
+    margin: 24px 0 12px;
+  }
+  section h4 {
+    font-size: 0.98rem;
+    color: var(--cyan);
+    margin: 18px 0 8px;
+  }
+  p, li { color: var(--text); margin-bottom: 10px; }
+  ul, ol { padding-left: 20px; margin-bottom: 14px; }
+  li { margin-bottom: 4px; }
+
+  /* ── code ── */
+  pre {
+    background: #0b0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 14px 0;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.85rem;
+    background: rgba(108,140,255,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; }
+
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; }
+  .nc { color: #ffcb6b; }
+  .nb { color: #89ddff; }
+  .op { color: #89ddff; }
+  .num { color: #f78c6c; }
+
+  /* ── diagram boxes ── */
+  .diagram {
+    background: #0b0d14;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 16px 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .diagram .hl { color: var(--accent); font-weight: 600; }
+  .diagram .hl2 { color: var(--green); font-weight: 600; }
+  .diagram .hl3 { color: var(--orange); font-weight: 600; }
+  .diagram .hl4 { color: var(--pink); font-weight: 600; }
+
+  .info-box {
+    background: rgba(108,140,255,0.07);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 0.92rem;
+  }
+  .info-box.green { border-left-color: var(--green); background: rgba(74,222,128,0.06); }
+  .info-box.orange { border-left-color: var(--orange); background: rgba(251,146,60,0.06); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  th { background: rgba(108,140,255,0.08); color: var(--accent); font-weight: 600; }
+  td { background: transparent; }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 14px 0;
+  }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+  .grid-card {
+    background: #0b0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .grid-card h4 { margin-top: 0; }
+
+  .footnote {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 32px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  .footnote a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero">
+  <h1>🔭 FPro — 频率提示引导的图像复原 Transformer</h1>
+  <p class="sub">Seeing the Unseen: A Frequency Prompt Guided Transformer for Image Restoration</p>
+  <div>
+    <span class="badge">ECCV 2024</span>
+    <span class="badge green">图像复原</span>
+    <span class="badge orange">Transformer</span>
+    <span class="badge">频率域学习</span>
+  </div>
+  <p style="margin-top:16px;color:var(--muted);font-size:0.9rem">
+    Shihao Zhou, Jinshan Pan, Jinglei Shi, Duosheng Chen, Lishen Qu, Jufeng Yang &nbsp;·&nbsp; 南开大学
+  </p>
+</header>
+
+<!-- ═══════════════ TOC ═══════════════ -->
+<nav class="toc">
+  <h2>📖 目录</h2>
+  <ol>
+    <li><a href="#sec1">项目概览</a></li>
+    <li><a href="#sec2">背景与动机</a></li>
+    <li><a href="#sec3">整体架构</a></li>
+    <li><a href="#sec4">核心模块详解</a></li>
+    <li><a href="#sec5">频率提示机制</a></li>
+    <li><a href="#sec6">训练策略</a></li>
+    <li><a href="#sec7">任务与数据集</a></li>
+    <li><a href="#sec8">项目结构</a></li>
+    <li><a href="#sec9">使用指南</a></li>
+    <li><a href="#sec10">代码逐模块分析</a></li>
+    <li><a href="#sec11">参考文献与致谢</a></li>
+    <li><a href="#sec12">实战：手机拍摄屏幕视频的去摩尔纹</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════ 1. 项目概览 ═══════════════ -->
+<section id="sec1">
+  <h2><span class="num">1</span> 项目概览</h2>
+  <p>
+    <strong>FPro</strong>（Frequency Prompt Guided Transformer）是南开大学发表于 <strong>ECCV 2024</strong> 
+    的一项图像复原工作。其核心思想是：<em>在 Transformer 编解码器的各个阶段注入"频率提示"（Frequency Prompt），
+    使网络能够显式地感知并利用图像中的低频结构信息和高频细节信息</em>。
+  </p>
+
+  <div class="grid2">
+    <div class="grid-card">
+      <h4>🎯 解决的问题</h4>
+      <ul>
+        <li>去雨（Derain）</li>
+        <li>去雨滴（Raindrop Removal）</li>
+        <li>去雾（Dehaze）</li>
+        <li>去运动模糊（Deblur）</li>
+        <li>去摩尔纹（Demoire）</li>
+      </ul>
+    </div>
+    <div class="grid-card">
+      <h4>⚡ 核心创新</h4>
+      <ul>
+        <li><strong>Split Frequency Module</strong> — 动态通道滤波器分离高低频</li>
+        <li><strong>Frequency-Specific Prompt Generator</strong> — 生成频率专属提示</li>
+        <li><strong>高低频提示融合模块</strong> — Attention 机制注入主网络</li>
+        <li>无需额外的频率分支网络，轻量高效</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>🔗 资源链接</strong><br>
+    GitHub: <a href="https://github.com/joshyZhou/FPro" target="_blank" style="color:var(--accent)">joshyZhou/FPro</a> &nbsp;|&nbsp;
+    HuggingFace Demo: <a href="https://huggingface.co/spaces/yssszzzzzzzzy/FPro-Dehaze" target="_blank" style="color:var(--accent)">FPro-Dehaze</a> &nbsp;|&nbsp;
+    论文: <em>Seeing the Unseen: A Frequency Prompt Guided Transformer for Image Restoration</em>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. 背景与动机 ═══════════════ -->
+<section id="sec2">
+  <h2><span class="num">2</span> 背景与动机</h2>
+
+  <h3>2.1 图像复原的挑战</h3>
+  <p>
+    图像复原任务（去雨、去雾、去模糊等）的目标是从退化观测 \(y\) 中恢复出干净的图像 \(x\)。
+    这是一个典型的<a href="https://en.wikipedia.org/wiki/Inverse_problem" target="_blank">逆问题</a>（ill-posed inverse problem），
+    需要强大的先验知识来约束解空间。传统方法依赖于手工设计的先验（如稀疏性、总变分），
+    而深度学习方法则从大量数据中隐式学习这些先验。
+  </p>
+
+  <h3>2.2 频率域视角</h3>
+  <p>
+    图像退化在不同频率分量上的表现不同：
+  </p>
+  <ul>
+    <li><strong>低频</strong>（平滑区域、背景）：雾霾、模糊主要影响低频成分</li>
+    <li><strong>高频</strong>（边缘、纹理、细节）：雨线、噪声、摩尔纹主要影响高频成分</li>
+  </ul>
+  <p>
+    然而，现有的基于 Transformer 的图像复原方法（如 <strong>Restormer</strong>）在空间域统一处理所有特征，
+    <em>没有显式区分频率信息</em>。FPro 的核心洞察在于：
+    <strong>"让网络知道自己正在处理什么频率的内容，并据此调整特征"</strong>。
+  </p>
+
+  <div class="info-box green">
+    <strong>💡 核心思路</strong><br>
+    在 Encoder-Decoder 的瓶颈层，通过<strong>动态通道滤波器</strong>将特征分离为低频部分和高频部分，
+    然后分别生成"频率提示"，通过 Cross-Attention 机制将这些提示注入到解码器的每一层，
+    引导网络关注适合该层的频率信息。
+  </div>
+</section>
+
+<!-- ═══════════════ 3. 整体架构 ═══════════════ -->
+<section id="sec3">
+  <h2><span class="num">3</span> 整体架构</h2>
+
+  <div class="diagram">
+<pre style="text-align:left;background:transparent;border:none;padding:0;font-size:0.78rem;line-height:1.7">
+                     ┌──────────────────────────────────────────┐
+                     │           输出图像 (Restored)            │
+                     └────────────────┬─────────────────────────┘
+                                      │  + 输入残差连接
+                     ┌────────────────▼─────────────────────────┐
+                     │           Output Conv (3×3)              │
+                     └────────────────┬─────────────────────────┘
+                                      │
+                          ┌───────────▼───────────┐
+                          │   Refinement Blocks   │ ◄─── Prompt_r
+                          │   (4× Transformer)    │
+                          └───────────┬───────────┘
+                                      │
+                          ┌───────────▼───────────┐
+             ┌────────────┤  Decoder Level 1      ├────────────┐
+             │            │  (TransformerBlocks)  │ ◄─── Prompt_d1
+             │            └───────────┬───────────┘            │
+             │                        │ ↑                      │
+             │              ┌─────────▼──────────┐             │
+             │              │    Upsample (×2)   │             │
+             │              └─────────┬──────────┘             │
+             │         ┌──────────────▼──────────────┐         │
+             │         │  Cat + 1×1 Conv (降通道)    │         │
+             │         └──────────────┬──────────────┘         │
+             │                        │                        │
+      ┌──────▼──────────┐    ┌────────▼───────────┐           │
+      │ Encoder Level 1 │    │  Decoder Level 2    ├───────────┤
+      │ (TransformerB.) │    │  (TransformerB.)    │ ◄─── Prompt_d2
+      └──────┬──────────┘    └────────┬────────────┘           │
+             │                        │ ↑                      │
+             │              ┌─────────▼──────────┐             │
+             │              │    Upsample (×2)   │             │
+             │              └─────────┬──────────┘             │
+             │         ┌──────────────▼──────────────┐         │
+             │         │  Cat + 1×1 Conv (降通道)    │         │
+             │         └──────────────┬──────────────┘         │
+             │                        │                        │
+      ┌──────▼──────────┐    ┌────────▼───────────┐           │
+      │ Encoder Level 2 │    │  Decoder Level 3    ◄──────────┤
+      │ (TransformerB.) │    │  (TransformerB.)    │ ◄─── Prompt_d3
+      └──────┬──────────┘    └────────┬────────────┘           │
+             │                        │ ↑                      │
+      ┌──────▼──────────┐             │                        │
+      │ Encoder Level 3 │             │                        │
+      │ (TransformerB.) │             │                        │
+      └──────┬──────────┘             │                        │
+             │                        │                        │
+             └──────────┬─────────────┘                        │
+                        │                                      │
+               ┌────────▼──────────┐                           │
+               │  SplitFrequency   │───────────────────────────┘
+               │  Module           │   低/高频提示
+               │  (动态通道滤波器)   │   注入所有解码层
+               └───────────────────┘
+                        │
+               ┌────────▼──────────┐
+               │  输入图像 (Input)  │
+               └───────────────────┘
+</pre>
+  </div>
+
+  <p>
+    如上图所示，FPro 采用标准的<strong>3层编码器-解码器</strong>架构，并在瓶颈处插入
+    <strong>SplitFrequencyModule</strong> 对<em>第一层编码器的浅层特征</em>进行高低频分离，
+    然后通过 <strong>PromptModule</strong> 将频率提示注入解码器的每一层以及最终的细化模块。
+  </p>
+
+  <div class="info-box orange">
+    <strong>📌 为什么用第一层编码器的特征做频率分离？</strong><br>
+    第一层编码器输出的特征保留了最多的空间细节（分辨率最大），且尚未被大量下采样，
+    从中提取的高低频信息最为丰富和准确。高层特征经过多次下采样已经丢失了精细的空间结构。
+  </div>
+</section>
+
+<!-- ═══════════════ 4. 核心模块详解 ═══════════════ -->
+<section id="sec4">
+  <h2><span class="num">4</span> 核心模块详解</h2>
+
+  <h3>4.1 Transformer Block（基础构件）</h3>
+
+  <p>FPro 的每个 Transformer Block 包含两个核心子模块，继承自 <strong>Restormer</strong>：</p>
+
+  <h4>① MDTA — 多头转置自注意力</h4>
+  <pre><code><span class="kw">class</span> <span class="nc">Attention</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim, num_heads, bias):
+        self.qkv = nn.Conv2d(dim, dim*3, 1, bias=bias)
+        self.qkv_dwconv = nn.Conv2d(dim*3, dim*3, 3, padding=1, groups=dim*3, bias=bias)
+        self.project_out = nn.Conv2d(dim, dim, 1, bias=bias)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):     <span class="cm"># x: (B, C, H, W)</span>
+        qkv = self.qkv_dwconv(self.qkv(x))
+        q, k, v = qkv.chunk(3, dim=1)
+        <span class="cm"># 转置注意力: 对 channels 维度做注意力</span>
+        q = rearrange(q, <span class="str">'b (head c) h w -> b head c (h w)'</span>, head=num_heads)
+        k = rearrange(k, <span class="str">'b (head c) h w -> b head c (h w)'</span>, head=num_heads)
+        v = rearrange(v, <span class="str">'b (head c) h w -> b head c (h w)'</span>, head=num_heads)
+        attn = (q @ k.transpose(-2,-1)) * temperature
+        out = (attn.softmax(dim=-1) @ v)
+        <span class="kw">return</span> self.project_out(rearrange(out, ...))</code></pre>
+
+  <div class="info-box">
+    <strong>❓ 为什么用"转置注意力"而非标准注意力？</strong><br>
+    标准自注意力的计算复杂度是 \(O(H^2W^2)\)，对于高分辨率图像不可接受。
+    转置注意力将计算复杂度降为 \(O(C^2)\)（C 是通道数，通常远小于 H×W），
+    使得 Transformer 能直接处理整张图像而无需分块。
+  </div>
+
+  <h4>② GDFN — 门控深度可分离前馈网络</h4>
+  <pre><code><span class="kw">class</span> <span class="nc">FeedForward</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim, ffn_expansion_factor, bias):
+        hidden = int(dim * ffn_expansion_factor)
+        self.project_in  = nn.Conv2d(dim, hidden*2, 1, bias=bias)
+        self.dwconv      = nn.Conv2d(hidden*2, hidden*2, 3, padding=1,
+                                     groups=hidden*2, bias=bias)
+        self.project_out = nn.Conv2d(hidden, dim, 1, bias=bias)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        x1, x2 = self.dwconv(self.project_in(x)).chunk(2, dim=1)
+        x = F.gelu(x1) * x2          <span class="cm"># 门控机制</span>
+        <span class="kw">return</span> self.project_out(x)</code></pre>
+
+  <h3>4.2 编码器-解码器</h3>
+  <p>
+    编码器由 3 个 Stage 组成，分辨率逐级降为 1/4（通过 PixelUnshuffle 下采样）。
+    解码器通过 PixelShuffle 上采样，并通过 skip-connection 拼接编码器对应层的特征。
+    每个 Stage 包含若干 <code>TransformerBlock</code>（编码器部分关闭了自注意力 <code>isAtt=False</code>，
+    只保留 GDFN；解码器打开自注意力）。
+  </p>
+
+  <table>
+    <tr><th>Stage</th><th>分辨率</th><th>通道数</th><th>Transformer Blocks</th><th>Attention</th></tr>
+    <tr><td>Encoder Level 1</td><td>H×W</td><td>48</td><td>4</td><td>✗</td></tr>
+    <tr><td>Encoder Level 2</td><td>H/2×W/2</td><td>96</td><td>6</td><td>✗</td></tr>
+    <tr><td>Encoder Level 3</td><td>H/4×W/4</td><td>192</td><td>6</td><td>✗</td></tr>
+    <tr><td>Decoder Level 3</td><td>H/4×W/4</td><td>192</td><td>6</td><td>✓ + 频率提示</td></tr>
+    <tr><td>Decoder Level 2</td><td>H/2×W/2</td><td>96</td><td>6</td><td>✓ + 频率提示</td></tr>
+    <tr><td>Decoder Level 1</td><td>H×W</td><td>96</td><td>4</td><td>✓ + 频率提示</td></tr>
+    <tr><td>Refinement</td><td>H×W</td><td>96</td><td>4</td><td>✓ + 频率提示</td></tr>
+  </table>
+
+  <h3>4.3 Downsample / Upsample</h3>
+  <p>
+    下采样使用 <code>Conv2d(通道→通道/2) + PixelUnshuffle(2)</code> 的组合，
+    将空间分辨率减半的同时通道数翻倍。上采样则是对称的 <code>Conv2d(通道→通道×2) + PixelShuffle(2)</code>。
+  </p>
+</section>
+
+<!-- ═══════════════ 5. 频率提示机制 ═══════════════ -->
+<section id="sec5">
+  <h2><span class="num">5</span> 频率提示机制（核心创新）</h2>
+
+  <p>频率提示机制由三个子模块串联组成，是 FPro 区别于 Restormer 的关键所在：</p>
+
+  <div class="diagram">
+<pre style="text-align:left;background:transparent;border:none;padding:0;font-size:0.8rem;line-height:1.6">
+第一层编码器特征 F_low (B, 48, H, W)
+        │
+        ▼
+┌─────────────────────────────────────┐
+│       SplitFrequencyModule          │
+│  ┌─────────────────────────────┐    │
+│  │  dynamic_filter_channel     │    │  ← 可学习的高斯/低通滤波器
+│  │  - AdaptiveAvgPool → conv   │    │     通过 Softmax 加权求和
+│  │  - Unfold + 加权求和 → low  │    │
+│  └──────────┬──────────┬───────┘    │
+│             │          │            │
+│       low_part    out_high         │
+│      (低频成分)   (高频成分)        │
+└─────────────┼──────────┼────────────┘
+              │          │
+              ▼          ▼
+┌──────────────────────────────────────┐
+│     FrequencySpecificPromptGen       │
+│  ┌─────────────┐  ┌──────────────┐   │
+│  │ FSPG_low    │  │ FSPG_high    │   │
+│  │ (频率域)    │  │ (空间域)      │   │
+│  │ rfft2 → att │  │ interp→DWConv│   │
+│  │ → irfft2   │  │ → gate→weight│   │
+│  └──────┬──────┘  └──────┬───────┘   │
+│         y_l              y_h         │
+└─────────┼────────────────┼───────────┘
+          │                │
+          ▼                ▼
+┌──────────────────────────────────────┐
+│         PromptModule                │
+│  ┌──────────┐  ┌──────────┐         │
+│  │ modulator │  │ modulator│         │
+│  │ _lo       │  │ _hi      │         │
+│  │(低频率跨注意)│ │(窗口跨注意)│       │
+│  └─────┬────┘  └────┬─────┘         │
+│        └──────┬──────┘              │
+│           ┌───▼───┐                 │
+│           │ Concat│                 │
+│           │ + 1×1 │                 │
+│           └───────┘                 │
+└──────────────────────────────────────┘
+        │
+        ▼
+频率提示 → + 到解码器特征 (残差连接)
+</pre>
+  </div>
+
+  <h3>5.1 SplitFrequencyModule — 动态通道滤波器</h3>
+
+  <pre><code><span class="kw">class</span> <span class="nc">dynamic_filter_channel</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, inchannels, kernel_size=3, group=8):
+        self.conv = nn.Conv2d(inchannels, group*k_size², 1, bias=False)
+        <span class="cm"># 从全局平均池化生成通道级滤波器权重</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        low_filter = self.ap_1(x)              <span class="cm"># B, C, 1, 1 — 全局统计</span>
+        low_filter = self.conv(low_filter)     <span class="cm"># B, G*k², 1, 1</span>
+        low_filter = sigmoid(gate(low_filter)) <span class="cm"># 门控调制</span>
+        low_filter = softmax(low_filter)       <span class="cm"># 沿空间维度归一化</span>
+
+        x_unfold = unfold(x, k_size)           <span class="cm"># B, G, C/G, k², HW</span>
+        low_part = Σ(x_unfold * low_filter)    <span class="cm"># 加权求和 → 低频分量</span>
+        out_high = x - low_part                <span class="cm"># 残差 → 高频分量</span>
+        <span class="kw">return</span> low_part, out_high</code></pre>
+
+  <div class="info-box green">
+    <strong>🔑 工作原理</strong><br>
+    这个模块本质上学习了一个<strong>数据驱动的低通滤波器</strong>：通过全局池化感知当前图像的内容，
+    动态生成 8 组（group=8）3×3 的卷积核权重，用 Softmax 归一化后对每个局部窗口加权求和。
+    结果 <code>low_part</code> 相当于对输入做了一次<strong>自适应低通滤波</strong>，
+    而 <code>out_high = x - low_part</code> 则提取出高频残差。
+  </div>
+
+  <h3>5.2 FrequencySpecificPromptGenerator (FSPG)</h3>
+
+  <p>FSPG 对低频和高频采用<strong>不同的生成策略</strong>：</p>
+
+  <div class="grid2">
+    <div class="grid-card">
+      <h4>🔵 低频提示 FSPG_low</h4>
+      <p>在<strong>频域</strong>中处理：</p>
+      <pre style="font-size:0.75rem;padding:10px;">y = torch.fft.rfft2(feature)  # 实FFT
+y_f = cat([real, imag])
+y_att = DWConv + GELU(y_f)    # 自门控
+y_f = y_f * y_att              # 特征调制
+y = complex(real, imag)
+y = y * learnable_weight       # 可学习权重
+y = torch.fft.irfft2(y)       # 反变换回空间域</pre>
+      <p>通过可学习的复数权重在频域中<strong>放大/抑制</strong>特定频率分量。</p>
+    </div>
+    <div class="grid-card">
+      <h4>🟠 高频提示 FSPG_high</h4>
+      <p>在<strong>空间域</strong>中处理：</p>
+      <pre style="font-size:0.75rem;padding:10px;">ffm = interpolate(feature, size=(H,W))
+y_att = DWConv_3×1 + GELU +
+        DWConv_1×3(ffm)        # 分离式卷积
+y_f = y_att * ffm              # 自门控调制
+y = y_f * learnable_weight     # 可学习缩放</pre>
+      <p>通过可学习的空间权重<strong>强调/弱化</strong>特定空间位置的高频细节。</p>
+    </div>
+  </div>
+
+  <p>
+    两种提示生成器都有一个<strong>可学习的权重张量</strong>（<code>self.weight</code> /
+    <code>self.complex_weight</code>），在训练过程中自动学习哪些频率/空间位置对复原任务更重要。
+  </p>
+
+  <h3>5.3 提示注入 — PromptModule</h3>
+
+  <p>生成的提示通过两种 Attention 机制注入到主干特征中：</p>
+
+  <h4>低频率提示融合（lowFrequencyPromptFusion）</h4>
+  <pre><code><span class="cm"># 全局 Cross-Attention</span>
+query = Q_proj(decoder_feature)          <span class="cm"># 解码器特征作为 Query</span>
+key   = K_proj(avg_pool(prompt_low))     <span class="cm"># 低频提示池化后作为 Key</span>
+value = V_proj(avg_pool(prompt_low))     <span class="cm"># 全局上下文建模</span>
+out = softmax(query @ key.T / τ) @ value
+<span class="cm"># 输出: 被低频提示调制后的解码器特征</span></code></pre>
+
+  <h4>高频率提示融合（highFrequencyPromptFusion）</h4>
+  <pre><code><span class="cm"># 窗口级 Cross-Attention</span>
+query_feature_win = window_partition(decoder_feature, 8)  <span class="cm"># 8×8 窗口</span>
+kv_feature_win    = window_partition(prompt_high, 8)
+<span class="cm"># 在每个窗口内做自注意力</span>
+query = Q_proj(query_feature_win)
+key   = K_proj(kv_feature_win)
+value = V_proj(kv_feature_win)
+out = softmax(query @ key.T / scale) @ value
+out = window_reverse(out)                <span class="cm"># 恢复为完整特征图</span>
+<span class="cm"># 输出: 被高频提示引导后的解码器特征</span></code></pre>
+
+  <div class="info-box orange">
+    <strong>🧩 为什么低频用全局注意力，高频用窗口注意力？</strong><br>
+    低频信息是全局性的（整体亮度、颜色、背景结构），适合用全局池化和全局注意力捕获。
+    高频信息是局部性的（边缘、纹理、细节），在局部窗口内做注意力更高效，
+    且能更好地保留精细的空间结构。这种<strong>非对称设计</strong>是 FPro 的巧妙之处。
+  </div>
+
+  <h3>5.4 整体前向流程</h3>
+
+  <pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, inp_img):
+    <span class="cm"># 编码器</span>
+    enc1 = encoder1(patch_embed(inp_img))   <span class="cm"># (B, 48, H, W)</span>
+    enc2 = encoder2(down1_2(enc1))          <span class="cm"># (B, 96, H/2, W/2)</span>
+    enc3 = encoder3(down2_3(enc2))          <span class="cm"># (B, 192, H/4, W/4)</span>
+
+    <span class="cm"># 频率分离（从 enc1 提取）</span>
+    low_part, out_high = splitFre(enc1)
+
+    <span class="cm"># 解码器 + 频率提示</span>
+    dec3 = decoder3(enc3)
+    dec3 = prompt_d3(low_part, out_high, dec3) + dec3    <span class="cm"># 残差注入</span>
+
+    dec2 = decoder2(cat([up3_2(dec3), enc2]))
+    dec2 = prompt_d2(low_part, out_high, dec2) + dec2
+
+    dec1 = decoder1(cat([up2_1(dec2), enc1]))
+    dec1 = prompt_d1(low_part, out_high, dec1) + dec1
+
+    <span class="cm"># 细化</span>
+    out = refinement(dec1)
+    out = prompt_r(low_part, out_high, out) + out
+
+    <span class="kw">return</span> output(out) + inp_img  <span class="cm"># 全局残差连接</span></code></pre>
+</section>
+
+<!-- ═══════════════ 6. 训练策略 ═══════════════ -->
+<section id="sec6">
+  <h2><span class="num">6</span> 训练策略</h2>
+
+  <h3>6.1 优化器与学习率调度</h3>
+
+  <table>
+    <tr><th>参数</th><th>设置</th></tr>
+    <tr><td>优化器</td><td>AdamW (β₁=0.9, β₂=0.999, weight_decay=1e-4)</td></tr>
+    <tr><td>初始学习率</td><td>3e-4</td></tr>
+    <tr><td>调度器</td><td>CosineAnnealingRestartCyclicLR</td></tr>
+    <tr><td>调度周期</td><td>第1段: 92k iters (固定 LR=3e-4), 第2段: 208k iters (余弦退火 3e-4 → 1e-6)</td></tr>
+    <tr><td>总迭代数</td><td>300k (去雾/去雨) / 600k (去模糊)</td></tr>
+    <tr><td>梯度裁剪</td><td>Max norm = 0.01</td></tr>
+    <tr><td>Batch size</td><td>2 per GPU (8 GPUs → 全局 16)</td></tr>
+    <tr><td>Patch size</td><td>256×256（固定大小训练）</td></tr>
+  </table>
+
+  <h3>6.2 损失函数</h3>
+
+  <pre><code><span class="cm"># 像素级 L1 损失</span>
+l_pix = L1Loss(pred, gt)                    <span class="cm"># weight=1.0</span>
+
+<span class="cm"># 频域 FFT 损失 — 强制网络恢复正确的频率分布</span>
+pred_fft = torch.fft.fft2(pred, dim=(-2,-1))
+target_fft = torch.fft.fft2(gt, dim=(-2,-1))
+l_fft = L1Loss(pred_fft, target_fft)        <span class="cm"># weight=0.1</span>
+
+<span class="cm"># 总损失</span>
+l_total = l_pix + 0.1 * l_fft</code></pre>
+
+  <div class="info-box green">
+    <strong>💡 FFT 损失的作用</strong><br>
+    FFT 损失在频域中计算 L1 距离，迫使预测结果的幅度谱和相位谱与 Ground Truth 一致。
+    这能有效恢复图像的高频细节（边缘、纹理）并避免过度平滑。
+    权重 0.1 确保频域约束是辅助性的，主导仍然是空间域的 L1 损失。
+  </div>
+
+  <h3>6.3 混合增强 (Mixing Augmentation)</h3>
+
+  <pre><code><span class="kw">class</span> <span class="nc">Mixing_Augment</span>:
+    <span class="kw">def</span> <span class="fn">mixup</span>(self, target, input_):
+        lam = Beta(1.2, 1.2).sample()       <span class="cm"># 从 Beta 分布采样混合系数</span>
+        r_index = random_permutation(B)     <span class="cm"># 随机选取另一张图</span>
+        target = lam * target + (1-lam) * target[r_index]
+        input_ = lam * input_ + (1-lam) * input_[r_index]
+        <span class="kw">return</span> target, input_</code></pre>
+
+  <p>
+    Mixup 以概率 50% 应用，能有效增加训练数据的多样性，提高模型的泛化能力。
+    去雾任务使用了 mixup（去雾性能提升明显），而去雨任务则禁用了 mixup。
+  </p>
+</section>
+
+<!-- ═══════════════ 7. 任务与数据集 ═══════════════ -->
+<section id="sec7">
+  <h2><span class="num">7</span> 任务与数据集</h2>
+
+  <p>FPro 在 5 个图像复原任务、6 个数据集上进行了验证：</p>
+
+  <table>
+    <tr><th>任务</th><th>数据集</th><th>训练配置</th><th>测试脚本</th></tr>
+    <tr>
+      <td>🌧️ 去雨 (Derain)</td>
+      <td>SPAD</td>
+      <td><code>Deraining_FPro_spad.yml</code></td>
+      <td><code>test_spad.py</code></td>
+    </tr>
+    <tr>
+      <td>💧 去雨滴 (Raindrop)</td>
+      <td>AGAN</td>
+      <td><code>RealDeraindrop_FPro.yml</code></td>
+      <td><code>test_AGAN.py</code></td>
+    </tr>
+    <tr>
+      <td>🌫️ 去雾 (Dehaze)</td>
+      <td>SOTS</td>
+      <td><code>RealDehazing_FPro.yml</code></td>
+      <td><code>test_SOTS.py</code></td>
+    </tr>
+    <tr>
+      <td>🌀 去运动模糊 (Deblur)</td>
+      <td>GoPro / HIDE / RealBlur</td>
+      <td><code>Deblurring_FPro.yml</code></td>
+      <td><code>test_FPro.py</code></td>
+    </tr>
+    <tr>
+      <td>🔲 去摩尔纹 (Demoire)</td>
+      <td>TIP18</td>
+      <td><code>RealDemoiring_FPro.yml</code></td>
+      <td><code>test_moire.py</code></td>
+    </tr>
+  </table>
+
+  <div class="info-box">
+    <strong>📦 预训练模型下载</strong>（百度网盘）<br>
+    <table style="margin:6px 0;font-size:0.85rem">
+      <tr><th>任务</th><th>模型链接</th><th>可视化结果</th></tr>
+      <tr><td>SPAD (去雨)</td><td><a href="#" style="color:var(--accent)">code:gd8j</a></td><td><a href="#" style="color:var(--accent)">code:ntgp</a></td></tr>
+      <tr><td>AGAN (去雨滴)</td><td><a href="#" style="color:var(--accent)">code:dqml</a></td><td><a href="#" style="color:var(--accent)">code:ul55</a></td></tr>
+      <tr><td>SOTS (去雾)</td><td><a href="#" style="color:var(--accent)">code:aagq</a></td><td><a href="#" style="color:var(--accent)">code:9ssj</a></td></tr>
+      <tr><td>GoPro (去模糊)</td><td><a href="#" style="color:var(--accent)">code:lhds</a></td><td><a href="#" style="color:var(--accent)">code:764e</a></td></tr>
+      <tr><td>TIP18 (去摩尔纹)</td><td><a href="#" style="color:var(--accent)">code:l13v</a></td><td><a href="#" style="color:var(--accent)">code:9und</a></td></tr>
+    </table>
+    更多详情请查阅项目 README 中的百度网盘链接。
+  </div>
+
+  <h3>7.1 大图像测试策略</h3>
+
+  <p>
+    测试时，FPro 使用<strong>重叠分块 + 加权合并</strong>的策略处理高分辨率图像：
+  </p>
+  <pre><code><span class="cm"># 1. 将图像切分为 256×256 的块，块之间重叠 158/200 像素</span>
+split_data, starts = splitimage(input_, crop_size=256, overlap_size=158)
+
+<span class="cm"># 2. 对每个块独立推理</span>
+<span class="kw">for</span> i, data <span class="kw">in</span> enumerate(split_data):
+    split_data[i] = model_restoration(data)
+
+<span class="cm"># 3. 加权合并：中心区域权重更高，边缘权重递减</span>
+restored = mergeimage(split_data, starts, crop_size=256, resolution=(B,C,H,W))
+<span class="cm"># 合并权重使用高斯得分图或均匀得分图</span></code></pre>
+
+  <p>
+    这种策略避免了直接输入大图时的显存溢出问题，同时通过重叠区域的加权平均消除了块边界伪影。
+  </p>
+</section>
+
+<!-- ═══════════════ 8. 项目结构 ═══════════════ -->
+<section id="sec8">
+  <h2><span class="num">8</span> 项目结构</h2>
+
+  <pre><code>FPro/
+├── README.md                      # 项目说明（训练/评估命令）
+├── INSTALL.md                     # 安装指南（conda + pip）
+├── setup.py                       # BasicSR 框架安装脚本
+├── train.sh                       # 分布式训练入口
+├── test.sh                        # 测试入口（各任务注释开关）
+│
+├── basicsr/                       # ⬅ 核心代码框架 (BasicSR)
+│   ├── train.py                   #   训练主程序
+│   ├── test.py                    #   验证程序
+│   ├── version.py                 #   版本信息
+│   ├── data/                      #   数据加载
+│   ├── models/
+│   │   ├── archs/
+│   │   │   ├── __init__.py        #   自动发现 _arch.py 文件
+│   │   │   ├── FPro_arch.py       #   ⭐ FPro 网络架构定义
+│   │   │   └── arch_util.py       #   通用工具（初始化、上采样等）
+│   │   ├── losses/
+│   │   │   ├── losses.py          #   L1Loss, FFTLoss, MSELoss 等
+│   │   │   └── loss_util.py       #   损失工具函数
+│   │   ├── image_restoration_model.py  # ImageCleanModel 训练/验证逻辑
+│   │   └── base_model.py          #   模型基类
+│   ├── metrics/                   #   评价指标 (PSNR/SSIM)
+│   └── utils/                     #   工具函数（日志/图像IO/分布式）
+│
+├── Deraining/
+│   ├── Options/
+│   │   ├── Deraining_FPro_spad.yml       # 去雨训练配置
+│   │   └── RealDeraindrop_FPro.yml       # 去雨滴训练配置
+│   ├── test_spad.py               # 去雨测试脚本
+│   ├── test_AGAN.py               # 去雨滴测试脚本
+│   ├── evaluate_PSNR_SSIM.m       # MATLAB 评估
+│   ├── evaluate_raindrop.py       # 雨滴评估
+│   └── utils.py                   # 图像IO工具
+│
+├── Dehaze/
+│   ├── Options/
+│   │   └── RealDehazing_FPro.yml  # 去雾训练配置
+│   ├── test_SOTS.py               # 去雾测试脚本
+│   ├── evaluate_SOTS.py           # 去雾评估
+│   └── utils.py                   # 图像IO工具
+│
+├── Motion_Deblurring/
+│   ├── Options/
+│   │   └── Deblurring_FPro.yml    # 去模糊训练配置
+│   ├── test_FPro.py               # 去模糊测试脚本
+│   ├── evaluate_gopro_hide.m      # MATLAB 评估
+│   ├── generate_patches_gopro.py  # 数据集预处理
+│   └── utils.py                   # 图像IO + PSNR/SSIM
+│
+└── Demoiring/
+    ├── Options/
+    │   └── RealDemoiring_FPro.yml # 去摩尔纹训练配置
+    ├── test_moire.py              # 去摩尔纹测试脚本
+    ├── evaluate_demoire.py        # 去摩尔纹评估
+    ├── dataset_demoire.py         # 数据集处理
+    └── utils.py                   # 图像IO工具</code></pre>
+</section>
+
+<!-- ═══════════════ 9. 使用指南 ═══════════════ -->
+<section id="sec9">
+  <h2><span class="num">9</span> 使用指南</h2>
+
+  <h3>9.1 环境安装</h3>
+
+  <pre><code><span class="cm"># 1. 克隆仓库</span>
+git clone https://github.com/joshyZhou/FPro.git
+cd FPro
+
+<span class="cm"># 2. 创建 conda 环境</span>
+conda create -n fpro python=3.7
+conda activate fpro
+conda install pytorch=1.8 torchvision cudatoolkit=10.2 -c pytorch
+
+<span class="cm"># 3. 安装依赖</span>
+pip install matplotlib scikit-learn scikit-image opencv-python yacs joblib natsort h5py tqdm
+pip install einops gdown addict future lmdb numpy pyyaml requests scipy tb-nightly yapf lpips
+
+<span class="cm"># 4. 安装 BasicSR 框架</span>
+python setup.py develop --no_cuda_ext</code></pre>
+
+  <div class="info-box orange">
+    <strong>⚠️ 注意事项</strong><br>
+    <ul>
+      <li>论文使用 PyTorch 1.8 + CUDA 10.2 + Python 3.7，但现代 PyTorch (2.x) 也兼容</li>
+      <li>分布式训练需要设置 <code>--nproc_per_node</code>（GPU 数量）和 <code>--master_port</code></li>
+      <li>如果训练时遇到 <code>DDP</code> 相关错误，可以尝试 <code>export NCCL_IB_DISABLE=1</code></li>
+    </ul>
+  </div>
+
+  <h3>9.2 训练</h3>
+
+  <pre><code><span class="cm"># 去雨 (SPAD 数据集)</span>
+./train.sh Deraining/Options/Deraining_FPro_spad.yml
+
+<span class="cm"># 去雾 (SOTS 数据集)</span>
+./train.sh Dehaze/Options/RealDehazing_FPro.yml
+
+<span class="cm"># 去模糊 (GoPro 数据集)</span>
+./train.sh Motion_Deblurring/Options/Deblurring_FPro.yml
+
+<span class="cm"># 去雨滴 (AGAN 数据集)</span>
+./train.sh Deraining/Options/RealDeraindrop_FPro.yml
+
+<span class="cm"># 去摩尔纹 (TIP18 数据集)</span>
+./train.sh Demoiring/Options/RealDemoiring_FPro.yml</code></pre>
+
+  <p>
+    每个任务的 YAML 配置文件中包含<strong>完整的数据路径、模型参数、训练超参数</strong>，
+    训练前需要修改 <code>dataroot_gt</code> 和 <code>dataroot_lq</code> 指向你的本地数据路径。
+  </p>
+
+  <h3>9.3 测试</h3>
+
+  <pre><code><span class="cm"># 在 test.sh 中取消注释对应任务，然后运行：</span>
+./test.sh
+
+<span class="cm"># 或直接运行测试脚本（以去模糊为例）：</span>
+cd Motion_Deblurring
+python test_FPro.py \
+    --input_dir /path/to/test/blur \
+    --result_dir ./results/FPro/ \
+    --weights /path/to/deblur.pth \
+    --dataset GoPro</code></pre>
+
+  <h3>9.4 配置关键参数</h3>
+
+  <p>YAML 配置文件中最重要的参数：</p>
+
+  <table>
+    <tr><th>参数路径</th><th>说明</th><th>典型值</th></tr>
+    <tr><td><code>network_g.type</code></td><td>网络类型（<strong>FPro</strong> 或 Restormer）</td><td><code>FPro</code></td></tr>
+    <tr><td><code>network_g.dim</code></td><td>基础通道数</td><td><code>48</code></td></tr>
+    <tr><td><code>network_g.num_blocks</code></td><td>每层 Transformer Block 数量</td><td><code>[2,3,6]</code></td></tr>
+    <tr><td><code>network_g.heads</code></td><td>每层注意力头数</td><td><code>[2,4,8]</code></td></tr>
+    <tr><td><code>network_g.num_refinement_blocks</code></td><td>细化的 Transformer Block 数</td><td><code>2</code></td></tr>
+    <tr><td><code>train.pixel_opt</code></td><td>像素损失（L1）权重</td><td><code>1.0</code></td></tr>
+    <tr><td><code>train.fft_loss_opt</code></td><td>FFT 频域损失权重</td><td><code>0.1</code></td></tr>
+    <tr><td><code>train.scheduler.periods</code></td><td>余弦退火周期（以 iter 为单位）</td><td><code>[92000, 208000]</code></td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════ 10. 代码逐模块分析 ═══════════════ -->
+<section id="sec10">
+  <h2><span class="num">10</span> 代码逐模块分析</h2>
+
+  <h3>10.1 网络定义入口 — <code>FPro_arch.py</code></h3>
+
+  <p>整个网络的类定义和所有子模块都在这个文件中。架构注册通过 <code>archs/__init__.py</code> 中的自动扫描机制完成：</p>
+
+  <pre><code><span class="cm"># basicsr/models/archs/__init__.py</span>
+<span class="cm"># 自动扫描 archs/ 目录下所有以 _arch.py 结尾的文件</span>
+<span class="cm"># 通过 dynamic_instantiation 动态实例化指定类</span>
+<span class="kw">def</span> <span class="fn">define_network</span>(opt):
+    network_type = opt.pop(<span class="str">'type'</span>)
+    net = dynamic_instantiation(_arch_modules, network_type, opt)
+    <span class="kw">return</span> net
+
+<span class="cm"># YAML 中 type: FPro → 自动找到 FPro_arch.py 中的 FPro 类</span></code></pre>
+
+  <h3>10.2 模型训练逻辑 — <code>image_restoration_model.py</code></h3>
+
+  <p><code>ImageCleanModel</code> 继承自 <code>BaseModel</code>，封装了训练和验证的完整流程：</p>
+  <ul>
+    <li><code>feed_train_data()</code> — 加载 batch 数据，可选 Mixup 增强</li>
+    <li><code>optimize_parameters()</code> — 前向传播 → 计算 L1 + FFT 损失 → 反向传播 → 梯度裁剪 → 优化器步进</li>
+    <li><code>pad_test() / nonpad_test()</code> — 测试时反射填充保证尺寸对齐 8 的倍数</li>
+    <li><code>nondist_validation()</code> — 验证循环：推理 → 计算 PSNR → 可选保存结果图像</li>
+  </ul>
+
+  <h3>10.3 损失函数 — <code>losses.py</code></h3>
+
+  <pre><code><span class="kw">class</span> <span class="nc">FFTLoss</span>(nn.Module):
+    <span class="cm"># 在频域计算 L1 损失</span>
+    <span class="kw">def</span> <span class="fn">forward</span>(self, pred, target):
+        pred_fft = torch.fft.fft2(pred, dim=(-2, -1))
+        pred_fft = torch.stack([pred_fft.real, pred_fft.imag], dim=-1)
+        target_fft = torch.fft.fft2(target, dim=(-2, -1))
+        target_fft = torch.stack([target_fft.real, target_fft.imag], dim=-1)
+        <span class="kw">return</span> l1_loss(pred_fft, target_fft)</code></pre>
+
+  <p>FFT 损失将预测和真实图像的频域表示（实部和虚部分开）进行 L1 比较。
+  这强制网络同时恢复正确的幅度谱和相位谱。</p>
+
+  <h3>10.4 测试脚本 — <code>test_FPro.py</code></h3>
+
+  <p>测试流程可以概括为以下几个步骤：</p>
+
+  <pre><code><span class="cm"># 1. 加载 YAML 配置</span>
+x = yaml.load(open(yaml_file, mode='r'), Loader=Loader)
+s = x['network_g'].pop(<span class="str">'type'</span>)  <span class="cm"># 移除 type 字段</span>
+
+<span class="cm"># 2. 实例化网络</span>
+model_restoration = FPro(**x['network_g'])
+
+<span class="cm"># 3. 加载预训练权重</span>
+checkpoint = torch.load(args.weights)
+model_restoration.load_state_dict(checkpoint[<span class="str">'params'</span>])
+
+<span class="cm"># 4. 多 GPU 推理</span>
+model_restoration = nn.DataParallel(model_restoration)
+model_restoration.eval()
+
+<span class="cm"># 5. 遍历测试图像</span>
+<span class="kw">for</span> file_ <span class="kw">in</span> tqdm(files):
+    img = load_img(file_)  <span class="cm"># HWC, RGB, [0,255]</span>
+    input_ = torch.from_numpy(img / 255.).permute(2,0,1).unsqueeze(0).cuda()
+
+    <span class="cm"># 6. 分块推理（避免 OOM）</span>
+    split_data, starts = splitimage(input_, crop_size=256, overlap_size=200)
+    <span class="kw">for</span> i, data <span class="kw">in</span> enumerate(split_data):
+        split_data[i] = model_restoration(data).cpu()
+    restored = mergeimage(split_data, starts, ...)
+
+    <span class="cm"># 7. 保存结果</span>
+    restored = torch.clamp(restored, 0, 1).permute(0,2,3,1).numpy()
+    save_img(result_path, img_as_ubyte(restored))</code></pre>
+
+  <h3>10.5 训练入口 — <code>basicsr/train.py</code></h3>
+
+  <p>训练流程的工作流总结：</p>
+  <ol>
+    <li>解析命令行参数和 YAML 配置</li>
+    <li>初始化分布式训练环境（若启用）</li>
+    <li>创建数据集和 DataLoader</li>
+    <li>创建模型（<code>ImageCleanModel</code>）</li>
+    <li>按迭代循环：<code>feed_train_data → optimize_parameters → 日志记录</code></li>
+    <li>定期验证并保存 checkpoint</li>
+  </ol>
+</section>
+
+<!-- ═══════════════ 11. 参考文献与致谢 ═══════════════ -->
+<section id="sec11">
+  <h2><span class="num">11</span> 参考文献与致谢</h2>
+
+  <h3>论文引用</h3>
+  <pre><code>@inproceedings{zhou_ECCV2024_FPro,
+  title={Seeing the Unseen: A Frequency Prompt Guided Transformer
+         for Image Restoration},
+  author={Zhou, Shihao and Pan, Jinshan and Shi, Jinglei and
+          Chen, Duosheng and Qu, Lishen and Yang, Jufeng},
+  booktitle={ECCV},
+  year={2024}
+}</code></pre>
+
+  <h3>致谢</h3>
+  <p>
+    FPro 代码库大量借鉴了 <a href="https://github.com/swz30/Restormer" target="_blank" style="color:var(--accent)">Restormer</a> 
+    （Zamir et al., CVPR 2022）的代码，并基于 
+    <a href="https://github.com/xinntao/BasicSR" target="_blank" style="color:var(--accent)">BasicSR</a> 框架构建。
+    感谢 HuggingFace 社区贡献的在线 Demo。
+  </p>
+
+  <h3>延伸阅读</h3>
+  <ul>
+    <li><strong>Restormer</strong>: Zamir et al., "Efficient Transformer for High-Resolution Image Restoration", CVPR 2022 — FPro 的基线模型</li>
+    <li><strong>PromptIR</strong>: Potlapalli et al., "Prompt-based Image Restoration", NeurIPS 2023 — 同样使用提示的图像复原方法</li>
+    <li><strong>BasicSR</strong>: 开源的图像/视频超分辨率和复原框架</li>
+    <li><strong>FFT-based methods</strong>: FFC (DeepRFT), WaveCNet 等频域学习方法</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 12. 实战 ═══════════════ -->
+<section id="sec12">
+  <h2><span class="num">12</span> 实战：手机拍摄屏幕视频的去摩尔纹</h2>
+
+  <p>
+    这是很多人的真实痛点：用手机拍摄电脑/电视屏幕时，画面会出现彩色的摩尔纹（Moire Pattern）。
+    FPro 项目自带的 <strong>Demoire（去摩尔纹）</strong>模块恰好解决这个问题。
+    本章提供从环境搭建到视频处理的全流程手把手教程。
+  </p>
+
+  <div class="info-box orange">
+    <strong>⚠️ 一个重要发现</strong><br>
+    查看 FPro 项目 <code>Demoiring/Options/RealDemoiring_FPro.yml</code> 官方配置文件发现：<br>
+    去摩尔纹任务官方使用的是 <code>type: Restormer</code>（而非 FPro）。这意味着：
+    <ul>
+      <li><strong>可以直接用</strong>：Restormer 在 TIP18 数据集上表现已经很好</li>
+      <li><strong>也可以换成 FPro</strong>：FPro 的频域提示机制理论上对摩尔纹这种高频退化更有效，但需要自己训练</li>
+      <li>下面的方案给出两条路径，你可以根据自己的需求选择</li>
+    </ul>
+  </div>
+
+  <h3>12.1 摩尔纹的形成原理</h3>
+
+  <div class="info-box green">
+    <strong>📐 摩尔纹 = 空间混叠</strong><br>
+    当手机相机的<strong>传感器像素网格</strong>与屏幕的<strong>子像素排列（RGB stripe / Pentile / Delta）</strong>
+    在空间频率上接近时，会发生<strong>差频干涉</strong>，产生肉眼可见的彩色波纹。
+    频率越接近，摩尔纹越明显；拍摄角度和距离的变化会导致摩尔纹形态不断变化 — 这也是视频比单图更难处理的原因。
+  </div>
+
+  <div class="grid2">
+    <div class="grid-card">
+      <h4>📱 影响摩尔纹的因素</h4>
+      <ul>
+        <li>手机与屏幕的夹角（越大越明显）</li>
+        <li>手机分辨率 vs 屏幕分辨率</li>
+        <li>屏幕刷新率 vs 手机帧率</li>
+        <li>是否开启 HDR</li>
+        <li>变焦倍数（数码变焦放大摩尔纹）</li>
+      </ul>
+    </div>
+    <div class="grid-card">
+      <h4>🎬 视频特有的挑战</h4>
+      <ul>
+        <li>滚动快门（Rolling Shutter）产生时变伪影</li>
+        <li>手持抖动导致摩尔纹形态不断变化</li>
+        <li>逐帧处理可能出现闪烁</li>
+        <li>需要处理大量帧（30fps × 60s = 1800 帧）</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>12.2 方案 A — 快速上手（Restormer 官方权重）</h3>
+
+  <p>如果你只想尽快跑通流程看看效果：</p>
+
+  <h4>步骤 ① 安装环境</h4>
+
+  <pre><code><span class="cm"># 克隆项目</span>
+git clone https://github.com/joshyZhou/FPro.git
+cd FPro
+
+<span class="cm"># 创建环境（Python 3.7+ / CUDA 10.2+ 均可）</span>
+conda create -n fpro python=3.9
+conda activate fpro
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+pip install matplotlib scikit-image opencv-python natsort tqdm einops pyyaml
+pip install yacs joblib h5py scikit-learn
+
+<span class="cm"># 安装 BasicSR 框架</span>
+python setup.py develop --no_cuda_ext</code></pre>
+
+  <h4>步骤 ② 下载预训练权重</h4>
+
+  <pre><code><span class="cm"># 从 README 获取百度网盘链接（TIP18 行, code:l13v）</span>
+<span class="cm"># 下载后放到 Demoiring/models/ 目录下</span>
+mkdir -p Demoiring/models
+mv ~/Downloads/your_downloaded_weights.pth Demoiring/models/demoire.pth</code></pre>
+
+  <div class="info-box">
+    <strong>💡 没有百度网盘账号？</strong><br>
+    可以去 <a href="https://huggingface.co/spaces/yssszzzzzzzzy/FPro-Dehaze" target="_blank" style="color:var(--accent)">HuggingFace 在线 Demo</a> 先测试
+    单张图片的效果。如果要批量处理视频，也可以尝试在 GitHub Issues 中向作者请求 Google Drive 链接。
+  </div>
+
+  <h4>步骤 ③ 单帧去摩尔纹测试</h4>
+
+  <p>先按官方测试脚本跑一张截图确认效果：</p>
+
+  <pre><code><span class="cm"># 修改 Demoiring/test_moire.py 中的路径</span>
+<span class="cm"># --input_dir 改为你的截图目录（里面放 .png 或 .jpg）</span>
+<span class="cm"># --weights 改为刚才下载的权重路径</span>
+
+cd Demoiring
+python test_moire.py \
+    --input_dir ./my_screenshots/ \
+    --result_dir ./results/demoire/ \
+    --weights ./models/demoire.pth</code></pre>
+
+  <h4>步骤 ④ 完整视频处理脚本</h4>
+
+  <p>
+    将以下代码保存为 <code>Demoiring/process_video.py</code>，然后运行：
+  </p>
+
+  <pre><code><span class="cm">#!/usr/bin/env python3</span>
+<span class="str">"""
+手机拍摄屏幕视频 → 去摩尔纹 → 输出视频
+支持批量处理，自动分块，进度条显示
+
+用法：
+    python process_video.py \
+        --input  video.mp4 \
+        --output video_demoired.mp4 \
+        --weights models/demoire.pth \
+        --device cuda
+"""</span>
+
+import cv2, torch, os, yaml, argparse, math
+import numpy as np
+from tqdm import tqdm
+
+<span class="cm"># ── FPro 架构（想用 Restormer 可以互换） ──</span>
+from basicsr.models.archs.FPro_arch import FPro
+<span class="cm"># from basicsr.models.archs.Restormer_arch import Restormer</span>
+
+parser = argparse.ArgumentParser()
+parser.add_argument(<span class="str">'--input'</span>,  required=<span class="nb">True</span>, help=<span class="str">'输入视频路径'</span>)
+parser.add_argument(<span class="str">'--output'</span>, required=<span class="nb">True</span>, help=<span class="str">'输出视频路径'</span>)
+parser.add_argument(<span class="str">'--weights'</span>, default=<span class="str">'./models/demoire.pth'</span>)
+parser.add_argument(<span class="str">'--yaml'</span>, default=<span class="str">'Options/RealDemoiring_FPro.yml'</span>)
+parser.add_argument(<span class="str">'--device'</span>, default=<span class="str">'cuda'</span>)
+parser.add_argument(<span class="str">'--max_w'</span>, type=int, default=<span class="num">1920</span>,
+                    help=<span class="str">'长边最大尺寸，超出的自动缩放（省钱省显存）'</span>)
+args = parser.parse_args()
+
+<span class="cm"># ── 1. 加载模型 ──</span>
+print(<span class="str">"[1/4] 加载模型..."</span>)
+with open(args.yaml) as f:
+    cfg = yaml.load(f, Loader=yaml.FullLoader)
+cfg[<span class="str">'network_g'</span>].pop(<span class="str">'type'</span>)
+
+<span class="cm"># 二选一：FPro 或 Restormer</span>
+model = FPro(**cfg[<span class="str">'network_g'</span>])
+<span class="cm"># model = Restormer(**cfg['network_g'])</span>
+
+ckpt = torch.load(args.weights, map_location=args.device)
+<span class="cm"># 兼容 'params' 和 'state_dict' 两种键名</span>
+sd = ckpt.get(<span class="str">'params'</span>, ckpt.get(<span class="str">'state_dict'</span>, ckpt))
+model.load_state_dict(sd, strict=<span class="nb">False</span>)
+model = model.to(args.device).eval()
+print(<span class="str">"   模型加载完成，参数数:",</span> sum(p.numel() <span class="kw">for</span> p <span class="kw">in</span> model.parameters()))
+
+<span class="cm"># ── 2. 读取视频 ──</span>
+print(<span class="str">"[2/4] 读取视频..."</span>)
+cap = cv2.VideoCapture(args.input)
+fps  = int(cap.get(cv2.CAP_PROP_FPS))
+w    = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+h    = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+<span class="cm"># 如果分辨率过大，等比缩放</span>
+scale = <span class="num">1.0</span>
+<span class="kw">if</span> max(w, h) &gt; args.max_w:
+    scale = args.max_w / max(w, h)
+    w, h = int(w * scale), int(h * scale)
+    print(<span class="str">f"   原始分辨率 {cap.get(3):.0f}×{cap.get(4):.0f}"</span>
+          <span class="str">f"，缩放至 {w}×{h}"</span>)
+
+fourcc = cv2.VideoWriter_fourcc(*<span class="str">'mp4v'</span>)
+out = cv2.VideoWriter(args.output, fourcc, fps, (w, h))
+
+<span class="cm"># ── 3. 逐帧处理 ──</span>
+print(<span class="str">f"[3/4] 开始处理 {total_frames} 帧..."</span>)
+<span class="kw">for</span> idx <span class="kw">in</span> tqdm(range(total_frames), desc=<span class="str">'去摩尔纹'</span>):
+    ret, frame = cap.read()
+    <span class="kw">if</span> <span class="kw">not</span> ret: <span class="kw">break</span>
+
+    <span class="cm"># 缩放</span>
+    <span class="kw">if</span> scale != <span class="num">1.0</span>:
+        frame = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
+
+    <span class="cm"># BGR → RGB → Tensor [0,1]</span>
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.float32) / <span class="num">255.0</span>
+    t   = torch.from_numpy(img).permute(<span class="num">2</span>, <span class="num">0</span>, <span class="num">1</span>).unsqueeze(<span class="num">0</span>).to(args.device)
+
+    <span class="cm"># 填充至 8 的倍数（Restormer 要求）</span>
+    h_orig, w_orig = t.shape[<span class="num">2</span>:]
+    pad_h = (<span class="num">8</span> - h_orig % <span class="num">8</span>) % <span class="num">8</span>
+    pad_w = (<span class="num">8</span> - w_orig % <span class="num">8</span>) % <span class="num">8</span>
+    t = torch.nn.functional.pad(t, (<span class="num">0</span>, pad_w, <span class="num">0</span>, pad_h), mode=<span class="str">'reflect'</span>)
+
+    <span class="cm"># 推理</span>
+    <span class="kw">with</span> torch.no_grad():
+        out_t = model(t)
+
+    <span class="cm"># 去除填充</span>
+    out_t = out_t[:, :, :h_orig, :w_orig]
+
+    <span class="cm"># Tensor → numpy → BGR</span>
+    out_t = out_t.clamp(<span class="num">0</span>, <span class="num">1</span>).squeeze(<span class="num">0</span>).permute(<span class="num">1</span>, <span class="num">2</span>, <span class="num">0</span>).cpu().numpy()
+    out_frame = cv2.cvtColor((out_t * <span class="num">255</span>).astype(np.uint8), cv2.COLOR_RGB2BGR)
+
+    <span class="cm"># 时域平滑（可选）：与上一帧以 0.1 的比例融合，减少闪烁</span>
+    <span class="kw">if</span> idx &gt; <span class="num">0</span>:
+        out_frame = cv2.addWeighted(out_frame, <span class="num">0.9</span>, prev_frame, <span class="num">0.1</span>, <span class="num">0</span>)
+    prev_frame = out_frame.copy()
+
+    out.write(out_frame)
+
+cap.release()
+out.release()
+print(<span class="str">f"[4/4] ✅ 完成！已保存至 {args.output}"</span>)</code></pre>
+
+  <p>运行方式：</p>
+
+  <pre><code><span class="cm"># 基本用法</span>
+cd Demoiring
+python process_video.py --input ~/Videos/screen_recording.mp4 \
+                         --output ~/Videos/screen_clean.mp4
+
+<span class="cm"># 指定权重和缩放限制</span>
+python process_video.py --input ~/Videos/large_4k.mp4 \
+                         --output ~/Videos/large_4k_clean.mp4 \
+                         --weights ./models/demoire.pth \
+                         --max_w 1280  <span class="cm"># 4K 缩放到 1280 宽，加速推理</span></code></pre>
+
+  <h3>12.3 方案 B — 用 FPro 架构训练更好的去摩尔纹模型</h3>
+
+  <p>
+    官方 Demoiring 用的是 Restormer。但你完全可以换成 <strong>FPro 架构</strong>，
+    因为 FPro 的频域提示机制天然适合处理摩尔纹这种高频退化。
+    只需要在 YAML 文件中改一个字段：
+  </p>
+
+  <pre><code><span class="cm"># Demoiring/Options/RealDemoiring_FPro.yml 中修改:</span>
+network_g:
+  <span class="hl">type: FPro</span>              <span class="cm"># ← 从 Restormer 改为 FPro</span>
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: [2,3,6]
+  num_refinement_blocks: 2
+  heads: [2,4,8]
+  ffn_expansion_factor: 3
+  bias: False
+  LayerNorm_type: WithBias
+  dual_pixel_task: False</code></pre>
+
+  <p>然后使用 FPro 的预训练权重（如去模糊的 GoPro 权重）做初始化：</p>
+
+  <pre><code><span class="cm"># 在 YAML 中指定预训练权重</span>
+path:
+  pretrain_network_g: /path/to/FPro_GoPro.pth
+  strict_load_g: false     <span class="cm"># 允许部分加载（结构不完全匹配时）</span></code></pre>
+
+  <h3>12.4 方案 C — 微调（Fine-tune）提升效果</h3>
+
+  <p>
+    如果你要处理的是 <strong>特定的</strong> 手机+屏幕组合（比如每次用 iPhone 拍同一个显示器），
+    微调是效果提升最大的方式。收集 20-50 张带摩尔纹的截图 + 对应的干净参考图即可。
+  </p>
+
+  <div class="grid2">
+    <div class="grid-card">
+      <h4>🎯 如何获取训练数据</h4>
+      <ul>
+        <li>拍一张带摩尔纹的屏幕照片</li>
+        <li>用截图工具（如微信截图 / Snipaste）截取同一画面的干净版本</li>
+        <li>将两者<strong>对齐裁剪</strong>为相同尺寸</li>
+        <li>放到 datasets/train/moire/ 和 datasets/train/clean/</li>
+      </ul>
+    </div>
+    <div class="grid-card">
+      <h4>⚙️ 微调命令</h4>
+      <pre style="font-size:0.75rem;padding:10px;">python basicsr/train.py \
+  -opt Demoiring/Options/RealDemoiring_FPro.yml \
+  --launcher none</pre>
+      <p style="margin-top:8px">在 YAML 中改 <code>dataroot_lq</code> 和 <code>dataroot_gt</code> 指向你的数据目录，<br>
+      <code>pretrain_network_g</code> 指向预训练权重。</p>
+    </div>
+  </div>
+
+  <h3>12.5 性能参考与优化技巧</h3>
+
+  <table>
+    <tr><th>GPU</th><th>分辨率</th><th>是否分块</th><th>约每秒帧数</th><th>显存占用</th></tr>
+    <tr><td>RTX 4090</td><td>1920×1080</td><td>否</td><td>~25 FPS</td><td>~6 GB</td></tr>
+    <tr><td>RTX 4090</td><td>3840×2160</td><td>是 (256+64)</td><td>~3 FPS</td><td>~8 GB</td></tr>
+    <tr><td>RTX 3060</td><td>1920×1080</td><td>否</td><td>~10 FPS</td><td>~4 GB</td></tr>
+    <tr><td>RTX 3060</td><td>1920×1080</td><td>是 (256+64)</td><td>~6 FPS</td><td>~2 GB</td></tr>
+    <tr><td>M1 Max (Mac)</td><td>1920×1080</td><td>否</td><td>~5 FPS</td><td>~4 GB</td></tr>
+  </table>
+
+  <div class="info-box green">
+    <strong>⚡ 加速技巧</strong>
+    <ol>
+      <li><strong>FP16 推理</strong>：加上 <code>model.half()</code> 和 <code>t.half()</code>，速度翻倍，显存减半</li>
+      <li><strong>降低分辨率</strong>：手机拍摄的 4K 视频可以先缩放到 1080p（`--max_w 1080`），
+        摩尔纹主要在高频细节中，分辨率降低后摩尔纹反而减轻，处理速度大幅提升</li>
+      <li><strong>跳帧处理</strong>：对于变化缓慢的屏幕内容，每隔 2-3 帧处理一帧，中间帧用插值</li>
+      <li><strong>TensorRT 导出</strong>：将模型导出为 TensorRT 引擎，1080p 可达 60+ FPS</li>
+      <li><strong>批量推理</strong>：一次 batch 处理 4-8 帧，充分利用 GPU 并行能力</li>
+    </ol>
+  </div>
+
+  <h3>12.6 完整工作流图示</h3>
+
+  <div class="diagram">
+<pre style="text-align:left;background:transparent;border:none;padding:0;font-size:0.78rem;line-height:1.7">
+手机拍摄视频 (4K, 30fps, 带摩尔纹)
+        │
+        ▼
+┌─────────────────────────────────┐
+│  1. 前置处理                    │
+│  - 可选: 裁切黑边/无用区域      │
+│  - 可选: 缩放到 1080p           │
+│  - 可选: 稳像（去手持抖动）      │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│  2. 帧级别去摩尔纹 (本脚本)     │
+│  - 加载 FPro/Restormer 模型     │
+│  - 逐帧推理                     │
+│  - 时域平滑 (减少闪烁)          │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│  3. 后处理                      │
+│  - 可选: 颜色校正（恢复屏幕色彩）│
+│  - 可选: 锐化（补偿去摩尔纹导   │
+│           致的细节模糊）         │
+│  - 可选: 去噪（去除算法噪声）    │
+└──────────────┬──────────────────┘
+               │
+               ▼
+    ✅ 干净的屏幕录制视频
+</pre>
+  </div>
+
+  <h3>12.7 常见问题</h3>
+
+  <div class="info-box orange">
+    <strong>❓ 问题：处理后的视频画面变模糊了</strong><br>
+    原因：去摩尔纹本质上是一个图像重建过程，过度去摩尔纹可能损失部分纹理细节。<br>
+    解决：可以尝试在时域平滑中降低融合权重（0.9→0.7），或者在后处理中加一层 USM 锐化。
+  </div>
+
+  <div class="info-box orange">
+    <strong>❓ 问题：有些帧的摩尔纹去掉了，有些还有残留</strong><br>
+    原因：手机抖动导致摩尔纹频率变化，模型对某些频率组合泛化不足。<br>
+    解决：使用方案 C 微调。从你的视频中提取这些"难例"帧作为微调数据。
+  </div>
+
+  <div class="info-box orange">
+    <strong>❓ 问题：显存不够（OOM）</strong><br>
+    解决：加 <code>--max_w 720</code> 进一步缩小分辨率；
+    或者在脚本中加上 <code>model.half()</code> 使用 FP16 推理；
+    或者在脚本中启用分块模式（参考 test_FPro.py 中的 splitimage + mergeimage）。
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<div class="footnote">
+  <p>
+    本文档为 FPro (ECCV 2024) 的教学性质解读 &nbsp;·&nbsp;
+    <a href="https://github.com/joshyZhou/FPro" target="_blank">GitHub 项目地址</a>
+  </p>
+  <p style="margin-top:6px;font-size:0.8rem">
+    生成于 2026-07-01 &nbsp;·&nbsp; 基于项目源码深度分析
+  </p>
+</div>
+
+</body>
+</html>
