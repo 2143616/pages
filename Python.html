@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, #3776AB, var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; color: var(--teal); }
+section h4 { font-size: 1rem; font-weight: 600; margin: 16px 0 8px; color: var(--pink); }
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🐍 Python 从入门到精通</h1>
+  <p>基础 · 数据结构 · OOP · 生成器 · 异步 · 标准库 — 最系统的 Python 教程</p>
+  <div class="tags">
+    <span>🐍 Python 3.12</span>
+    <span>📘 教学文档</span>
+    <span>🎯 进阶进阶</span>
+    <span>⚡ 面试准备</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. Python 哲学与运行机制</a></li>
+    <li><a href="#sec2">2. 基础语法与类型</a></li>
+    <li><a href="#sec3">3. 控制流与函数</a></li>
+    <li><a href="#sec4">4. 数据结构详解</a></li>
+    <li><a href="#sec5">5. 面向对象编程</a></li>
+    <li><a href="#sec6">6. 魔术方法 &amp; 协议</a></li>
+    <li><a href="#sec7">7. 函数式编程</a></li>
+    <li><a href="#sec8">8. 迭代器、生成器、协程</a></li>
+    <li><a href="#sec9">9. 装饰器</a></li>
+    <li><a href="#sec10">10. 上下文管理器</a></li>
+    <li><a href="#sec11">11. 异常处理</a></li>
+    <li><a href="#sec12">12. 文件 I/O &amp; 序列化</a></li>
+    <li><a href="#sec13">13. 模块与包</a></li>
+    <li><a href="#sec14">14. 并发编程</a></li>
+    <li><a href="#sec15">15. 类型注解</a></li>
+    <li><a href="#sec16">16. 标准库精选</a></li>
+    <li><a href="#sec17">17. 测试与调试</a></li>
+    <li><a href="#sec18">18. 进阶技巧</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. Python 哲学与运行机制</h2>
+
+<h3>Python 之禅</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">this</span>  <span class="cm"># 隐式输出《Zen of Python》</span>
+
+<span class="cm">"""
+Beautiful is better than ugly.  优美胜于丑陋
+Simple is better than complex.  简单胜于复杂
+Readability counts.            可读性很重要
+"""</span></pre>
+
+<h3>运行机制</h3>
+<div class="card-grid">
+  <div class="card"><h4>🐍 解释型语言</h4><p>Python 代码 → 字节码 (.pyc) → Python 虚拟机 (PVM) 逐行执行。没有传统编译过程</p></div>
+  <div class="card"><h4>🔒 GIL</h4><p>全局解释器锁（Global Interpreter Lock）。同一时刻只有一个线程执行 Python 字节码。影响 CPU 密集任务，不影响 I/O 密集</p></div>
+  <div class="card"><h4>⚡ 动态类型</h4><p>变量没有类型约束，运行时才确定。灵活但可能带来运行时错误。Python 3.6+ 支持类型注解辅助静态检查</p></div>
+  <div class="card"><h4>🧹 垃圾回收</h4><p>引用计数为主 + 标记清除（循环引用）。<code>del</code> 减少引用计数，归零立即回收</p></div>
+</div>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># Python 版本</span>
+<span class="kw">import</span> <span class="builtin">sys</span>
+<span class="builtin">print</span>(sys.version)        <span class="cm"># 3.12.x</span>
+<span class="builtin">print</span>(sys.implementation) <span class="cm"># CPython</span>
+
+<span class="cm"># 查看字节码</span>
+<span class="kw">import</span> <span class="builtin">dis</span>
+dis.dis(<span class="str">"a = 1 + 2"</span>)</pre>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">📝</span> 2. 基础语法与类型</h2>
+
+<h3>2.1 变量与基本类型</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 变量不需要声明类型</span>
+name = <span class="str">"Python"</span>        <span class="cm"># str</span>
+age = <span class="num">30</span>              <span class="cm"># int</span>
+pi = <span class="num">3.14159</span>          <span class="cm"># float</span>
+is_fun = True          <span class="cm"># bool</span>
+nothing = <span class="kw">None</span>        <span class="cm"># NoneType</span>
+
+<span class="cm"># 多变量赋值</span>
+a = b = c = <span class="num">0</span>
+x, y, z = <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>
+
+<span class="cm"># type() 查看类型</span>
+<span class="builtin">print</span>(<span class="builtin">type</span>(age))        <span class="cm"># <class 'int'></span></pre>
+
+<h3>2.2 数字类型</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 整数 — 任意精度</span>
+big = <span class="num">2</span> ** <span class="num">1000</span>         <span class="cm"># 不会溢出</span>
+<span class="builtin">print</span>(<span class="str">"2^1000 位数:"</span>, <span class="builtin">len</span>(<span class="builtin">str</span>(big)))
+
+<span class="cm"># 浮点数 — 小心精度问题</span>
+<span class="builtin">print</span>(<span class="num">0.1</span> + <span class="num">0.2</span>)         <span class="cm"># 0.30000000000000004</span>
+<span class="cm"># 用 Decimal 解决</span>
+<span class="kw">from</span> <span class="builtin">decimal</span> <span class="kw">import</span> Decimal
+<span class="builtin">print</span>(Decimal(<span class="str">"0.1"</span>) + Decimal(<span class="str">"0.2"</span>))  <span class="cm"># 0.3</span>
+
+<span class="cm"># 进制</span>
+<span class="builtin">print</span>(<span class="num">0xFF</span>)              <span class="cm"># 255 (十六进制)</span>
+<span class="builtin">print</span>(<span class="num">0o77</span>)              <span class="cm"># 63  (八进制)</span>
+<span class="builtin">print</span>(<span class="num">0b1010</span>)            <span class="cm"># 10  (二进制)</span>
+
+<span class="cm"># 复数</span>
+c = <span class="num">3</span> + <span class="num">4j</span>
+<span class="builtin">print</span>(c.real, c.imag, <span class="builtin">abs</span>(c))  <span class="cm"># 3.0 4.0 5.0</span></pre>
+
+<h3>2.3 字符串</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 字符串不可变</span>
+s1 = <span class="str">'单引号'</span>
+s2 = <span class="str">"双引号"</span>
+s3 = <span class="str">"""多行
+字符串"""</span>
+
+<span class="cm"># f-string (Python 3.6+)</span>
+name, age = <span class="str">"Python"</span>, <span class="num">30</span>
+<span class="builtin">print</span>(f<span class="str">"语言: {name}, 年龄: {age}"</span>)
+<span class="builtin">print</span>(f<span class="str">"数学: {2 * 3.14:.2f}"</span>)   <span class="cm"># 6.28</span>
+<span class="builtin">print</span>(f<span class="str">"填充: {name:>10}"</span>)     <span class="cm"># "    Python"</span>
+
+<span class="cm"># 常用方法</span>
+text = <span class="str">"  hello, Python  "</span>
+<span class="builtin">print</span>(text.strip())         <span class="cm"># "hello, Python"</span>
+<span class="builtin">print</span>(text.split(<span class="str">","</span>))      <span class="cm"># ['  hello', ' Python  ']</span>
+<span class="builtin">print</span>(<span class="str">"-"</span>.join([<span class="str">"a"</span>, <span class="str">"b"</span>, <span class="str">"c"</span>]))  <span class="cm"># "a-b-c"</span>
+<span class="builtin">print</span>(text.replace(<span class="str">"Python"</span>, <span class="str">"世界"</span>))
+<span class="builtin">print</span>(text.startswith(<span class="str">"  hello"</span>))  <span class="cm"># True</span></pre>
+
+<h3>2.4 布尔与比较</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 布尔值</span>
+<span class="builtin">print</span>(<span class="kw">True</span> <span class="kw">and</span> False)     <span class="cm"># False</span>
+<span class="builtin">print</span>(<span class="kw">True</span> <span class="kw">or</span> False)      <span class="cm"># True</span>
+<span class="builtin">print</span>(<span class="kw">not</span> True)            <span class="cm"># False</span>
+
+<span class="cm"># 链式比较（Python 特性）</span>
+x = <span class="num">5</span>
+<span class="builtin">print</span>(<span class="num">1</span> < x < <span class="num">10</span>)          <span class="cm"># True (等价于 1 < x and x < 10)</span>
+
+<span class="cm"># Truthy / Falsy 值</span>
+<span class="cm"># Falsy: False, None, 0, 0.0, "", [], (), {}, set()</span>
+<span class="kw">if</span> []:    <span class="builtin">print</span>(<span class="str">"不会执行"</span>)
+<span class="kw">if</span> [<span class="num">0</span>]:   <span class="builtin">print</span>(<span class="str">"会执行"</span>)      <span class="cm"># 非空列表是 Truthy</span>
+
+<span class="cm"># 身份比较 is vs ==</span>
+a = [<span class="num">1</span>, <span class="num">2</span>]; b = [<span class="num">1</span>, <span class="num">2</span>]
+<span class="builtin">print</span>(a == b)              <span class="cm"># True  — 值相等</span>
+<span class="builtin">print</span>(a <span class="kw">is</span> b)              <span class="cm"># False — 不同对象</span></pre>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">🔄</span> 3. 控制流与函数</h2>
+
+<h3>3.1 if / match / for / while</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># if</span>
+score = <span class="num">85</span>
+<span class="kw">if</span> score >= <span class="num">90</span>:     grade = <span class="str">"A"</span>
+<span class="kw">elif</span> score >= <span class="num">80</span>:  grade = <span class="str">"B"</span>
+<span class="kw">else</span>:               grade = <span class="str">"C"</span>
+
+<span class="cm"># match (Python 3.10+ 模式匹配)</span>
+command = <span class="str">"quit"</span>
+<span class="kw">match</span> command:
+    <span class="kw">case</span> <span class="str">"quit"</span> | <span class="str">"exit"</span>:   <span class="builtin">print</span>(<span class="str">"退出"</span>)
+    <span class="kw">case</span> <span class="str">"help"</span>:            <span class="builtin">print</span>(<span class="str">"帮助"</span>)
+    <span class="kw">case</span> _:                  <span class="builtin">print</span>(<span class="str">"未知"</span>)
+
+<span class="cm"># match 解包</span>
+point = (<span class="num">1</span>, <span class="num">0</span>)
+<span class="kw">match</span> point:
+    <span class="kw">case</span> (<span class="num">0</span>, <span class="num">0</span>):          <span class="builtin">print</span>(<span class="str">"原点"</span>)
+    <span class="kw">case</span> (x, <span class="num">0</span>):           <span class="builtin">print</span>(f<span class="str">"X 轴上: x={x}"</span>)
+    <span class="kw">case</span> (<span class="num">0</span>, y):           <span class="builtin">print</span>(f<span class="str">"Y 轴上: y={y}"</span>)
+    <span class="kw">case</span> (x, y):           <span class="builtin">print</span>(f<span class="str">"点 ({x}, {y})"</span>)
+
+<span class="cm"># for 循环</span>
+<span class="kw">for</span> i, v <span class="kw">in</span> <span class="builtin">enumerate</span>([<span class="str">"a"</span>, <span class="str">"b"</span>, <span class="str">"c"</span>]):
+    <span class="builtin">print</span>(i, v)
+
+<span class="cm"># while</span>
+n = <span class="num">0</span>
+<span class="kw">while</span> n < <span class="num">3</span>:
+    n += <span class="num">1</span>
+
+<span class="cm"># else 从句——for/while 正常结束（非 break）时执行</span>
+<span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>):
+    <span class="kw">if</span> x == <span class="num">3</span>: <span class="kw">break</span>
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"没有 break"</span>)  <span class="cm"># 不会执行，因为 break 了</span></pre>
+
+<h3>3.2 函数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 基本函数</span>
+<span class="kw">def</span> <span class="fn">greet</span>(name: <span class="builtin">str</span>) -> <span class="builtin">str</span>:    <span class="cm"># 类型注解</span>
+    <span class="kw">return</span> f<span class="str">"Hello, {name}!"</span>
+
+<span class="cm"># 默认参数（⚠ 注意可变对象陷阱）</span>
+<span class="kw">def</span> <span class="fn">add_item</span>(item, lst=<span class="kw">None</span>):    <span class="cm"># ✅ 用 None 代替 []</span>
+    <span class="kw">if</span> lst <span class="kw">is</span> <span class="kw">None</span>: lst = []
+    lst.append(item)
+    <span class="kw">return</span> lst
+
+<span class="cm"># 关键字参数</span>
+<span class="kw">def</span> <span class="fn">connect</span>(host, port=<span class="num">80</span>, timeout=<span class="num">30</span>):
+    <span class="builtin">print</span>(f<span class="str">"连接 {host}:{port} (超时 {timeout}s)"</span>)
+connect(<span class="str">"localhost"</span>)                    <span class="cm"># 仅必填</span>
+connect(<span class="str">"localhost"</span>, <span class="num">8080</span>)             <span class="cm"># 位置参数</span>
+connect(<span class="str">"localhost"</span>, timeout=<span class="num">10</span>)       <span class="cm"># 关键字参数</span>
+
+<span class="cm"># *args / **kwargs</span>
+<span class="kw">def</span> <span class="fn">log</span>(fmt, *args, **kwargs):
+    <span class="builtin">print</span>(fmt % args, kwargs)
+
+<span class="cm"># 仅位置 / 仅关键字参数 (Python 3.8+)</span>
+<span class="kw">def</span> <span class="fn">f</span>(a, b, /, c, d, *, e, f):   <span class="cm"># a,b 仅位置; e,f 仅关键字</span>
+    <span class="kw">pass</span>
+
+<span class="cm"># 嵌套函数与闭包</span>
+<span class="kw">def</span> <span class="fn">make_counter</span>():
+    count = <span class="num">0</span>
+    <span class="kw">def</span> <span class="fn">counter</span>():
+        <span class="kw">nonlocal</span> count        <span class="cm"># 修改外层变量</span>
+        count += <span class="num">1</span>
+        <span class="kw">return</span> count
+    <span class="kw">return</span> counter
+
+c = make_counter()
+<span class="builtin">print</span>(c(), c(), c())           <span class="cm"># 1 2 3</span></pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">🧰</span> 4. 数据结构详解</h2>
+
+<h3>4.1 列表（List）</h3>
+<pre><span class="lang-label">Python</span>
+arr = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+arr.append(<span class="num">6</span>)                 <span class="cm"># 尾部添加</span>
+arr.extend([<span class="num">7</span>, <span class="num">8</span>])            <span class="cm"># 扩展</span>
+arr.insert(<span class="num">0</span>, <span class="num">0</span>)               <span class="cm"># 头部插入</span>
+x = arr.pop()                   <span class="cm"># 尾部弹出</span>
+x = arr.pop(<span class="num">0</span>)                 <span class="cm"># 弹出指定位置</span>
+arr.remove(<span class="num">3</span>)                  <span class="cm"># 按值删除</span>
+arr.sort(reverse=<span class="kw">True</span>)          <span class="cm"># 排序</span>
+arr.reverse()                   <span class="cm"># 反转</span>
+
+<span class="cm"># 列表推导式</span>
+squares = [x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>) <span class="kw">if</span> x % <span class="num">2</span> == <span class="num">0</span>]
+matrix = [[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>,<span class="num">4</span>],[<span class="num">5</span>,<span class="num">6</span>]]
+flat = [v <span class="kw">for</span> row <span class="kw">in</span> matrix <span class="kw">for</span> v <span class="kw">in</span> row]  <span class="cm"># 展平</span>
+
+<span class="cm"># 切片 — [start:stop:step]</span>
+s = <span class="str">"abcdefg"</span>
+<span class="builtin">print</span>(s[::<span class="num">2</span>])    <span class="cm"># 'aceg'</span>
+<span class="builtin">print</span>(s[::-<span class="num">1</span>])   <span class="cm"># 'gfedcba'</span>
+<span class="builtin">print</span>(s[-<span class="num">3</span>:])     <span class="cm"># 'efg'</span></pre>
+
+<h3>4.2 元组（Tuple）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 不可变列表</span>
+t = (<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>)
+single = (<span class="num">1</span>,)         <span class="cm"># 单元素元组必须加逗号</span>
+
+<span class="cm"># 解包</span>
+a, b, c = (<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>)
+first, *rest = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>]   <span class="cm"># first=1, rest=[2,3,4]</span>
+first, _, third = (<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>)    <span class="cm"># _ 表示忽略</span>
+
+<span class="cm"># 具名元组</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> namedtuple
+Point = namedtuple(<span class="str">"Point"</span>, [<span class="str">"x"</span>, <span class="str">"y"</span>])
+p = Point(<span class="num">10</span>, <span class="num">20</span>)
+<span class="builtin">print</span>(p.x, p.y, p[<span class="num">0</span>])         <span class="cm"># 可通过属性/索引访问</span></pre>
+
+<h3>4.3 字典（Dict）</h3>
+<pre><span class="lang-label">Python</span>
+d = {<span class="str">"name"</span>: <span class="str">"Python"</span>, <span class="str">"age"</span>: <span class="num">30</span>}
+d[<span class="str">"version"</span>] = <span class="num">3.12</span>          <span class="cm"># 添加</span>
+d.get(<span class="str">"missing"</span>, <span class="str">"默认值"</span>)    <span class="cm"># 安全访问</span>
+d.setdefault(<span class="str">"count"</span>, <span class="num">0</span>)     <span class="cm"># 不存在才设值</span>
+
+<span class="cm"># 合并 (Python 3.9+)</span>
+d1 = {<span class="str">"a"</span>: <span class="num">1</span>, <span class="str">"b"</span>: <span class="num">2</span>}
+d2 = {<span class="str">"c"</span>: <span class="num">3</span>, <span class="str">"d"</span>: <span class="num">4</span>}
+merged = d1 | d2          <span class="cm"># {'a': 1, 'b': 2, 'c': 3, 'd': 4}</span>
+
+<span class="cm"># 字典推导式</span>
+squares = {x: x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>)}
+
+<span class="cm"># 遍历</span>
+<span class="kw">for</span> k, v <span class="kw">in</span> d.items():    <span class="builtin">print</span>(k, v)
+<span class="kw">for</span> k <span class="kw">in</span> d:              <span class="builtin">print</span>(k)  <span class="cm"># 等价于 d.keys()</span>
+<span class="kw">for</span> v <span class="kw">in</span> d.values():     <span class="builtin">print</span>(v)
+
+<span class="cm"># defaultdict / Counter</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> defaultdict, Counter
+dd = defaultdict(<span class="builtin">list</span>)     <span class="cm"># 访问不存在的 key 返回 []</span>
+cnt = Counter(<span class="str">"abracadabra"</span>)  <span class="cm"># {'a':5, 'b':2, ...}</span>
+<span class="builtin">print</span>(cnt.most_common(<span class="num">2</span>))     <span class="cm"># [('a',5), ('r',2)]</span></pre>
+
+<h3>4.4 集合（Set）</h3>
+<pre><span class="lang-label">Python</span>
+s1 = {<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>}
+s2 = {<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>}
+<span class="builtin">print</span>(s1 | s2)    <span class="cm"># 并集: {1,2,3,4}</span>
+<span class="builtin">print</span>(s1 & s2)    <span class="cm"># 交集: {2,3}</span>
+<span class="builtin">print</span>(s1 - s2)    <span class="cm"># 差集: {1}</span>
+<span class="builtin">print</span>(s1 ^ s2)    <span class="cm"># 对称差: {1,4}</span>
+
+<span class="cm"># 集合推导式</span>
+evens = {x <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>) <span class="kw">if</span> x % <span class="num">2</span> == <span class="num">0</span>}
+
+<span class="cm"># frozenset — 不可变集合</span>
+fs = frozenset([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>])  <span class="cm"># 可用作字典键</span></pre>
+
+<h3>4.5 数据结构复杂度</h3>
+<table>
+  <tr><th>操作</th><th>list</th><th>tuple</th><th>dict</th><th>set</th></tr>
+  <tr><td>索引</td><td>O(1)</td><td>O(1)</td><td>—</td><td>—</td></tr>
+  <tr><td>查找(in)</td><td>O(n)</td><td>O(n)</td><td>O(1)</td><td>O(1)</td></tr>
+  <tr><td>尾部添加</td><td>O(1)摊销</td><td>—</td><td>O(1)</td><td>O(1)</td></tr>
+  <tr><td>任意插入</td><td>O(n)</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>删除</td><td>O(n)</td><td>—</td><td>O(1)</td><td>O(1)</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>💡 选型建议：</strong>
+  <br>• 需要按索引访问 → <strong>list</strong>
+  <br>• 需要不可变、作字典键 → <strong>tuple</strong>
+  <br>• 需要键值对映射 → <strong>dict</strong>
+  <br>• 需要去重 / 集合运算 → <strong>set</strong>
+  <br>• 需要先进先出 → <strong>collections.deque</strong>
+  <br>• 需要有序元素（插入顺序）→ <strong>list</strong> 或 Python 3.7+ <strong>dict</strong>（有序）
+</div>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🏛</span> 5. 面向对象编程</h2>
+
+<h3>5.1 类与实例</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">Dog</span>:
+    <span class="str">"""狗类 —— 类文档字符串"""</span>
+    species = <span class="str">"Canis familiaris"</span>   <span class="cm"># 类属性</span>
+
+    <span class="kw">def</span> __init__(self, name, age):   <span class="cm"># 构造方法</span>
+        self.name = name               <span class="cm"># 实例属性</span>
+        self.age = age
+        self._internal = <span class="str">"受保护"</span>     <span class="cm"># 约定：单下划线"保护"</span>
+        self.__private = <span class="str">"私有"</span>      <span class="cm"># 名称修饰：_Dog__private</span>
+
+    <span class="kw">def</span> <span class="fn">bark</span>(self):                    <span class="cm"># 实例方法</span>
+        <span class="kw">return</span> f<span class="str">"{self.name} says 汪汪!"</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="kw">def</span> <span class="fn">create_puppy</span>(cls):           <span class="cm"># 类方法（可继承）</span>
+        <span class="kw">return</span> cls(<span class="str">"Puppy"</span>, <span class="num">0</span>)
+
+    <span class="nd">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">info</span>():                      <span class="cm"># 静态方法（无 self/cls）</span>
+        <span class="kw">return</span> <span class="str">"狗是人类的好朋友"</span>
+
+    <span class="kw">def</span> __repr__(self):                <span class="cm"># 调试用表示</span>
+        <span class="kw">return</span> f<span class="str">"Dog(name={self.name!r}, age={self.age})"</span>
+
+<span class="cm"># 使用</span>
+d = Dog(<span class="str">"旺财"</span>, <span class="num">3</span>)
+<span class="builtin">print</span>(d.bark())               <span class="cm"># 旺财 says 汪汪!</span>
+<span class="builtin">print</span>(Dog.species)            <span class="cm"># Canis familiaris</span>
+<span class="builtin">print</span>(Dog.create_puppy())     <span class="cm"># 通过类方法创建</span>
+<span class="builtin">print</span>(d._internal)           <span class="cm"># 可以访问（但约定不要）</span>
+<span class="cm"># print(d.__private)         # ❌ AttributeError</span></pre>
+
+<h3>5.2 继承与多态</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">Animal</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(self):
+        <span class="kw">raise</span> NotImplementedError  <span class="cm"># 抽象方法</span>
+
+<span class="kw">class</span> <span class="cls">Cat</span>(Animal):
+    <span class="kw">def</span> <span class="fn">speak</span>(self):
+        <span class="kw">return</span> <span class="str">"喵~"</span>
+
+<span class="kw">class</span> <span class="cls">Dog</span>(Animal):
+    <span class="kw">def</span> <span class="fn">speak</span>(self):
+        <span class="kw">return</span> <span class="str">"汪汪!"</span>
+
+<span class="cm"># 多态 —— 统一接口</span>
+animals = [Cat(), Dog(), Cat()]
+<span class="kw">for</span> a <span class="kw">in</span> animals:
+    <span class="builtin">print</span>(a.speak())          <span class="cm"># 各自调用自己版本的 speak</span></pre>
+
+<h3>5.3 抽象基类与协议</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">abc</span> <span class="kw">import</span> ABC, abstractmethod
+
+<span class="kw">class</span> <span class="cls">Shape</span>(ABC):
+    <span class="nd">@abstractmethod</span>
+    <span class="kw">def</span> <span class="fn">area</span>(self) -> <span class="builtin">float</span>: ...
+
+<span class="kw">class</span> <span class="cls">Circle</span>(Shape):
+    <span class="kw">def</span> __init__(self, r): self.r = r
+    <span class="kw">def</span> <span class="fn">area</span>(self): <span class="kw">return</span> <span class="num">3.14159</span> * self.r ** <span class="num">2</span>
+
+<span class="cm"># s = Shape()  # ❌ TypeError: Can't instantiate abstract class</span></pre>
+
+<h3>5.4 数据类（Python 3.7+）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">dataclasses</span> <span class="kw">import</span> dataclass, field
+
+<span class="nd">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Person</span>:
+    name: <span class="builtin">str</span>
+    age: <span class="builtin">int</span>
+    email: <span class="builtin">str</span> = <span class="str">""</span>               <span class="cm"># 默认值</span>
+    tags: <span class="builtin">list</span> = field(default_factory=<span class="builtin">list</span>)  <span class="cm"># 可变默认值</span>
+
+    <span class="kw">def</span> <span class="fn">say_hi</span>(self):
+        <span class="kw">return</span> f<span class="str">"Hi, I'm {self.name}"</span>
+
+p = Person(<span class="str">"张三"</span>, <span class="num">25</span>)
+<span class="builtin">print</span>(p)                      <span class="cm"># Person(name='张三', age=25, email='', ...)</span>
+<span class="builtin">print</span>(p.say_hi())
+
+<span class="cm"># 比手写 __init__ / __repr__ / __eq__ 方便太多</span></pre>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">🪄</span> 6. 魔术方法 &amp; 协议</h2>
+<p>Python 的<strong>魔术方法（dunder methods）</strong> 让你自定义类的行为——让它像一个内置类型一样工作。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">Vector</span>:
+    <span class="str">"""实现一个向量 —— 演示常用魔术方法"""</span>
+    <span class="kw">def</span> __init__(self, x, y):
+        self.x, self.y = x, y
+
+    <span class="cm"># 字符串表示</span>
+    <span class="kw">def</span> __repr__(self): <span class="kw">return</span> f<span class="str">"Vector({self.x}, {self.y})"</span>
+    <span class="kw">def</span> __str__(self):  <span class="kw">return</span> f<span class="str">"({self.x}, {self.y})"</span>
+
+    <span class="cm"># 算术运算</span>
+    <span class="kw">def</span> __add__(self, other):  <span class="kw">return</span> Vector(self.x + other.x, self.y + other.y)
+    <span class="kw">def</span> __sub__(self, other):  <span class="kw">return</span> Vector(self.x - other.x, self.y - other.y)
+    <span class="kw">def</span> __mul__(self, scalar): <span class="kw">return</span> Vector(self.x * scalar, self.y * scalar)
+    <span class="kw">def</span> __abs__(self):         <span class="kw">return</span> (self.x**<span class="num">2</span> + self.y**<span class="num">2</span>)**<span class="num">0.5</span>
+
+    <span class="cm"># 比较</span>
+    <span class="kw">def</span> __eq__(self, other):   <span class="kw">return</span> self.x == other.x <span class="kw">and</span> self.y == other.y
+    <span class="kw">def</span> __lt__(self, other):   <span class="kw">return</span> <span class="builtin">abs</span>(self) < <span class="builtin">abs</span>(other)
+
+    <span class="cm"># 哈希（使对象可用作字典键）</span>
+    <span class="kw">def</span> __hash__(self): <span class="kw">return</span> <span class="builtin">hash</span>((self.x, self.y))
+
+    <span class="cm"># 迭代</span>
+    <span class="kw">def</span> __iter__(self): <span class="kw">return</span> <span class="builtin">iter</span>((self.x, self.y))
+
+    <span class="cm"># 可调用</span>
+    <span class="kw">def</span> __call__(self): <span class="kw">return</span> <span class="str">"向量被调用了！"</span>
+
+    <span class="cm"># 上下文管理器</span>
+    <span class="kw">def</span> __enter__(self): <span class="builtin">print</span>(<span class="str">"进入上下文"</span>); <span class="kw">return</span> self
+    <span class="kw">def</span> __exit__(self, *args): <span class="builtin">print</span>(<span class="str">"退出上下文"</span>)
+
+<span class="cm"># 测试</span>
+v1 = Vector(<span class="num">3</span>, <span class="num">4</span>)
+v2 = Vector(<span class="num">1</span>, <span class="num">2</span>)
+<span class="builtin">print</span>(v1 + v2)           <span class="cm"># (4, 6)</span>
+<span class="builtin">print</span>(v1 * <span class="num">2</span>)            <span class="cm"># (6, 8)</span>
+<span class="builtin">print</span>(<span class="builtin">abs</span>(v1))           <span class="cm"># 5.0</span>
+<span class="builtin">print</span>(v1 > v2)           <span class="cm"># True</span>
+<span class="builtin">print</span>(<span class="builtin">list</span>(v1))          <span class="cm"># [3, 4]</span>
+<span class="builtin">print</span>(v1())              <span class="cm"># "向量被调用了！"</span>
+<span class="kw">with</span> v1: <span class="builtin">print</span>(<span class="str">"工作"</span>)</pre>
+
+<div class="highlight">
+  <strong>🎯 协议速记：</strong>
+  <br>• <strong>可迭代</strong>：<code>__iter__</code> → <code>for x in obj</code>
+  <br>• <strong>可调用</strong>：<code>__call__</code> → <code>obj()</code>
+  <br>• <strong>上下文</strong>：<code>__enter__</code> + <code>__exit__</code> → <code>with obj</code>
+  <br>• <strong>可哈希</strong>：<code>__hash__</code> + <code>__eq__</code> → 可用作字典键
+  <br>• <strong>序列</strong>：<code>__len__</code> + <code>__getitem__</code> → <code>obj[0]</code>
+  <br>• <strong>数值</strong>：<code>__add__</code> / <code>__sub__</code> / <code>__mul__</code> / ...
+</div>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">🔀</span> 7. 函数式编程</h2>
+
+<h3>7.1 Lambda 表达式</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># lambda 参数: 表达式</span>
+square = <span class="kw">lambda</span> x: x**<span class="num">2</span>
+<span class="builtin">print</span>(square(<span class="num">5</span>))           <span class="cm"># 25</span>
+
+<span class="cm"># 配合排序</span>
+students = [(<span class="str">"张三"</span>, <span class="num">85</span>), (<span class="str">"李四"</span>, <span class="num">92</span>), (<span class="str">"王五"</span>, <span class="num">78</span>)]
+students.sort(key=<span class="kw">lambda</span> s: s[<span class="num">1</span>], reverse=<span class="kw">True</span>)
+
+<span class="cm"># 配合 filter / map</span>
+nums = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>]
+evens = <span class="builtin">list</span>(<span class="builtin">filter</span>(<span class="kw">lambda</span> x: x % <span class="num">2</span> == <span class="num">0</span>, nums))
+doubled = <span class="builtin">list</span>(<span class="builtin">map</span>(<span class="kw">lambda</span> x: x * <span class="num">2</span>, nums))</pre>
+
+<h3>7.2 reduce / any / all</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">functools</span> <span class="kw">import</span> reduce
+
+<span class="cm"># reduce 累积</span>
+product = reduce(<span class="kw">lambda</span> a, b: a * b, [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>])  <span class="cm"># 24</span>
+
+<span class="cm"># any / all</span>
+<span class="builtin">print</span>(<span class="builtin">any</span>([False, True, False]))  <span class="cm"># True</span>
+<span class="builtin">print</span>(<span class="builtin">all</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]))             <span class="cm"># True</span>
+
+<span class="cm"># 实用：检测是否所有元素满足条件</span>
+data = [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>]
+<span class="builtin">print</span>(<span class="builtin">all</span>(x > <span class="num">5</span> <span class="kw">for</span> x <span class="kw">in</span> data))   <span class="cm"># True</span></pre>
+
+<h3>7.3 偏函数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">functools</span> <span class="kw">import</span> partial
+
+<span class="cm"># 固定某些参数</span>
+<span class="kw">def</span> <span class="fn">power</span>(base, exp):
+    <span class="kw">return</span> base ** exp
+
+square = partial(power, exp=<span class="num">2</span>)
+cube = partial(power, exp=<span class="num">3</span>)
+<span class="builtin">print</span>(square(<span class="num">5</span>), cube(<span class="num">5</span>))     <span class="cm"># 25 125</span>
+
+<span class="cm"># 实际应用：简化 API 调用</span>
+<span class="kw">from</span> <span class="builtin">pathlib</span> <span class="kw">import</span> Path
+listdir = partial(Path.iterdir)  <span class="cm"># 略</span></pre>
+
+<h3>7.4 运算符重载函数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">operator</span> <span class="kw">import</span> itemgetter, attrgetter, methodcaller
+
+<span class="cm"># itemgetter: 按索引/键取元素</span>
+get_name = itemgetter(<span class="str">"name"</span>)
+<span class="builtin">print</span>(get_name({<span class="str">"name"</span>: <span class="str">"Python"</span>, <span class="str">"age"</span>: <span class="num">30</span>}))  <span class="cm"># Python</span>
+
+<span class="cm"># 排序时用</span>
+users = [{<span class="str">"name"</span>: <span class="str">"Alice"</span>}, {<span class="str">"name"</span>: <span class="str">"Bob"</span>}]
+users.sort(key=itemgetter(<span class="str">"name"</span>))</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">🔄</span> 8. 迭代器、生成器、协程</h2>
+
+<h3>8.1 迭代器协议</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">CountDown</span>:
+    <span class="str">"""自定义迭代器：倒计时"""</span>
+    <span class="kw">def</span> __init__(self, start):
+        self.n = start
+
+    <span class="kw">def</span> __iter__(self):
+        <span class="kw">return</span> self              <span class="cm"># 迭代器返回自身</span>
+
+    <span class="kw">def</span> __next__(self):
+        <span class="kw">if</span> self.n <= <span class="num">0</span>:
+            <span class="kw">raise</span> StopIteration    <span class="cm"># 结束信号</span>
+        val = self.n
+        self.n -= <span class="num">1</span>
+        <span class="kw">return</span> val
+
+<span class="kw">for</span> x <span class="kw">in</span> CountDown(<span class="num">3</span>):
+    <span class="builtin">print</span>(x)                    <span class="cm"># 3 2 1</span></pre>
+
+<h3>8.2 生成器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 生成器函数 — 用 yield 替代 return</span>
+<span class="kw">def</span> <span class="fn">fibonacci</span>(n):
+    a, b = <span class="num">0</span>, <span class="num">1</span>
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(n):
+        <span class="kw">yield</span> a
+        a, b = b, a + b
+
+<span class="builtin">print</span>(<span class="builtin">list</span>(fibonacci(<span class="num">10</span>)))  <span class="cm"># [0,1,1,2,3,5,8,13,21,34]</span>
+
+<span class="cm"># 生成器表达式（类似列表推导式但延迟计算）</span>
+squares = (x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>))  <span class="cm"># 生成器对象</span>
+<span class="builtin">print</span>(<span class="builtin">sum</span>(squares))                    <span class="cm"># 不会一次性创建 10 个元素的列表</span>
+
+<span class="cm"># yield from — 委托给另一个生成器</span>
+<span class="kw">def</span> <span class="fn">chain</span>(*iterables):
+    <span class="kw">for</span> it <span class="kw">in</span> iterables:
+        <span class="kw">yield from</span> it                <span class="cm"># 等价于 for x in it: yield x</span>
+
+<span class="builtin">print</span>(<span class="builtin">list</span>(chain([<span class="num">1</span>,<span class="num">2</span>], (<span class="num">3</span>,<span class="num">4</span>), <span class="str">"ab"</span>)))</pre>
+
+<h3>8.3 协程与异步迭代</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+
+<span class="cm"># 异步生成器</span>
+<span class="kw">async def</span> <span class="fn">async_range</span>(n):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n):
+        <span class="kw">await</span> asyncio.sleep(<span class="num">0.1</span>)    <span class="cm"># 模拟异步操作</span>
+        <span class="kw">yield</span> i
+
+<span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="cm"># 异步迭代</span>
+    async <span class="kw">for</span> x <span class="kw">in</span> async_range(<span class="num">5</span>):
+        <span class="builtin">print</span>(x, end=<span class="str">" "</span>)           <span class="cm"># 0 1 2 3 4</span>
+
+<span class="cm"># asyncio.run(main())</span></pre>
+
+<h3>8.4 itertools 工具箱</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">itertools</span>
+
+<span class="cm"># 无限迭代</span>
+counter = itertools.count(start=<span class="num">10</span>, step=<span class="num">2</span>)
+<span class="builtin">print</span>([<span class="builtin">next</span>(counter) <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>)])  <span class="cm"># [10,12,14,16,18]</span>
+
+<span class="cm"># 循环</span>
+cycler = itertools.cycle([<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"C"</span>])
+<span class="builtin">print</span>([<span class="builtin">next</span>(cycler) <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>)])  <span class="cm"># ['A','B','C','A','B']</span>
+
+<span class="cm"># 组合</span>
+<span class="builtin">print</span>(<span class="builtin">list</span>(itertools.permutations([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>], <span class="num">2</span>)))  <span class="cm"># 排列</span>
+<span class="builtin">print</span>(<span class="builtin">list</span>(itertools.combinations([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>], <span class="num">2</span>)))  <span class="cm"># 组合</span>
+<span class="builtin">print</span>(<span class="builtin">list</span>(itertools.product([<span class="num">1</span>,<span class="num">2</span>], [<span class="str">"a"</span>,<span class="str">"b"</span>])))   <span class="cm"># 笛卡尔积</span>
+
+<span class="cm"># 分组（需已排序）</span>
+data = [(<span class="str">"a"</span>,<span class="num">1</span>), (<span class="str">"a"</span>,<span class="num">2</span>), (<span class="str">"b"</span>,<span class="num">3</span>)]
+<span class="kw">for</span> key, group <span class="kw">in</span> itertools.groupby(data, <span class="kw">lambda</span> x: x[<span class="num">0</span>]):
+    <span class="builtin">print</span>(key, <span class="builtin">list</span>(group))</pre>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">🎀</span> 9. 装饰器</h2>
+<p><strong>装饰器（Decorator）</strong> 是 Python 最强大的特性之一——在不修改原函数的情况下增加功能。</p>
+
+<h3>9.1 基础装饰器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+<span class="kw">from</span> <span class="builtin">functools</span> <span class="kw">import</span> wraps
+
+<span class="kw">def</span> <span class="fn">timer</span>(func):
+    <span class="str">"""统计函数执行时间"""</span>
+    <span class="nd">@wraps</span>(func)                         <span class="cm"># 保留原函数元信息</span>
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        <span class="builtin">print</span>(f<span class="str">"[{func.__name__}] 耗时: {elapsed:.4f}s"</span>)
+        <span class="kw">return</span> result
+    <span class="kw">return</span> wrapper
+
+<span class="nd">@timer</span>
+<span class="kw">def</span> <span class="fn">slow_function</span>(n):
+    <span class="kw">return</span> <span class="builtin">sum</span>(<span class="builtin">range</span>(n))
+
+slow_function(<span class="num">10_000_000</span>)  <span class="cm"># 自动打印执行时间</span></pre>
+
+<h3>9.2 带参数的装饰器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">retry</span>(max_attempts=<span class="num">3</span>, delay=<span class="num">1</span>):
+    <span class="str">"""失败重试装饰器"""</span>
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        <span class="nd">@wraps</span>(func)
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            <span class="kw">for</span> attempt <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">1</span>, max_attempts + <span class="num">1</span>):
+                <span class="kw">try</span>:
+                    <span class="kw">return</span> func(*args, **kwargs)
+                <span class="kw">except</span> Exception <span class="kw">as</span> e:
+                    <span class="builtin">print</span>(f<span class="str">"第 {attempt} 次失败: {e}"</span>)
+                    <span class="kw">if</span> attempt == max_attempts:
+                        <span class="kw">raise</span>
+                    time.sleep(delay)
+            <span class="kw">return</span> <span class="kw">None</span>
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+<span class="nd">@retry</span>(max_attempts=<span class="num">3</span>, delay=<span class="num">0.5</span>)
+<span class="kw">def</span> <span class="fn">unreliable_api</span>():
+    <span class="kw">import</span> <span class="builtin">random</span>
+    <span class="kw">if</span> random.random() < <span class="num">0.7</span>:
+        <span class="kw">raise</span> ConnectionError(<span class="str">"网络故障"</span>)
+    <span class="kw">return</span> <span class="str">"成功！"</span>
+
+<span class="cm"># unreliable_api()</span></pre>
+
+<h3>9.3 类装饰器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">Singleton</span>:
+    <span class="str">"""单例模式装饰器"""</span>
+    <span class="kw">def</span> __init__(self, cls):
+        self._cls = cls
+        self._instance = <span class="kw">None</span>
+
+    <span class="kw">def</span> __call__(self, *args, **kwargs):
+        <span class="kw">if</span> self._instance <span class="kw">is</span> <span class="kw">None</span>:
+            self._instance = self._cls(*args, **kwargs)
+        <span class="kw">return</span> self._instance
+
+<span class="nd">@Singleton</span>
+<span class="kw">class</span> <span class="cls">Database</span>:
+    <span class="kw">def</span> __init__(self):
+        <span class="builtin">print</span>(<span class="str">"创建数据库连接"</span>)
+
+db1 = Database()
+db2 = Database()
+<span class="builtin">print</span>(db1 <span class="kw">is</span> db2)  <span class="cm"># True — 同一个实例</span></pre>
+
+<h3>9.4 多重装饰器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 装饰器从下往上应用, 从上往下执行</span>
+<span class="nd">@timer</span>
+<span class="nd">@retry</span>(max_attempts=<span class="num">2</span>)
+<span class="kw">def</span> <span class="fn">fetch_data</span>(url):
+    <span class="builtin">print</span>(f<span class="str">"请求 {url}..."</span>)
+    <span class="kw">return</span> <span class="str">"data"</span>
+
+<span class="cm"># 等价于: fetch_data = timer(retry(2)(fetch_data))</span></pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">🗑</span> 10. 上下文管理器</h2>
+<p><strong>上下文管理器</strong> 让你用 <code>with</code> 语句自动管理资源——文件、锁、数据库连接，进入时设置，退出时清理。</p>
+
+<h3>10.1 类式实现</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">ManagedFile</span>:
+    <span class="kw">def</span> __init__(self, path, mode=<span class="str">"r"</span>):
+        self.path = path
+        self.mode = mode
+
+    <span class="kw">def</span> __enter__(self):
+        self.file = <span class="builtin">open</span>(self.path, self.mode, encoding=<span class="str">"utf-8"</span>)
+        <span class="builtin">print</span>(f<span class="str">"📂 打开文件: {self.path}"</span>)
+        <span class="kw">return</span> self.file       <span class="cm"># as 后面拿到的就是这个</span>
+
+    <span class="kw">def</span> __exit__(self, exc_type, exc_val, exc_tb):
+        self.file.close()
+        <span class="builtin">print</span>(f<span class="str">"📂 关闭文件: {self.path}"</span>)
+        <span class="kw">return</span> False           <span class="cm"># False=不吞异常; True=吞掉</span>
+
+<span class="kw">with</span> ManagedFile(<span class="str">"test.txt"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+    f.write(<span class="str">"Hello, context manager!"</span>)</pre>
+
+<h3>10.2 contextlib 工具</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">contextlib</span> <span class="kw">import</span> contextmanager, closing, suppress
+
+<span class="cm"># @contextmanager 装饰器——用 yield 分割进入/退出</span>
+<span class="nd">@contextmanager</span>
+<span class="kw">def</span> <span class="fn">timed_block</span>(label):
+    <span class="builtin">print</span>(f<span class="str">"⏱ [{label}] 开始"</span>)
+    start = time.time()
+    <span class="kw">yield</span>                             <span class="cm"># 这里是 with 块</span>
+    elapsed = time.time() - start
+    <span class="builtin">print</span>(f<span class="str">"⏱ [{label}] 耗时 {elapsed:.3f}s"</span>)
+
+<span class="kw">with</span> timed_block(<span class="str">"计算"</span>):
+    <span class="builtin">print</span>(<span class="builtin">sum</span>(<span class="builtin">range</span>(<span class="num">10_000_000</span>)))
+
+<span class="cm"># suppress — 静默忽略特定异常</span>
+<span class="kw">with</span> suppress(FileNotFoundError):
+    <span class="builtin">open</span>(<span class="str">"不存在的文件.txt"</span>)  <span class="cm"># 不会报错</span>
+
+<span class="cm"># closing — 自动调用 close 方法</span>
+<span class="kw">with</span> closing(<span class="builtin">open</span>(<span class="str">"test.txt"</span>)):
+    <span class="kw">pass</span></pre>
+
+<h3>10.3 嵌套上下文</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># Python 3.10+ 支持嵌套括号</span>
+<span class="kw">with</span> (
+    <span class="builtin">open</span>(<span class="str">"a.txt"</span>) <span class="kw">as</span> f1,
+    <span class="builtin">open</span>(<span class="str">"b.txt"</span>) <span class="kw">as</span> f2,
+):
+    <span class="builtin">print</span>(f1.read(), f2.read())</pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">⚠️</span> 11. 异常处理</h2>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">try</span>:
+    result = <span class="num">10</span> / <span class="num">0</span>
+<span class="kw">except</span> ZeroDivisionError:
+    <span class="builtin">print</span>(<span class="str">"不能除以零"</span>)
+<span class="kw">except</span> (ValueError, TypeError) <span class="kw">as</span> e:
+    <span class="builtin">print</span>(f<span class="str">"类型错误: {e}"</span>)
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"没有异常时执行"</span>)
+<span class="kw">finally</span>:
+    <span class="builtin">print</span>(<span class="str">"总是执行 —— 清理资源"</span>)
+
+<span class="cm"># 主动抛出异常</span>
+<span class="kw">def</span> <span class="fn">validate_age</span>(age):
+    <span class="kw">if</span> age < <span class="num">0</span>:
+        <span class="kw">raise</span> ValueError(<span class="str">"年龄不能为负数"</span>)
+
+<span class="cm"># 自定义异常</span>
+<span class="kw">class</span> <span class="cls">APIError</span>(Exception):
+    <span class="kw">def</span> __init__(self, code, message):
+        self.code = code
+        self.message = message
+        <span class="builtin">super</span>().__init__(f<span class="str">"[{code}] {message}"</span>)
+
+<span class="kw">raise</span> APIError(<span class="num">429</span>, <span class="str">"请求过于频繁"</span>)
+
+<span class="cm"># 异常链</span>
+<span class="kw">try</span>:
+    <span class="num">1</span> / <span class="num">0</span>
+<span class="kw">except</span> ZeroDivisionError <span class="kw">as</span> e:
+    <span class="kw">raise</span> RuntimeError(<span class="str">"计算失败"</span>) <span class="kw">from</span> e   <span class="cm"># 保留原始异常上下文</span></pre>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">📁</span> 12. 文件 I/O &amp; 序列化</h2>
+
+<h3>12.1 文件操作</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 读文件</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.txt"</span>, <span class="str">"r"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    content = f.read()             <span class="cm"># 全部</span>
+    <span class="kw">for</span> line <span class="kw">in</span> f:               <span class="cm"># 逐行（内存友好）</span>
+        <span class="builtin">print</span>(line.strip())
+
+<span class="cm"># 写文件</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"out.txt"</span>, <span class="str">"w"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    f.write(<span class="str">"第一行\n"</span>)
+    f.writelines([<span class="str">"第二行\n"</span>, <span class="str">"第三行\n"</span>])
+
+<span class="cm"># 追加</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"log.txt"</span>, <span class="str">"a"</span>) <span class="kw">as</span> f:
+    f.write(<span class="str">f"日志: {time.time()}\n"</span>)
+
+<span class="cm"># 二进制文件</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"image.jpg"</span>, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+    header = f.read(<span class="num">4</span>)          <span class="cm"># 读前 4 字节</span></pre>
+
+<h3>12.2 pathlib（推荐）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pathlib</span> <span class="kw">import</span> Path
+
+p = Path(<span class="str">"/home/user/docs"</span>) / <span class="str">"data"</span> / <span class="str">"config.json"</span>
+p.parent                          <span class="cm"># /home/user/docs/data</span>
+p.name                            <span class="cm"># config.json</span>
+p.stem                            <span class="cm"># config</span>
+p.suffix                          <span class="cm"># .json</span>
+
+<span class="cm"># 读写</span>
+p.write_text(<span class="str">"Hello, pathlib!"</span>)
+content = p.read_text()
+
+<span class="cm"># 目录遍历</span>
+<span class="kw">for</span> f <span class="kw">in</span> Path(<span class="str">"."</span>).glob(<span class="str">"*.py"</span>):     <span class="builtin">print</span>(f.name)
+<span class="kw">for</span> f <span class="kw">in</span> Path(<span class="str">"."</span>).rglob(<span class="str">"**/*.txt"</span>): <span class="builtin">print</span>(f)
+
+<span class="cm"># 创建目录</span>
+Path(<span class="str">"a/b/c"</span>).mkdir(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)</pre>
+
+<h3>12.3 JSON / pickle / CSV</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">json</span>, <span class="builtin">csv</span>, <span class="builtin">pickle</span>
+
+<span class="cm"># JSON</span>
+data = {<span class="str">"name"</span>: <span class="str">"Python"</span>, <span class="str">"versions"</span>: [<span class="num">3</span>, <span class="num">10</span>, <span class="num">12</span>]}
+json_str = json.dumps(data, ensure_ascii=<span class="kw">False</span>, indent=<span class="num">2</span>)
+parsed = json.loads(json_str)
+
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.json"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:  json.dump(data, f)
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.json"</span>) <span class="kw">as</span> f:        parsed = json.load(f)
+
+<span class="cm"># CSV</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.csv"</span>, <span class="str">"w"</span>, newline=<span class="str">""</span>) <span class="kw">as</span> f:
+    writer = csv.writer(f)
+    writer.writerow([<span class="str">"name"</span>, <span class="str">"age"</span>])
+    writer.writerows([[<span class="str">"Alice"</span>, <span class="num">25</span>], [<span class="str">"Bob"</span>, <span class="num">30</span>]])
+
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.csv"</span>) <span class="kw">as</span> f:
+    <span class="kw">for</span> row <span class="kw">in</span> csv.DictReader(f):
+        <span class="builtin">print</span>(row[<span class="str">"name"</span>], row[<span class="str">"age"</span>])
+
+<span class="cm"># pickle — Python 对象序列化（⚠ 不安全，只信任自己的数据）</span>
+<span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"data.pkl"</span>, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+    pickle.dump({<span class="str">"complex"</span>: [<span class="num">1</span>, {<span class="str">"nested"</span>: <span class="str">"data"</span>}]}, f)</pre>
+</section>
+
+<!-- ============= 13 ============= -->
+<section id="sec13">
+<h2><span class="emoji">📦</span> 13. 模块与包</h2>
+
+<h3>13.1 模块导入</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 各种导入方式</span>
+<span class="kw">import</span> <span class="builtin">os</span>                          <span class="cm"># import 模块</span>
+<span class="kw">from</span> <span class="builtin">pathlib</span> <span class="kw">import</span> Path, PurePath  <span class="cm"># 导入特定对象</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime <span class="kw">as</span> dt  <span class="cm"># 别名</span>
+
+<span class="cm"># 动态导入</span>
+<span class="kw">import</span> <span class="builtin">importlib</span>
+math = importlib.import_module(<span class="str">"math"</span>)
+<span class="builtin">print</span>(math.pi)
+
+<span class="cm"># __name__ 判断</span>
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="builtin">print</span>(<span class="str">"该文件作为脚本直接运行"</span>)</pre>
+
+<h3>13.2 包结构</h3>
+<pre><span class="lang-label">项目</span>
+myproject/
+├── __init__.py          <span class="cm"># 标记为包（可为空）</span>
+├── main.py
+├── utils/
+│   ├── __init__.py
+│   ├── helpers.py
+│   └── validators.py
+└── models/
+    ├── __init__.py
+    ├── user.py
+    └── post.py
+
+<span class="cm"># 导入方式</span>
+<span class="kw">from</span> <span class="builtin">myproject.utils</span> <span class="kw">import</span> helpers
+<span class="kw">from</span> <span class="builtin">myproject.models.user</span> <span class="kw">import</span> User
+
+<span class="cm"># __all__ 控制 from package import * 的行为</span>
+<span class="cm"># __init__.py: __all__ = ["helpers", "validators"]</span></pre>
+
+<h3>13.3 sys.path 与 PYTHONPATH</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">sys</span>
+<span class="builtin">print</span>(sys.path)  <span class="cm"># 模块搜索路径列表</span>
+<span class="cm"># 可以通过 sys.path.append('/path/to/your/module') 添加</span></pre>
+
+<h3>13.4 常用第三方包速查</h3>
+<table>
+  <tr><th>领域</th><th>包名</th><th>用途</th></tr>
+  <tr><td>Web</td><td>FastAPI / Flask / Django</td><td>构建 Web 应用和 API</td></tr>
+  <tr><td>数据科学</td><td>NumPy / Pandas / Matplotlib</td><td>科学计算/数据分析/可视化</td></tr>
+  <tr><td>HTTP 请求</td><td>requests / httpx / aiohttp</td><td>发送 HTTP 请求</td></tr>
+  <tr><td>数据库</td><td>SQLAlchemy / psycopg2 / pymongo</td><td>ORM 和数据库驱动</td></tr>
+  <tr><td>异步</td><td>asyncio / aiofiles / anyio</td><td>异步 I/O 生态</td></tr>
+  <tr><td>测试</td><td>pytest / unittest / coverage</td><td>单元测试和覆盖度</td></tr>
+  <tr><td>CLI</td><td>typer / click / argparse</td><td>命令行工具</td></tr>
+  <tr><td>图像处理</td><td>Pillow / OpenCV / scikit-image</td><td>图像处理</td></tr>
+</table>
+</section>
+
+<!-- ============= 14 ============= -->
+<section id="sec14">
+<h2><span class="emoji">⚡</span> 14. 并发编程</h2>
+<p>Python 有三种并发方式，适用不同场景：</p>
+
+<h3>14.1 threading（I/O 密集型）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="cm"># 基本用法</span>
+<span class="kw">def</span> <span class="fn">worker</span>(name, delay):
+    <span class="builtin">print</span>(f<span class="str">"[{name}] 开始"</span>)
+    time.sleep(delay)
+    <span class="builtin">print</span>(f<span class="str">"[{name}] 结束"</span>)
+
+threads = []
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">3</span>):
+    t = threading.Thread(target=worker, args=(f<span class="str">"T-{i}"</span>, <span class="num">2</span>))
+    t.start()
+    threads.append(t)
+
+<span class="kw">for</span> t <span class="kw">in</span> threads:
+    t.join()                          <span class="cm"># 等待完成</span>
+
+<span class="cm"># 线程间同步</span>
+lock = threading.Lock()
+counter = <span class="num">0</span>
+
+<span class="kw">def</span> <span class="fn">increment</span>():
+    <span class="kw">global</span> counter
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">100000</span>):
+        <span class="kw">with</span> lock:
+            counter += <span class="num">1</span></pre>
+
+<h3>14.2 multiprocessing（CPU 密集型）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">multiprocessing</span> <span class="kw">import</span> Process, Pool, Queue
+<span class="kw">import</span> <span class="builtin">os</span>
+
+<span class="cm"># 进程池</span>
+<span class="kw">def</span> <span class="fn">square</span>(x):
+    <span class="kw">return</span> x ** <span class="num">2</span>
+
+<span class="kw">with</span> Pool(processes=<span class="num">4</span>) <span class="kw">as</span> pool:
+    result = pool.map(square, <span class="builtin">range</span>(<span class="num">10</span>))
+    <span class="builtin">print</span>(result)                  <span class="cm"># [0, 1, 4, 9, ..., 81]</span>
+
+<span class="cm"># 进程间通信 — Queue</span>
+<span class="kw">def</span> <span class="fn">producer</span>(q):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>): q.put(i)
+
+<span class="kw">def</span> <span class="fn">consumer</span>(q):
+    <span class="kw">while</span> <span class="kw">not</span> q.empty():
+        <span class="builtin">print</span>(<span class="str">"收到:"</span>, q.get())
+
+q = Queue()
+Process(target=producer, args=(q,)).start()
+Process(target=consumer, args=(q,)).start()</pre>
+
+<h3>14.3 asyncio（高并发 I/O）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+
+<span class="kw">async def</span> <span class="fn">fetch_data</span>(name, delay):
+    <span class="builtin">print</span>(f<span class="str">"开始获取 {name}..."</span>)
+    <span class="kw">await</span> asyncio.sleep(delay)     <span class="cm"># 模拟 I/O 等待</span>
+    <span class="builtin">print</span>(f<span class="str">"{name} 完成！"</span>)
+    <span class="kw">return</span> f<span class="str">"data-{name}"</span>
+
+<span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="cm"># 并发执行</span>
+    results = <span class="kw">await</span> asyncio.gather(
+        fetch_data(<span class="str">"A"</span>, <span class="num">2</span>),
+        fetch_data(<span class="str">"B"</span>, <span class="num">3</span>),
+        fetch_data(<span class="str">"C"</span>, <span class="num">1</span>),
+    )
+    <span class="builtin">print</span>(<span class="str">"全部结果:"</span>, results)
+
+<span class="cm"># asyncio.run(main())</span>
+
+<span class="cm"># 三种并发对比</span>
+comparison = [
+    (<span class="str">"threading"</span>, <span class="str">"I/O 密集型"</span>, <span class="str">"GIL 限制 CPU"</span>, <span class="str">"共享内存、易写"</span>),
+    (<span class="str">"multiprocessing"</span>, <span class="str">"CPU 密集型"</span>, <span class="str">"通信开销大"</span>, <span class="str">"真并行"</span>),
+    (<span class="str">"asyncio"</span>, <span class="str">"高并发 I/O"</span>, <span class="str">"单线程"</span>, <span class="str">"轻量、极高并发"</span>),
+]
+<span class="builtin">print</span>(<span class="str">"{:18} {:14} {:20} {:12}"</span>.format(<span class="str">"方法"</span>, <span class="str">"适用"</span>, <span class="str">"局限"</span>, <span class="str">"优势"</span>))
+<span class="kw">for</span> row <span class="kw">in</span> comparison:
+    <span class="builtin">print</span>(<span class="str">"{:18} {:14} {:20} {:12}"</span>.format(*row))</pre>
+
+<h3>14.4 ThreadPoolExecutor 与 asyncio 混编</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">concurrent.futures</span> <span class="kw">import</span> ThreadPoolExecutor
+
+<span class="kw">def</span> <span class="fn">blocking_io</span>(x):
+    <span class="builtin">print</span>(f<span class="str">"阻塞操作: {x}"</span>)
+    time.sleep(<span class="num">1</span>)
+    <span class="kw">return</span> x * <span class="num">2</span>
+
+<span class="kw">async def</span> <span class="fn">async_wrapper</span>():
+    <span class="kw">with</span> ThreadPoolExecutor() <span class="kw">as</span> pool:
+        loop = asyncio.get_running_loop()
+        results = <span class="kw">await</span> asyncio.gather(*[
+            loop.run_in_executor(pool, blocking_io, i)
+            <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>)
+        ])
+        <span class="builtin">print</span>(results)</pre>
+</section>
+
+<!-- ============= 15 ============= -->
+<section id="sec15">
+<h2><span class="emoji">🏷</span> 15. 类型注解</h2>
+<p>Python 3.5+ 引入类型注解，3.10+ 大幅简化。类型注解<strong>不影响运行时</strong>，但 mypy / IDE 可用它做静态检查。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> List, Dict, Tuple, Optional, Union, Any, Callable
+
+<span class="cm"># 基本类型</span>
+name: <span class="builtin">str</span> = <span class="str">"Python"</span>
+count: <span class="builtin">int</span> = <span class="num">42</span>
+rate: <span class="builtin">float</span> = <span class="num">3.14</span>
+active: <span class="builtin">bool</span> = <span class="kw">True</span>
+
+<span class="cm"># 容器类型（Python 3.9+ 直接使用内置泛型）</span>
+tags: <span class="builtin">list</span>[<span class="builtin">str</span>] = [<span class="str">"python"</span>, <span class="str">"typing"</span>]
+config: <span class="builtin">dict</span>[<span class="builtin">str</span>, <span class="builtin">int</span>] = {<span class="str">"timeout"</span>: <span class="num">30</span>}
+point: <span class="builtin">tuple</span>[<span class="builtin">int</span>, <span class="builtin">int</span>] = (<span class="num">0</span>, <span class="num">0</span>)
+
+<span class="cm"># Optional = Union[X, None]</span>
+email: Optional[<span class="builtin">str</span>] = <span class="kw">None</span>   <span class="cm"># Python 3.10+: str | None</span>
+
+<span class="cm"># Union 类型</span>
+data: <span class="builtin">int</span> | <span class="builtin">str</span> = <span class="str">"42"</span>          <span class="cm"># Python 3.10+ 语法</span>
+
+<span class="cm"># 函数注解</span>
+<span class="kw">def</span> <span class="fn">process</span>(items: <span class="builtin">list</span>[<span class="builtin">int</span>], factor: <span class="builtin">float</span> = <span class="num">1.5</span>) -> <span class="builtin">dict</span>[<span class="builtin">str</span>, <span class="builtin">float</span>]:
+    <span class="kw">return</span> {<span class="builtin">str</span>(x): x * factor <span class="kw">for</span> x <span class="kw">in</span> items}
+
+<span class="cm"># Callable</span>
+callback: Callable[[<span class="builtin">int</span>, <span class="builtin">int</span>], <span class="builtin">int</span>] = <span class="kw">lambda</span> a, b: a + b
+
+<span class="cm"># 类型别名</span>
+Vector = <span class="builtin">list</span>[<span class="builtin">float</span>]
+<span class="kw">def</span> <span class="fn">scale</span>(v: Vector, s: <span class="builtin">float</span>) -> Vector:
+    <span class="kw">return</span> [x * s <span class="kw">for</span> x <span class="kw">in</span> v]
+
+<span class="cm"># TypedDict</span>
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> TypedDict
+<span class="kw">class</span> <span class="cls">UserDict</span>(TypedDict):
+    name: <span class="builtin">str</span>
+    age: <span class="builtin">int</span>
+
+u: UserDict = {<span class="str">"name"</span>: <span class="str">"Alice"</span>, <span class="str">"age"</span>: <span class="num">25</span>}  <span class="cm"># mypy 通过</span></pre>
+</section>
+
+<!-- ============= 16 ============= -->
+<section id="sec16">
+<h2><span class="emoji">📚</span> 16. 标准库精选</h2>
+
+<h3>16.1 datetime</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime, date, timedelta, timezone
+
+now = datetime.now()
+<span class="builtin">print</span>(now)                         <span class="cm"># 2026-07-01 14:30:00</span>
+<span class="builtin">print</span>(now.strftime(<span class="str">"%Y-%m-%d %H:%M"</span>))  <span class="cm"># 格式化</span>
+<span class="builtin">print</span>(now + timedelta(days=<span class="num">7</span>, hours=<span class="num">3</span>))  <span class="cm"># 日期运算</span>
+
+<span class="cm"># 时区处理</span>
+utc_now = datetime.now(timezone.utc)
+shanghai = datetime.now(timezone(timedelta(hours=<span class="num">8</span>)))
+
+<span class="cm"># 字符串解析</span>
+dt = datetime.fromisoformat(<span class="str">"2026-07-01T10:30:00"</span>)</pre>
+
+<h3>16.2 collections</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> deque, Counter, defaultdict, OrderedDict
+
+<span class="cm"># deque — 双端队列</span>
+dq = deque(maxlen=<span class="num">5</span>)   <span class="cm"># 固定长度</span>
+dq.append(<span class="num">1</span>); dq.appendleft(<span class="num">2</span>)
+<span class="builtin">print</span>(dq.popleft())     <span class="cm"># 2</span>
+
+<span class="cm"># Counter</span>
+c = Counter(<span class="str">"abracadabra"</span>)
+<span class="builtin">print</span>(c.most_common(<span class="num">3</span>))  <span class="cm"># [('a',5), ('b',2), ('r',2)]</span>
+
+<span class="cm"># defaultdict — 自动初始化</span>
+dd = defaultdict(<span class="builtin">int</span>)
+dd[<span class="str">"visits"</span>] += <span class="num">1</span>       <span class="cm"># 不需要先检查 key 是否存在</span></pre>
+
+<h3>16.3 re — 正则表达式</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">re</span>
+
+text = <span class="str">"我的邮箱是 alice@example.com 和 bob@test.com"</span>
+emails = re.findall(<span class="str">r"\b[\w.]+@[\w.]+\.\w{2,4}\b"</span>, text)
+<span class="builtin">print</span>(emails)                    <span class="cm"># ['alice@example.com', 'bob@test.com']</span>
+
+<span class="cm"># 替换</span>
+clean = re.sub(<span class="str">r"\d+"</span>, <span class="str">"[数字]"</span>, <span class="str">"价格: 100 元, 折扣: 20 元"</span>)
+<span class="cm"># "价格: [数字] 元, 折扣: [数字] 元"</span>
+
+<span class="cm"># 编译正则（复用）</span>
+pattern = re.compile(<span class="str">r"(\d{4})-(\d{2})-(\d{2})"</span>)
+m = pattern.search(<span class="str">"日期: 2026-07-01"</span>)
+<span class="builtin">print</span>(m.groups())  <span class="cm"># ('2026', '07', '01')</span></pre>
+
+<h3>16.4 os / sys / subprocess</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">os</span>, <span class="builtin">sys</span>, <span class="builtin">subprocess</span>, <span class="builtin">platform</span>
+
+<span class="cm"># 操作系统信息</span>
+<span class="builtin">print</span>(os.name)                    <span class="cm"># 'posix' / 'nt'</span>
+<span class="builtin">print</span>(platform.system())          <span class="cm"># 'Linux' / 'Darwin' / 'Windows'</span>
+<span class="builtin">print</span>(os.cpu_count())             <span class="cm"># CPU 核心数</span>
+
+<span class="cm"># 环境变量</span>
+os.environ[<span class="str">"MY_VAR"</span>] = <span class="str">"value"</span>
+db_url = os.getenv(<span class="str">"DATABASE_URL"</span>, <span class="str">"sqlite:///default.db"</span>)
+
+<span class="cm"># 运行命令</span>
+result = subprocess.run([<span class="str">"echo"</span>, <span class="str">"Hello"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+<span class="builtin">print</span>(result.stdout)               <span class="cm"># "Hello\n"</span>
+
+<span class="cm"># sys.argv — 命令行参数</span>
+<span class="cm"># python script.py arg1 arg2</span>
+<span class="cm"># sys.argv = ['script.py', 'arg1', 'arg2']</span></pre>
+
+<h3>16.5 hashlib / secrets</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">hashlib</span>, <span class="builtin">secrets</span>
+
+<span class="cm"># 哈希</span>
+h = hashlib.sha256(<span class="str">b"hello"</span>).hexdigest()
+<span class="builtin">print</span>(h)  <span class="cm"># 2cf24dba5fb0a30e26e83b2ac5b9e29e...</span>
+
+<span class="cm"># 安全随机</span>
+token = secrets.token_hex(<span class="num">32</span>)     <span class="cm"># 64 字符安全随机字符串</span>
+password = secrets.token_urlsafe(<span class="num">16</span>)  <span class="cm"># URL 安全的随机密码</span></pre>
+
+<h3>16.6 logging</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">logging</span>
+
+logging.basicConfig(
+    level=logging.INFO,
+    format=<span class="str">"%(asctime)s [%(levelname)s] %(name)s: %(message)s"</span>,
+)
+
+logger = logging.getLogger(__name__)
+logger.info(<span class="str">"应用启动"</span>)
+logger.warning(<span class="str">"磁盘使用率 85%"</span>)
+logger.error(<span class="str">"数据库连接失败"</span>)</pre>
+
+<h3>16.7 argparse — 命令行参数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">argparse</span>
+
+parser = argparse.ArgumentParser(description=<span class="str">"文件处理工具"</span>)
+parser.add_argument(<span class="str">"input"</span>, help=<span class="str">"输入文件路径"</span>)
+parser.add_argument(<span class="str">"-o"</span>, <span class="str">"--output"</span>, default=<span class="str">"out.txt"</span>, help=<span class="str">"输出文件路径"</span>)
+parser.add_argument(<span class="str">"-v"</span>, <span class="str">"--verbose"</span>, action=<span class="str">"store_true"</span>, help=<span class="str">"详细输出"</span>)
+
+args = parser.parse_args()
+<span class="builtin">print</span>(f<span class="str">"处理: {args.input} → {args.output}"</span>)</pre>
+</section>
+
+<!-- ============= 17 ============= -->
+<section id="sec17">
+<h2><span class="emoji">🧪</span> 17. 测试与调试</h2>
+
+<h3>17.1 pytest</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install pytest pytest-cov</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># test_demo.py</span>
+<span class="kw">import</span> <span class="builtin">pytest</span>
+
+<span class="kw">def</span> <span class="fn">add</span>(a, b):
+    <span class="kw">return</span> a + b
+
+<span class="kw">def</span> <span class="fn">test_add</span>():
+    <span class="kw">assert</span> add(<span class="num">2</span>, <span class="num">3</span>) == <span class="num">5</span>
+    <span class="kw">assert</span> add(<span class="str">"a"</span>, <span class="str">"b"</span>) == <span class="str">"ab"</span>
+
+<span class="kw">def</span> <span class="fn">test_raises</span>():
+    <span class="kw">with</span> pytest.raises(TypeError):
+        add(<span class="str">"a"</span>, <span class="num">1</span>)
+
+<span class="nd">@pytest.mark.parametrize</span>(<span class="str">"a,b,expected"</span>, [
+    (<span class="num">1</span>, <span class="num">1</span>, <span class="num">2</span>),
+    (<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>),
+    (-<span class="num">1</span>, <span class="num">1</span>, <span class="num">0</span>),
+])
+<span class="kw">def</span> <span class="fn">test_params</span>(a, b, expected):
+    <span class="kw">assert</span> add(a, b) == expected
+
+<span class="cm"># fixture</span>
+<span class="nd">@pytest.fixture</span>
+<span class="kw">def</span> <span class="fn">db_connection</span>():
+    conn = sqlite3.connect(<span class="str">":memory:"</span>)
+    conn.execute(<span class="str">"CREATE TABLE test (id INT)"</span>)
+    <span class="kw">yield</span> conn        <span class="cm"># 提供连接</span>
+    conn.close()       <span class="cm"># 清理</span>
+
+<span class="kw">def</span> <span class="fn">test_insert</span>(db_connection):
+    db_connection.execute(<span class="str">"INSERT INTO test VALUES (1)"</span>)
+    cursor = db_connection.execute(<span class="str">"SELECT COUNT(*) FROM test"</span>)
+    <span class="kw">assert</span> cursor.fetchone()[<span class="num">0</span>] == <span class="num">1</span></pre>
+
+<h3>17.2 调试技巧</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 1. print 调试（最常用的"调试器"）</span>
+<span class="builtin">print</span>(f<span class="str">"DEBUG: x={x}, type={type(x)}"</span>)
+
+<span class="cm"># 2. pdb — Python 调试器</span>
+<span class="kw">import</span> <span class="builtin">pdb</span>
+pdb.set_trace()  <span class="cm"># 代码运行到此处停住，进入交互式调试</span>
+<span class="cm"># 常用命令: n(下一行), s(进入函数), c(继续), p(打印), l(查看上下文)</span>
+
+<span class="cm"># 3. breakpoint() — Python 3.7+ 等价于 pdb.set_trace()</span>
+breakpoint()
+
+<span class="cm"># 4. 日志调试</span>
+<span class="kw">import</span> <span class="builtin">traceback</span>
+<span class="kw">try</span>:
+    <span class="num">1</span> / <span class="num">0</span>
+<span class="kw">except</span>:
+    traceback.print_exc()  <span class="cm"># 打印完整堆栈</span>
+
+<span class="cm"># 5. inspect</span>
+<span class="kw">import</span> <span class="builtin">inspect</span>
+<span class="builtin">print</span>(inspect.signature(add))       <span class="cm"># (a, b)</span>
+<span class="builtin">print</span>(inspect.getsource(add))       <span class="cm"># 打印源代码</span></pre>
+</section>
+
+<!-- ============= 18 ============= -->
+<section id="sec18">
+<h2><span class="emoji">🧠</span> 18. 进阶技巧</h2>
+
+<h3>18.1 描述符</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">PositiveNumber</span>:
+    <span class="str">"""描述符：自动校验数值为正"""</span>
+    <span class="kw">def</span> __set_name__(self, owner, name):
+        self.name = f<span class="str">"_{name}"</span>
+
+    <span class="kw">def</span> __get__(self, obj, objtype=<span class="kw">None</span>):
+        <span class="kw">return</span> getattr(obj, self.name, <span class="num">0</span>)
+
+    <span class="kw">def</span> __set__(self, obj, value):
+        <span class="kw">if</span> value <= <span class="num">0</span>:
+            <span class="kw">raise</span> ValueError(<span class="str">"必须为正数"</span>)
+        setattr(obj, self.name, value)
+
+<span class="kw">class</span> <span class="cls">Order</span>:
+    amount = PositiveNumber()
+    qty = PositiveNumber()
+
+    <span class="kw">def</span> __init__(self, amount, qty):
+        self.amount = amount   <span class="cm"># 触发描述符 __set__</span>
+        self.qty = qty
+
+o = Order(<span class="num">100</span>, <span class="num">2</span>)
+<span class="builtin">print</span>(o.amount)                   <span class="cm"># 100</span>
+<span class="cm"># o.amount = -5  # ❌ ValueError: 必须为正数</span></pre>
+
+<h3>18.2 元类</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">SingletonMeta</span>(<span class="builtin">type</span>):
+    <span class="str">"""元类实现单例模式"""</span>
+    _instances = {}
+    <span class="kw">def</span> <span class="fn">__call__</span>(cls, *args, **kwargs):
+        <span class="kw">if</span> cls <span class="kw">not in</span> cls._instances:
+            cls._instances[cls] = <span class="builtin">super</span>().__call__(*args, **kwargs)
+        <span class="kw">return</span> cls._instances[cls]
+
+<span class="kw">class</span> <span class="cls">Config</span>(metaclass=SingletonMeta):
+    <span class="kw">pass</span>
+
+a = Config(); b = Config()
+<span class="builtin">print</span>(a <span class="kw">is</span> b)  <span class="cm"># True</span></pre>
+
+<h3>18.3 属性访问控制</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">ReadOnly</span>:
+    <span class="kw">def</span> __init__(self, data):
+        self._data = <span class="builtin">dict</span>(data)
+
+    <span class="kw">def</span> __getattr__item__(self, key):
+        <span class="kw">return</span> self._data[key]
+
+    <span class="kw">def</span> __setitem__(self, key, value):
+        <span class="kw">raise</span> TypeError(<span class="str">"只读对象"</span>)
+
+    <span class="kw">def</span> __getattr__(self, name):
+        <span class="kw">return</span> self._data[name]
+
+    <span class="kw">def</span> __setattr__(self, name, value):
+        <span class="kw">if</span> name == <span class="str">"_data"</span>:
+            <span class="builtin">super</span>().__setattr__(name, value)
+        <span class="kw">else</span>:
+            <span class="kw">raise</span> TypeError(<span class="str">"只读"</span>)</pre>
+
+<h3>18.4 性能优化技巧</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 1. 局部变量加速（减少全局查找）</span>
+<span class="kw">def</span> <span class="fn">fast_sum</span>(n):
+    local_sum = <span class="builtin">sum</span>      <span class="cm"># 把 built-in 赋给局部变量</span>
+    <span class="kw">return</span> local_sum(<span class="builtin">range</span>(n))
+
+<span class="cm"># 2. 列表推导式 > map/filter > 手动 for 循环</span>
+<span class="cm"># 3. 字符串用 join 而不是 +=</span>
+parts = [<span class="str">"a"</span>, <span class="str">"b"</span>, <span class="str">"c"</span>]
+result = <span class="str">""</span>.join(parts)      <span class="cm"># ✅ 比 for 循环 += 快 N 倍</span>
+
+<span class="cm"># 4. 使用 slots 减少内存</span>
+<span class="kw">class</span> <span class="cls">Point</span>:
+    __slots__ = (<span class="str">"x"</span>, <span class="str">"y"</span>)    <span class="cm"># 禁止动态添加属性，节省内存</span>
+    <span class="kw">def</span> __init__(self, x, y): self.x, self.y = x, y
+
+<span class="cm"># 5. 缓存计算结果</span>
+<span class="kw">from</span> <span class="builtin">functools</span> <span class="kw">import</span> lru_cache
+
+<span class="nd">@lru_cache</span>(maxsize=<span class="num">128</span>)
+<span class="kw">def</span> <span class="fn">fib</span>(n):
+    <span class="kw">if</span> n < <span class="num">2</span>: <span class="kw">return</span> n
+    <span class="kw">return</span> fib(n-<span class="num">1</span>) + fib(n-<span class="num">2</span>)  <span class="cm"># 重复计算被缓存</span>
+
+<span class="cm"># 6. 使用 array.array / numpy 处理大量数字</span>
+<span class="kw">from</span> <span class="builtin">array</span> <span class="kw">import</span> array
+arr = array(<span class="str">"i"</span>, [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>])  <span class="cm"># C 级别的整数数组</span></pre>
+
+<h3>18.5 Walrus 操作符 (Python 3.8+)</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># := 海象表达式 — 赋值并返回</span>
+
+<span class="cm"># 传统写法</span>
+data = get_data()
+<span class="kw">if</span> data:
+    <span class="builtin">print</span>(data)
+
+<span class="cm"># 海象写法</span>
+<span class="kw">if</span> (data := get_data()):
+    <span class="builtin">print</span>(data)
+
+<span class="cm"># 文件读取</span>
+<span class="kw">while</span> chunk := file.read(<span class="num">8192</span>):
+    process(chunk)
+
+<span class="cm"># 列表推导式中复用值</span>
+results = [y <span class="kw">for</span> x <span class="kw">in</span> data <span class="kw">if</span> (y := expensive(x)) > <span class="num">0</span>]</pre>
+
+<h3>18.6 常用一行式</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 斐波那契</span>
+fib = <span class="kw">lambda</span> n: n <span class="kw">if</span> n < <span class="num">2</span> <span class="kw">else</span> fib(n-<span class="num">1</span>) + fib(n-<span class="num">2</span>)
+
+<span class="cm"># 展平嵌套列表</span>
+flatten = <span class="kw">lambda</span> lst: [v <span class="kw">for</span> sub <span class="kw">in</span> lst <span class="kw">for</span> v <span class="kw">in</span> (sub <span class="kw">if</span> <span class="builtin">isinstance</span>(sub, <span class="builtin">list</span>) <span class="kw">else</span> [sub])]
+
+<span class="cm"># 文件内容去重</span>
+unique_lines = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(<span class="builtin">open</span>(<span class="str">"file.txt"</span>).read().splitlines()))
+
+<span class="cm"># 矩阵转置</span>
+matrix = [[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>,<span class="num">4</span>],[<span class="num">5</span>,<span class="num">6</span>]]
+transposed = <span class="builtin">list</span>(<span class="builtin">zip</span>(*matrix))  <span class="cm"># [(1,3,5), (2,4,6)]</span>
+
+<span class="cm"># 检查回文</span>
+is_palindrome = <span class="kw">lambda</span> s: s == s[::-<span class="num">1</span>]
+
+<span class="cm"># 查找众数</span>
+mode = <span class="kw">lambda</span> lst: <span class="builtin">max</span>(<span class="builtin">set</span>(lst), key=lst.count)</pre>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  🐍 Python 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

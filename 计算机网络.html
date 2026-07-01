@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>计算机网络 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 {
+  font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px;
+  color: var(--teal);
+}
+section h4 {
+  font-size: 1rem; font-weight: 600; margin: 16px 0 8px;
+  color: var(--pink);
+}
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px;
+}
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🌐 计算机网络 从入门到精通</h1>
+  <p>OSI七层 · TCP/IP · HTTP · 套接字 · 路由 · 安全 — 理论 + Python 实战</p>
+  <div class="tags">
+    <span>🐍 Python 示例</span>
+    <span>🔌 Socket 编程</span>
+    <span>📘 教学文档</span>
+    <span>🎯 面试准备</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. 网络模型总览</a></li>
+    <li><a href="#sec2">2. 物理层 &amp; 数据链路层</a></li>
+    <li><a href="#sec3">3. 网络层（IP / 子网 / 路由）</a></li>
+    <li><a href="#sec4">4. 传输层（TCP / UDP）</a></li>
+    <li><a href="#sec5">5. 应用层（HTTP / DNS / WebSocket）</a></li>
+    <li><a href="#sec6">6. Socket 编程实战</a></li>
+    <li><a href="#sec7">7. HTTP 客户端与服务器</a></li>
+    <li><a href="#sec8">8. DNS 解析</a></li>
+    <li><a href="#sec9">9. 网络安全基础</a></li>
+    <li><a href="#sec10">10. 网络分析与抓包</a></li>
+    <li><a href="#sec11">11. CDN &amp; 负载均衡</a></li>
+    <li><a href="#sec12">12. 面试高频题 &amp; 实验</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">🏛</span> 1. 网络模型总览</h2>
+
+<p>计算机网络的核心思维是<strong>分层</strong>——每一层解决特定问题，向上层提供抽象服务。最经典的是<strong>OSI 七层模型</strong>和<strong>TCP/IP 四层模型</strong>。</p>
+
+<h3>OSI 七层 vs TCP/IP 四层</h3>
+<table>
+  <tr><th>OSI 七层</th><th>TCP/IP 四层</th><th>核心协议</th><th>数据单元</th></tr>
+  <tr><td>7 应用层</td><td rowspan="3">应用层</td><td>HTTP / HTTPS / FTP / SMTP / DNS / WebSocket</td><td>消息</td></tr>
+  <tr><td>6 表示层</td><td>SSL/TLS（加密）、字符编码转换</td><td>—</td></tr>
+  <tr><td>5 会话层</td><td>RPC、Socket 建立/维护会话</td><td>—</td></tr>
+  <tr><td>4 传输层</td><td>传输层</td><td>TCP（可靠）、UDP（不可靠）</td><td>段</td></tr>
+  <tr><td>3 网络层</td><td>网络层</td><td>IP（IPv4/IPv6）、ICMP、ARP、OSPF、BGP</td><td>包</td></tr>
+  <tr><td>2 数据链路层</td><td>网络接口层</td><td>Ethernet、MAC、VLAN、PPP</td><td>帧</td></tr>
+  <tr><td>1 物理层</td><td></td><td>RJ45、光纤、WiFi（802.11）、蓝牙</td><td>比特</td></tr>
+</table>
+
+<h3>数据封装过程</h3>
+<pre><span class="lang-label">封装</span>
+  ┌───────────────────────────────────────────────────┐
+  │ 应用层:  HTTP 请求 "GET /index.html"             │
+  ├───────────────────────────────────────────────────┤
+  │ 传输层:  TCP 头 (源端口:54321, 目的端口:80) + 数据│
+  ├───────────────────────────────────────────────────┤
+  │ 网络层:  IP 头 (源IP:192.168.1.2, 目标IP:142.250.80.4) + 数据│
+  ├───────────────────────────────────────────────────┤
+  │ 链路层: 以太帧头 (源MAC:AA:BB, 目标MAC:CC:DD) + 数据 + FCS│
+  └───────────────────────────────────────────────────┘
+  比特流 → 网线 → 路由器 → 互联网 → 目标服务器</pre>
+
+<h3>Python 查看本机网络信息</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+<span class="kw">import</span> <span class="builtin">os</span>
+
+<span class="cm"># 主机名</span>
+hostname = socket.gethostname()
+<span class="builtin">print</span>(<span class="str">"主机名:"</span>, hostname)
+
+<span class="cm"># 本机 IP（通过连接外部地址获取）</span>
+<span class="kw">def</span> <span class="fn">get_local_ip</span>():
+    <span class="kw">try</span>:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect((<span class="str">"8.8.8.8"</span>, <span class="num">80</span>))
+        ip = s.getsockname()[<span class="num">0</span>]
+        s.close()
+        <span class="kw">return</span> ip
+    <span class="kw">except</span>:
+        <span class="kw">return</span> <span class="str">"127.0.0.1"</span>
+<span class="builtin">print</span>(<span class="str">"本机 IP:"</span>, get_local_ip())
+
+<span class="cm"># DNS 解析</span>
+ip = socket.gethostbyname(<span class="str">"www.example.com"</span>)
+<span class="builtin">print</span>(<span class="str">"example.com →"</span>, ip)
+
+<span class="cm"># MAC 地址（Linux）</span>
+<span class="kw">if</span> os.name == <span class="str">"posix"</span>:
+    <span class="kw">import</span> <span class="builtin">uuid</span>
+    mac = <span class="str">":".join(f<span class="str">"{b:02x}"</span> <span class="kw">for</span> b <span class="kw">in</span> uuid.getnode().to_bytes(<span class="num">6</span>, <span class="str">'big'</span>))
+    <span class="builtin">print</span>(<span class="str">"MAC 地址:"</span>, mac)</pre>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">🔌</span> 2. 物理层 &amp; 数据链路层</h2>
+
+<h3>2.1 物理层</h3>
+<p>把比特（0/1）转换成信号在介质上传输。关键概念：<strong>带宽</strong>（bps）、<strong>时延</strong>、<strong>信道复用</strong>（频分/时分/波分）。</p>
+
+<h3>2.2 数据链路层</h3>
+<p>负责<strong>相邻节点之间的帧传输</strong>和<strong>差错检测</strong>。核心：</p>
+
+<div class="card-grid">
+  <div class="card"><h4>📡 MAC 地址</h4><p>每个网卡有唯一的 48 位物理地址（如 AA:BB:CC:DD:EE:FF）。链路层用 MAC 地址标识设备</p></div>
+  <div class="card"><h4>🔄 ARP 协议</h4><p>Address Resolution Protocol：已知 IP → 询问"谁的 IP？" → 对方回复 MAC 地址</p></div>
+  <div class="card"><h4>🔁 以太网帧</h4><p>前导码 + 目标MAC + 源MAC + 类型 + 数据(46~1500B) + FCS（CRC 校验）</p></div>
+  <div class="card"><h4>🔄 VLAN</h4><p>在帧头加 802.1Q 标签，把物理上的一个交换机隔离成多个"虚拟局域网"</p></div>
+</div>
+
+<h3>2.3 CRC 校验模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">crc32_checksum</span>(data: <span class="builtin">bytes</span>) -> <span class="builtin">int</span>:
+    <span class="str">"""CRC-32 循环冗余校验"""</span>
+    <span class="kw">import</span> <span class="builtin">binascii</span>
+    <span class="kw">return</span> binascii.crc32(data)
+
+<span class="cm"># 模拟发送端</span>
+frame_data = <span class="str">b"Hello, Network!"</span>
+checksum = crc32_checksum(frame_data)
+<span class="builtin">print</span>(f<span class="str">"发送数据: {frame_data}"</span>)
+<span class="builtin">print</span>(f<span class="str">"CRC32: {checksum:#010x}"</span>)  <span class="cm"># 0x 开头十六进制</span>
+
+<span class="cm"># 模拟接收端校验</span>
+received_data = <span class="str">b"Hello, Network!"</span>
+<span class="kw">if</span> crc32_checksum(received_data) == checksum:
+    <span class="builtin">print</span>(<span class="str">"✅ CRC 校验通过，数据完好"</span>)
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"❌ 数据损坏！"</span>)
+
+<span class="cm"># 模拟数据损坏</span>
+<span class="builtin">print</span>(<span class="str">"\n模拟传输错误..."</span>)
+corrupted = <span class="str">b"Hello, Netw3rk!"</span>
+<span class="kw">if</span> crc32_checksum(corrupted) == checksum:
+    <span class="builtin">print</span>(<span class="str">"✅ 校验通过"</span>)
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"❌ 检测到数据损坏！"</span>)</pre>
+
+<h3>2.4 ARP 模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">ARPTable</span>:
+    <span class="str">"""模拟 ARP 缓存表"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._table = {}  <span class="cm"># {IP: MAC}</span>
+
+    <span class="kw">def</span> <span class="fn">query</span>(self, ip):
+        <span class="kw">if</span> ip <span class="kw">in</span> self._table:
+            <span class="builtin">print</span>(f<span class="str">"ARP 缓存命中: {ip} → {self._table[ip]}"</span>)
+            <span class="kw">return</span> self._table[ip]
+        <span class="builtin">print</span>(f<span class="str">"ARP 请求: 谁的 IP 是 {ip}？"</span>)
+        <span class="cm"># 模拟广播响应</span>
+        self._table[ip] = <span class="str">"00:1A:2B:3C:4D:5E"</span>
+        <span class="builtin">print</span>(f<span class="str">"ARP 响应: {ip} 的 MAC 是 {self._table[ip]}"</span>)
+        <span class="kw">return</span> self._table[ip]
+
+arp = ARPTable()
+<span class="builtin">print</span>(arp.query(<span class="str">"192.168.1.1"</span>))  <span class="cm"># 第一次 → ARP 请求</span>
+<span class="builtin">print</span>(arp.query(<span class="str">"192.168.1.1"</span>))  <span class="cm"># 第二次 → 缓存命中</span></pre>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">🧭</span> 3. 网络层（IP / 子网 / 路由）</h2>
+<p>网络层负责<strong>端到端</strong>的寻址和路由选择——把数据包从源主机送到目标主机，中间可能经过多个路由器。</p>
+
+<h3>3.1 IPv4 与子网划分</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">ipaddress</span>
+
+<span class="cm"># 创建网络</span>
+net = ipaddress.IPv4Network(<span class="str">"192.168.1.0/24"</span>, strict=<span class="kw">False</span>)
+<span class="builtin">print</span>(<span class="str">"网络地址:"</span>, net.network_address)      <span class="cm"># 192.168.1.0</span>
+<span class="builtin">print</span>(<span class="str">"广播地址:"</span>, net.broadcast_address)     <span class="cm"># 192.168.1.255</span>
+<span class="builtin">print</span>(<span class="str">"子网掩码:"</span>, net.netmask)               <span class="cm"># 255.255.255.0</span>
+<span class="builtin">print</span>(<span class="str">"可用主机数:"</span>, net.num_addresses - <span class="num">2</span>)   <span class="cm"># 254</span>
+
+<span class="cm"># 判断 IP 是否属于子网</span>
+<span class="builtin">print</span>(ipaddress.IPv4Address(<span class="str">"192.168.1.50"</span>) <span class="kw">in</span> net)  <span class="cm"># True</span>
+<span class="builtin">print</span>(ipaddress.IPv4Address(<span class="str">"10.0.0.1"</span>) <span class="kw">in</span> net)      <span class="cm"># False</span>
+
+<span class="cm"># 子网划分</span>
+subnets = <span class="builtin">list</span>(net.subnets(prefixlen_diff=<span class="num">2</span>))  <span class="cm"># /24 → 4 个 /26</span>
+<span class="kw">for</span> s <span class="kw">in</span> subnets:
+    <span class="builtin">print</span>(f<span class="str">"子网: {s} 可用: {s.num_addresses - 2} 台主机"</span>)</pre>
+
+<h3>3.2 CIDR 计算器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">cidr_info</span>(cidr: <span class="builtin">str</span>):
+    <span class="str">"""显示 CIDR 的详细信息"""</span>
+    net = ipaddress.IPv4Network(cidr, strict=<span class="kw">False</span>)
+    <span class="builtin">print</span>(f<span class="str">"""
+{'='*40}
+CIDR:         {cidr}
+网络地址:     {net.network_address}
+广播地址:     {net.broadcast_address}
+子网掩码:     {net.netmask}
+前缀长度:     {net.prefixlen}
+主机范围:     {net.network_address + 1} ~ {net.broadcast_address - 1}
+可用主机数:   {net.num_addresses - 2}
+{'='*40}
+"""</span>)
+
+cidr_info(<span class="str">"10.0.0.0/16"</span>)
+cidr_info(<span class="str">"172.16.0.0/12"</span>)</pre>
+
+<h3>3.3 路由表与转发</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">Router</span>:
+    <span class="str">"""模拟路由器路由表与转发"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, name):
+        self.name = name
+        self.routing_table = []  <span class="cm"># [(网络, 下一跳, 接口)]</span>
+
+    <span class="kw">def</span> <span class="fn">add_route</span>(self, network, next_hop, interface):
+        self.routing_table.append((
+            ipaddress.IPv4Network(network, strict=<span class="kw">False</span>),
+            next_hop, interface
+        ))
+        <span class="cm"># 按前缀长度从长到短排序（最长前缀匹配）</span>
+        self.routing_table.sort(key=<span class="kw">lambda</span> x: x[<span class="num">0</span>].prefixlen, reverse=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, dest_ip):
+        ip = ipaddress.IPv4Address(dest_ip)
+        <span class="kw">for</span> net, next_hop, intf <span class="kw">in</span> self.routing_table:
+            <span class="kw">if</span> ip <span class="kw">in</span> net:
+                <span class="builtin">print</span>(f<span class="str">"[{self.name}] 转发 {dest_ip} → 下一跳 {next_hop} (接口 {intf})"</span>)
+                <span class="kw">return</span>
+        <span class="builtin">print</span>(f<span class="str">"[{self.name}] ❌ 无路由: {dest_ip}"</span>)
+
+<span class="cm"># 构建网络</span>
+r1 = Router(<span class="str">"R1"</span>)
+r1.add_route(<span class="str">"192.168.1.0/24"</span>, <span class="str">"直接"</span>, <span class="str">"eth0"</span>)
+r1.add_route(<span class="str">"10.0.0.0/8"</span>, <span class="str">"192.168.1.254"</span>, <span class="str">"eth0"</span>)
+r1.add_route(<span class="str">"0.0.0.0/0"</span>, <span class="str">"192.168.1.1"</span>, <span class="str">"eth0"</span>)  <span class="cm"># 默认路由</span>
+
+r1.forward(<span class="str">"192.168.1.50"</span>)     <span class="cm"># 匹配 /24</span>
+r1.forward(<span class="str">"10.1.2.3"</span>)         <span class="cm"># 匹配 /8</span>
+r1.forward(<span class="str">"8.8.8.8"</span>)          <span class="cm"># 匹配默认路由</span></pre>
+
+<h3>3.4 ICMP Ping 模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">subprocess</span>
+<span class="kw">import</span> <span class="builtin">platform</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="kw">def</span> <span class="fn">ping</span>(host: <span class="builtin">str</span>, count=<span class="num">4</span>) -> <span class="builtin">float</span> | <span class="kw">None</span>:
+    <span class="str">"""使用系统 ping 命令测试连通性"""</span>
+    param = <span class="str">"-n"</span> <span class="kw">if</span> platform.system().lower() == <span class="str">"windows"</span> <span class="kw">else</span> <span class="str">"-c"</span>
+    cmd = [<span class="str">"ping"</span>, param, <span class="builtin">str</span>(count), host]
+
+    <span class="kw">try</span>:
+        start = time.time()
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=<span class="num">10</span>)
+        elapsed = time.time() - start
+        <span class="builtin">print</span>(f<span class="str">"Ping {host} ({count} 次) 耗时: {elapsed:.2f}s"</span>)
+        <span class="builtin">print</span>(result.stdout[-<span class="num">500</span>:])  <span class="cm"># 显示尾部</span>
+        <span class="kw">return</span> elapsed
+    <span class="kw">except</span> subprocess.TimeoutExpired:
+        <span class="builtin">print</span>(<span class="str">"❌ 请求超时"</span>)
+        <span class="kw">return</span> <span class="kw">None</span>
+
+<span class="cm"># 可以执行（需要网络）</span>
+<span class="cm"># ping("8.8.8.8")</span>
+<span class="builtin">print</span>(<span class="str">"Ping 命令使用 system ping，Python 中常用 ping3 或 subprocess"</span>)</pre>
+
+<h3>3.5 Traceroute 模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">simulate_traceroute</span>(target_ip, hops=<span class="num">8</span>):
+    <span class="str">"""模拟 Traceroute — 通过 TTL 递增探测路径"""</span>
+    <span class="builtin">print</span>(f<span class="str">"追踪路由到 {target_ip} (最多 {hops} 跳):\n"</span>)
+    <span class="kw">for</span> ttl <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">1</span>, hops + <span class="num">1</span>):
+        <span class="cm"># 模拟路由器响应</span>
+        <span class="kw">if</span> ttl <= <span class="num">4</span>:
+            router_ip = f<span class="str">"10.0.{ttl}.1"</span>
+            rtt = <span class="builtin">round</span>(<span class="num">5</span> + ttl * <span class="num">3</span> + <span class="builtin">hash</span>(target_ip) % <span class="num">10</span>, <span class="num">1</span>)
+            <span class="builtin">print</span>(f<span class="str">"  {ttl:&gt;2}  {router_ip:&gt;15}  {rtt} ms"</span>)
+        <span class="kw">elif</span> ttl == <span class="num">5</span>:
+            router_ip = <span class="str">"203.0.113.45"</span>
+            <span class="builtin">print</span>(f<span class="str">"  {ttl:&gt;2}  {router_ip:&gt;15}  12.3 ms"</span>)
+        <span class="kw">elif</span> ttl == <span class="num">6</span>:
+            <span class="builtin">print</span>(f<span class="str">"  {ttl:&gt;2}  {target_ip:&gt;15}  21.7 ms  ✅ 到达目标"</span>)
+            <span class="kw">break</span>
+        <span class="kw">else</span>:
+            <span class="builtin">print</span>(f<span class="str">"  {ttl:&gt;2}  * 请求超时"</span>)
+
+simulate_traceroute(<span class="str">"142.250.80.4"</span>)</pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">📦</span> 4. 传输层（TCP / UDP）</h2>
+
+<p>传输层提供<strong>端到端通信</strong>——给应用层进程之间建立逻辑连接。两个核心协议：</p>
+
+<div class="card-grid">
+  <div class="card"><h4>📮 TCP</h4><p>Transmission Control Protocol<br>✅ 可靠、有序、面向连接<br>✅ 流量控制（滑动窗口）<br>✅ 拥塞控制（慢启动/拥塞避免）<br>✅ 三次握手 + 四次挥手</p></div>
+  <div class="card"><h4>📨 UDP</h4><p>User Datagram Protocol<br>❌ 不可靠（发出去不管）<br>❌ 无序、无连接<br>✅ 低延迟、低开销<br>✅ 适用：DNS / 视频 / 游戏</p></div>
+</div>
+
+<h3>4.1 TCP 三次握手</h3>
+<pre><span class="lang-label">状态机</span>
+  客户端                   服务器
+    │                        │
+    │    SYN=1, seq=x        │
+    │───────────────────────→│  LISTEN → SYN_RCVD
+    │                        │
+    │  SYN=1, ACK=1,         │
+    │  seq=y, ack=x+1        │
+    │←───────────────────────│  SYN_RCVD → ESTABLISHED
+    │                        │
+    │    ACK=1, seq=x+1,     │
+    │    ack=y+1             │
+    │───────────────────────→│
+    │                        │
+    │    连接建立, 开始传数据  │
+    │◄──────────────────────►│  ESTABLISHED</pre>
+
+<h3>4.2 TCP 拥塞控制模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">TCPCongestionControl</span>:
+    <span class="str">"""模拟 TCP 拥塞控制（慢启动 + 拥塞避免 + 快速重传）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.ssthresh = <span class="num">16</span>       <span class="cm"># 慢启动阈值</span>
+        self.cwnd = <span class="num">1</span>            <span class="cm"># 拥塞窗口（单位：MSS）</span>
+        self.rtt = <span class="num">0</span>              <span class="cm"># 轮数</span>
+        self.log = []
+
+    <span class="kw">def</span> <span class="fn">step</span>(self, loss=False):
+        self.rtt += <span class="num">1</span>
+        <span class="kw">if</span> loss:  <span class="cm"># 丢包检测</span>
+            <span class="builtin">print</span>(f<span class="str">"  ❌ RTT {self.rtt}: 丢包! cwnd={self.cwnd} → 1 (重置)"</span>)
+            self.ssthresh = <span class="builtin">max</span>(self.cwnd // <span class="num">2</span>, <span class="num">2</span>)
+            self.cwnd = <span class="num">1</span>
+        <span class="kw">else</span>:
+            <span class="kw">if</span> self.cwnd < self.ssthresh:
+                <span class="cm"># 慢启动：每 RTT 翻倍</span>
+                old = self.cwnd
+                self.cwnd *= <span class="num">2</span>
+                <span class="builtin">print</span>(f<span class="str">"  RTT {self.rtt}: 慢启动 {old} → {self.cwnd} (ssthresh={self.ssthresh})"</span>)
+            <span class="kw">else</span>:
+                <span class="cm"># 拥塞避免：每 RTT +1</span>
+                old = self.cwnd
+                self.cwnd += <span class="num">1</span>
+                <span class="builtin">print</span>(f<span class="str">"  RTT {self.rtt}: 拥塞避免 {old} → {self.cwnd}"</span>)
+        self.log.append((self.rtt, self.cwnd, self.ssthresh))
+
+<span class="cm"># 模拟 12 轮传输，中间遇到一次丢包</span>
+tcp = TCPCongestionControl()
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">12</span>):
+    tcp.step(loss=(i == <span class="num">7</span>))</pre>
+
+<h3>4.3 TCP 状态迁移</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">TCPConnection</span>:
+    <span class="str">"""模拟 TCP 连接状态机"""</span>
+    STATES = {
+        <span class="str">"CLOSED"</span>, <span class="str">"LISTEN"</span>, <span class="str">"SYN_SENT"</span>, <span class="str">"SYN_RCVD"</span>,
+        <span class="str">"ESTABLISHED"</span>, <span class="str">"FIN_WAIT_1"</span>, <span class="str">"FIN_WAIT_2"</span>,
+        <span class="str">"CLOSE_WAIT"</span>, <span class="str">"CLOSING"</span>, <span class="str">"LAST_ACK"</span>, <span class="str">"TIME_WAIT"</span>,
+    }
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, role=<span class="str">"client"</span>):
+        self.state = <span class="str">"CLOSED"</span>
+        self.role = role
+
+    <span class="kw">def</span> <span class="fn">event</span>(self, event):
+        transitions = {
+            <span class="str">"CLOSED"</span>: [(<span class="str">"主动打开"</span>, <span class="str">"SYN_SENT"</span>), (<span class="str">"被动打开"</span>, <span class="str">"LISTEN"</span>)],
+            <span class="str">"SYN_SENT"</span>: [(<span class="str">"收到 SYN+ACK"</span>, <span class="str">"ESTABLISHED"</span>)],
+            <span class="str">"LISTEN"</span>: [(<span class="str">"收到 SYN"</span>, <span class="str">"SYN_RCVD"</span>)],
+            <span class="str">"SYN_RCVD"</span>: [(<span class="str">"收到 ACK"</span>, <span class="str">"ESTABLISHED"</span>)],
+            <span class="str">"ESTABLISHED"</span>: [(<span class="str">"主动关闭"</span>, <span class="str">"FIN_WAIT_1"</span>), (<span class="str">"收到 FIN"</span>, <span class="str">"CLOSE_WAIT"</span>)],
+            <span class="str">"FIN_WAIT_1"</span>: [(<span class="str">"收到 ACK"</span>, <span class="str">"FIN_WAIT_2"</span>), (<span class="str">"收到 FIN"</span>, <span class="str">"CLOSING"</span>)],
+            <span class="str">"FIN_WAIT_2"</span>: [(<span class="str">"收到 FIN"</span>, <span class="str">"TIME_WAIT"</span>)],
+            <span class="str">"CLOSE_WAIT"</span>: [(<span class="str">"关闭"</span>, <span class="str">"LAST_ACK"</span>)],
+            <span class="str">"LAST_ACK"</span>: [(<span class="str">"收到 ACK"</span>, <span class="str">"CLOSED"</span>)],
+            <span class="str">"CLOSING"</span>: [(<span class="str">"收到 ACK"</span>, <span class="str">"TIME_WAIT"</span>)],
+            <span class="str">"TIME_WAIT"</span>: [(<span class="str">"超时"</span>, <span class="str">"CLOSED"</span>)],
+        }
+        <span class="kw">for</span> e, next_state <span class="kw">in</span> transitions.get(self.state, []):
+            <span class="kw">if</span> e == event:
+                old = self.state
+                self.state = next_state
+                <span class="builtin">print</span>(f<span class="str">"[{self.role}] {old} ─[{event}]→ {next_state}"</span>)
+                <span class="kw">return</span>
+        <span class="builtin">print</span>(f<span class="str">"[{self.role}] ⚠ 状态 {self.state} 不能处理事件 '{event}'"</span>)
+
+<span class="cm"># 演示三次握手</span>
+c = TCPConnection(<span class="str">"Client"</span>)
+s = TCPConnection(<span class="str">"Server"</span>)
+
+<span class="builtin">print</span>(<span class="str">"=== 三次握手 ===="</span>)
+c.event(<span class="str">"主动打开"</span>)       <span class="cm"># CLOSED → SYN_SENT</span>
+s.event(<span class="str">"被动打开"</span>)       <span class="cm"># CLOSED → LISTEN</span>
+s.event(<span class="str">"收到 SYN"</span>)       <span class="cm"># LISTEN → SYN_RCVD</span>
+c.event(<span class="str">"收到 SYN+ACK"</span>)   <span class="cm"># SYN_SENT → ESTABLISHED</span>
+s.event(<span class="str">"收到 ACK"</span>)       <span class="cm"># SYN_RCVD → ESTABLISHED</span>
+
+<span class="builtin">print</span>(<span class="str">"\n=== 数据传输中 ==="</span>)
+
+<span class="builtin">print</span>(<span class="str">"\n=== 四次挥手 ===="</span>)
+c.event(<span class="str">"主动关闭"</span>)       <span class="cm"># ESTABLISHED → FIN_WAIT_1</span>
+s.event(<span class="str">"收到 FIN"</span>)       <span class="cm"># ESTABLISHED → CLOSE_WAIT</span>
+c.event(<span class="str">"收到 ACK"</span>)       <span class="cm"># FIN_WAIT_1 → FIN_WAIT_2</span>
+s.event(<span class="str">"关闭"</span>)           <span class="cm"># CLOSE_WAIT → LAST_ACK</span>
+c.event(<span class="str">"收到 FIN"</span>)       <span class="cm"># FIN_WAIT_2 → TIME_WAIT</span>
+s.event(<span class="str">"收到 ACK"</span>)       <span class="cm"># LAST_ACK → CLOSED</span>
+c.event(<span class="str">"超时"</span>)           <span class="cm"># TIME_WAIT → CLOSED</span></pre>
+
+<h3>4.4 UDP 与 TCP 对比</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># Python socket 类型常量</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+
+<span class="builtin">print</span>(<span class="str">"TCP socket:"</span>, socket.SOCK_STREAM)     <span class="cm"># 1</span>
+<span class="builtin">print</span>(<span class="str">"UDP socket:"</span>, socket.SOCK_DGRAM)      <span class="cm"># 2</span>
+
+<span class="cm"># TCP vs UDP 特征对比</span>
+comparison = [
+    (<span class="str">"连接"</span>, <span class="str">"面向连接 (三次握手)"</span>, <span class="str">"无连接"</span>),
+    (<span class="str">"可靠性"</span>, <span class="str">"可靠 (确认重传)"</span>, <span class="str">"不可靠 (发即弃)"</span>),
+    (<span class="str">"有序性"</span>, <span class="str">"保证有序"</span>, <span class="str">"不保证"</span>),
+    (<span class="str">"流量控制"</span>, <span class="str">"滑动窗口"</span>, <span class="str">"无"</span>),
+    (<span class="str">"拥塞控制"</span>, <span class="str">"慢启动+拥塞避免"</span>, <span class="str">"无"</span>),
+    (<span class="str">"首部开销"</span>, <span class="str">"20~60 字节"</span>, <span class="str">"8 字节"</span>),
+    (<span class="str">"应用"</span>, <span class="str">"HTTP/FTP/SMTP/SSH"</span>, <span class="str">"DNS/视频/游戏/DHCP"</span>),
+]
+<span class="builtin">print</span>(<span class="str">"{:<12} {:<30} {:<20}"</span>.format(<span class="str">"特征"</span>, <span class="str">"TCP"</span>, <span class="str">"UDP"</span>))
+<span class="builtin">print</span>(<span class="str">"-"</span>*<span class="num">62</span>)
+<span class="kw">for</span> row <span class="kw">in</span> comparison:
+    <span class="builtin">print</span>(<span class="str">"{:<12} {:<30} {:<20}"</span>.format(*row))</pre>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🌍</span> 5. 应用层（HTTP / DNS / WebSocket）</h2>
+
+<h3>5.1 HTTP 请求与响应</h3>
+<pre><span class="lang-label">HTTP 报文</span>
+<span class="cm"># 请求报文</span>
+GET /index.html HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0
+Accept: text/html
+Connection: keep-alive
+
+（空行）
+（请求体 - GET 没有）
+
+<span class="cm"># 响应报文</span>
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Server: nginx/1.24.0
+Date: Mon, 01 Jul 2026 10:00:00 GMT
+
+&lt;!DOCTYPE html&gt;&lt;html&gt;...&lt;/html&gt;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">http.client</span>
+<span class="kw">import</span> <span class="builtin">json</span>
+
+<span class="cm"># 发送 HTTP 请求（底层 socket）</span>
+conn = http.client.HTTPSConnection(<span class="str">"httpbin.org"</span>, timeout=<span class="num">5</span>)
+conn.request(<span class="str">"GET"</span>, <span class="str">"/get"</span>, headers={<span class="str">"Accept"</span>: <span class="str">"application/json"</span>})
+response = conn.getresponse()
+
+<span class="builtin">print</span>(<span class="str">"状态码:"</span>, response.status, response.reason)
+<span class="builtin">print</span>(<span class="str">"响应头:"</span>)
+<span class="kw">for</span> k, v <span class="kw">in</span> response.getheaders():
+    <span class="builtin">print</span>(f<span class="str">"  {k}: {v}"</span>)
+
+data = response.read().decode()
+<span class="builtin">print</span>(<span class="str">"\n响应体 (前 300 字符):"</span>)
+<span class="builtin">print</span>(data[:<span class="num">300</span>])
+conn.close()</pre>
+
+<h3>5.2 HTTP 状态码速查</h3>
+<table>
+  <tr><th>分类</th><th>代码</th><th>含义</th><th>典型场景</th></tr>
+  <tr><td rowspan="3">1xx 信息</td><td>100</td><td>Continue</td><td>客户端需继续发送请求体</td></tr>
+  <tr><td>101</td><td>Switching Protocols</td><td>WebSocket 升级</td></tr>
+  <tr><td>103</td><td>Early Hints</td><td>预加载提示</td></tr>
+  <tr><td rowspan="5">2xx 成功</td><td>200</td><td>OK</td><td>GET 请求成功</td></tr>
+  <tr><td>201</td><td>Created</td><td>POST 创建资源成功</td></tr>
+  <tr><td>204</td><td>No Content</td><td>删除成功，无响应体</td></tr>
+  <tr><td>206</td><td>Partial Content</td><td>Range 分片下载</td></tr>
+  <tr><td>200</td><td>OK (缓存)</td><td>配合 Cache-Control</td></tr>
+  <tr><td rowspan="4">3xx 重定向</td><td>301</td><td>Moved Permanently</td><td>永久重定向（SEO 传权重）</td></tr>
+  <tr><td>302</td><td>Found</td><td>临时重定向</td></tr>
+  <tr><td>304</td><td>Not Modified</td><td>缓存未过期（ETag/If-Modified-Since）</td></tr>
+  <tr><td>307/308</td><td>Redirect</td><td>保留请求方法的重定向</td></tr>
+  <tr><td rowspan="5">4xx 客户端错误</td><td>400</td><td>Bad Request</td><td>请求格式错误</td></tr>
+  <tr><td>401</td><td>Unauthorized</td><td>未登录/未提供 token</td></tr>
+  <tr><td>403</td><td>Forbidden</td><td>已登录但无权限</td></tr>
+  <tr><td>404</td><td>Not Found</td><td>资源不存在</td></tr>
+  <tr><td>429</td><td>Too Many Requests</td><td>限流</td></tr>
+  <tr><td rowspan="3">5xx 服务器错误</td><td>500</td><td>Internal Server Error</td><td>服务器内部错误</td></tr>
+  <tr><td>502</td><td>Bad Gateway</td><td>网关/代理上游无响应</td></tr>
+  <tr><td>503</td><td>Service Unavailable</td><td>过载/维护中</td></tr>
+</table>
+
+<h3>5.3 自己实现简单的 HTTP Server</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">http.server</span> <span class="kw">import</span> HTTPServer, BaseHTTPRequestHandler
+<span class="kw">import</span> <span class="builtin">json</span>
+
+<span class="kw">class</span> <span class="cls">SimpleHandler</span>(BaseHTTPRequestHandler):
+    <span class="kw">def</span> <span class="fn">do_GET</span>(self):
+        <span class="builtin">print</span>(f<span class="str">"→ GET {self.path}"</span>)
+        <span class="kw">if</span> self.path == <span class="str">"/"</span>:
+            self.send_response(<span class="num">200</span>)
+            self.send_header(<span class="str">"Content-Type"</span>, <span class="str">"text/plain; charset=utf-8"</span>)
+            self.end_headers()
+            self.wfile.write(<span class="str">"你好，计算机网络！\n"</span>.encode())
+        <span class="kw">elif</span> self.path == <span class="str">"/api/info"</span>:
+            self.send_response(<span class="num">200</span>)
+            self.send_header(<span class="str">"Content-Type"</span>, <span class="str">"application/json"</span>)
+            self.end_headers()
+            data = json.dumps({
+                <span class="str">"method"</span>: <span class="str">"GET"</span>,
+                <span class="str">"path"</span>: self.path,
+                <span class="str">"headers"</span>: <span class="builtin">dict</span>(self.headers),
+                <span class="str">"client"</span>: self.client_address[<span class="num">0</span>],
+            }, ensure_ascii=<span class="kw">False</span>)
+            self.wfile.write(data.encode())
+
+    <span class="kw">def</span> <span class="fn">log_message</span>(self, format, *args):
+        <span class="builtin">print</span>(f<span class="str">"  ↪ {args}"</span>)
+
+<span class="kw">def</span> <span class="fn">start_server</span>(port=<span class="num">8888</span>):
+    server = HTTPServer((<span class="str">"127.0.0.1"</span>, port), SimpleHandler)
+    <span class="builtin">print</span>(f<span class="str">"🌐 HTTP 服务器启动: http://127.0.0.1:{port}"</span>)
+    <span class="builtin">print</span>(<span class="str">"  按 Ctrl+C 停止"</span>)
+    <span class="kw">try</span>:
+        server.serve_forever()
+    <span class="kw">except</span> KeyboardInterrupt:
+        <span class="builtin">print</span>(<span class="str">"\n服务器已停止"</span>)
+        server.server_close()
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    start_server()</pre>
+
+<h3>5.4 requests 库实战</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install requests</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">requests</span>
+
+<span class="cm"># GET 请求</span>
+resp = requests.get(<span class="str">"https://httpbin.org/get"</span>, params={<span class="str">"name"</span>: <span class="str">"Alice"</span>, <span class="str">"age"</span>: <span class="num">25</span>})
+<span class="builtin">print</span>(<span class="str">"GET:"</span>, resp.status_code, resp.json()[<span class="str">"args"</span>])
+
+<span class="cm"># POST JSON</span>
+resp = requests.post(<span class="str">"https://httpbin.org/post"</span>, json={<span class="str">"key"</span>: <span class="str">"value"</span>})
+<span class="builtin">print</span>(<span class="str">"POST:"</span>, resp.json()[<span class="str">"json"</span>])
+
+<span class="cm"># 自定义头</span>
+resp = requests.get(<span class="str">"https://httpbin.org/headers"</span>,
+                     headers={<span class="str">"Authorization"</span>: <span class="str">"Bearer my-token"</span>})
+<span class="builtin">print</span>(<span class="str">"Headers:"</span>, resp.json()[<span class="str">"headers"</span>][<span class="str">"Authorization"</span>])
+
+<span class="cm"># 超时设置</span>
+<span class="kw">try</span>:
+    resp = requests.get(<span class="str">"https://httpbin.org/delay/5"</span>, timeout=<span class="num">3</span>)
+<span class="kw">except</span> requests.Timeout:
+    <span class="builtin">print</span>(<span class="str">"❌ 请求超时！"</span>)
+
+<span class="cm"># 会话复用连接</span>
+<span class="kw">with</span> requests.Session() <span class="kw">as</span> sess:
+    sess.headers.update({<span class="str">"User-Agent"</span>: <span class="str">"MyApp/1.0"</span>})
+    r1 = sess.get(<span class="str">"https://httpbin.org/cookies/set?name=test"</span>)
+    r2 = sess.get(<span class="str">"https://httpbin.org/cookies"</span>)
+    <span class="builtin">print</span>(<span class="str">"Session Cookie:"</span>, r2.json())</pre>
+
+<h3>5.5 DNS 解析实战</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+
+<span class="kw">def</span> <span class="fn">dns_lookup</span>(domain):
+    <span class="str">"""DNS 查询：域名 → IP 地址"""</span>
+    <span class="kw">try</span>:
+        ip = socket.gethostbyname(domain)
+        <span class="builtin">print</span>(f<span class="str">"{domain} → {ip}"</span>)
+        <span class="cm"># 获取所有 IP (负载均衡时多个 IP)</span>
+        ips = socket.gethostbyname_ex(domain)
+        <span class="builtin">print</span>(f<span class="str">"  别名: {ips[1]}"</span>)
+        <span class="builtin">print</span>(f<span class="str">"  所有 IP: {', '.join(ips[2])}"</span>)
+        <span class="kw">return</span> ip
+    <span class="kw">except</span> socket.gaierror <span class="kw">as</span> e:
+        <span class="builtin">print</span>(f<span class="str">"❌ DNS 解析失败: {e}"</span>)
+        <span class="kw">return</span> <span class="kw">None</span>
+
+<span class="cm"># 解析常见域名</span>
+<span class="kw">for</span> domain <span class="kw">in</span> [<span class="str">"www.google.com"</span>, <span class="str">"www.baidu.com"</span>, <span class="str">"github.com"</span>]:
+    dns_lookup(domain)
+    <span class="builtin">print</span>()
+
+<span class="cm"># DNS 记录类型</span>
+<span class="kw">def</span> <span class="fn">dns_record_types</span>():
+    <span class="kw">return</span> {
+        <span class="str">"A"</span>: <span class="str">"IPv4 地址"</span>,
+        <span class="str">"AAAA"</span>: <span class="str">"IPv6 地址"</span>,
+        <span class="str">"CNAME"</span>: <span class="str">"别名记录（域名→域名）"</span>,
+        <span class="str">"MX"</span>: <span class="str">"邮件交换记录"</span>,
+        <span class="str">"NS"</span>: <span class="str">"域名服务器"</span>,
+        <span class="str">"TXT"</span>: <span class="str">"文本记录（如 SPF 验证）"</span>,
+        <span class="str">"SOA"</span>: <span class="str">"区域权威记录"</span>,
+    }</pre>
+
+<h3>5.6 URL 解析</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">urllib.parse</span> <span class="kw">import</span> urlparse, parse_qs
+
+url = <span class="str">"https://user:pass@api.example.com:8443/v1/users?id=123&name=张三#section"</span>
+parsed = urlparse(url)
+
+<span class="builtin">print</span>(<span class="str">"协议:"</span>, parsed.scheme)          <span class="cm"># https</span>
+<span class="builtin">print</span>(<span class="str">"用户名:"</span>, parsed.username)       <span class="cm"># user</span>
+<span class="builtin">print</span>(<span class="str">"密码:"</span>, parsed.password)         <span class="cm"># pass</span>
+<span class="builtin">print</span>(<span class="str">"主机:"</span>, parsed.hostname)         <span class="cm"># api.example.com</span>
+<span class="builtin">print</span>(<span class="str">"端口:"</span>, parsed.port)             <span class="cm"># 8443</span>
+<span class="builtin">print</span>(<span class="str">"路径:"</span>, parsed.path)             <span class="cm"># /v1/users</span>
+<span class="builtin">print</span>(<span class="str">"查询参数:"</span>, parse_qs(parsed.query))  <span class="cm"># {'id': ['123'], 'name': ['张三']}</span>
+<span class="builtin">print</span>(<span class="str">"片段:"</span>, parsed.fragment)         <span class="cm"># section</span></pre>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">🔌</span> 6. Socket 编程实战</h2>
+<p>Socket（套接字）是应用层与传输层的接口——几乎所有网络编程的起点。</p>
+
+<h3>6.1 TCP Socket — Echo 服务器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># echo_server.py</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+
+<span class="kw">def</span> <span class="fn">handle_client</span>(conn, addr):
+    <span class="builtin">print</span>(f<span class="str">"[新连接] {addr}"</span>)
+    <span class="kw">with</span> conn:
+        <span class="kw">while</span> True:
+            data = conn.recv(<span class="num">1024</span>)  <span class="cm"># 接收最多 1024 字节</span>
+            <span class="kw">if</span> <span class="kw">not</span> data: <span class="kw">break</span>        <span class="cm"># 客户端关闭</span>
+            <span class="builtin">print</span>(f<span class="str">"  收到: {data.decode()!r}"</span>)
+            conn.sendall(data)        <span class="cm"># 原样发回（echo）</span>
+    <span class="builtin">print</span>(f<span class="str">"[断开] {addr}"</span>)
+
+<span class="kw">def</span> <span class="fn">tcp_echo_server</span>(host=<span class="str">"127.0.0.1"</span>, port=<span class="num">9999</span>):
+    <span class="kw">with</span> socket.socket(socket.AF_INET, socket.SOCK_STREAM) <span class="kw">as</span> server:
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, <span class="num">1</span>)
+        server.bind((host, port))
+        server.listen(<span class="num">5</span>)
+        <span class="builtin">print</span>(f<span class="str">"🔊 Echo 服务器: {host}:{port}"</span>)
+        <span class="kw">try</span>:
+            <span class="kw">while</span> True:
+                conn, addr = server.accept()
+                threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+        <span class="kw">except</span> KeyboardInterrupt:
+            <span class="builtin">print</span>(<span class="str">"\n服务器关闭"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    tcp_echo_server()</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># echo_client.py</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+
+<span class="kw">def</span> <span class="fn">tcp_echo_client</span>(host=<span class="str">"127.0.0.1"</span>, port=<span class="num">9999</span>):
+    <span class="kw">with</span> socket.socket(socket.AF_INET, socket.SOCK_STREAM) <span class="kw">as</span> s:
+        s.connect((host, port))
+        <span class="builtin">print</span>(f<span class="str">"✅ 已连接到 {host}:{port}"</span>)
+
+        <span class="kw">for</span> msg <span class="kw">in</span> [<span class="str">"你好"</span>, <span class="str">"世界"</span>, <span class="str">"exit"</span>]:
+            data = msg.encode()
+            s.sendall(data)
+            <span class="builtin">print</span>(f<span class="str">"发送: {msg}"</span>)
+
+            response = s.recv(<span class="num">1024</span>).decode()
+            <span class="builtin">print</span>(f<span class="str">"收到: {response}"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    tcp_echo_client()</pre>
+
+<h3>6.2 UDP Socket</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># udp_server.py</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+
+<span class="kw">def</span> <span class="fn">udp_server</span>(host=<span class="str">"127.0.0.1"</span>, port=<span class="num">9876</span>):
+    <span class="kw">with</span> socket.socket(socket.AF_INET, socket.SOCK_DGRAM) <span class="kw">as</span> s:
+        s.bind((host, port))
+        <span class="builtin">print</span>(f<span class="str">"🔊 UDP 服务器: {host}:{port}"</span>)
+        <span class="kw">while</span> True:
+            data, addr = s.recvfrom(<span class="num">1024</span>)
+            <span class="builtin">print</span>(f<span class="str">"  来自 {addr}: {data.decode()!r}"</span>)
+            s.sendto(<span class="str">b"OK:"</span> + data, addr)
+
+<span class="cm"># udp_client.py</span>
+<span class="kw">def</span> <span class="fn">udp_client</span>(host=<span class="str">"127.0.0.1"</span>, port=<span class="num">9876</span>):
+    <span class="kw">with</span> socket.socket(socket.AF_INET, socket.SOCK_DGRAM) <span class="kw">as</span> s:
+        s.sendto(<span class="str">b"Hello UDP"</span>, (host, port))
+        data, _ = s.recvfrom(<span class="num">1024</span>)
+        <span class="builtin">print</span>(<span class="str">"收到:"</span>, data.decode())</pre>
+
+<h3>6.3 端口扫描</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+<span class="kw">import</span> <span class="builtin">concurrent.futures</span>
+
+<span class="kw">def</span> <span class="fn">scan_port</span>(host, port):
+    <span class="str">"""扫描单个端口"""</span>
+    <span class="kw">try</span>:
+        <span class="kw">with</span> socket.socket(socket.AF_INET, socket.SOCK_STREAM) <span class="kw">as</span> s:
+            s.settimeout(<span class="num">1</span>)
+            result = s.connect_ex((host, port))
+            <span class="kw">if</span> result == <span class="num">0</span>:
+                <span class="kw">return</span> port
+    <span class="kw">except</span>:
+        <span class="kw">pass</span>
+    <span class="kw">return</span> <span class="kw">None</span>
+
+<span class="kw">def</span> <span class="fn">port_scanner</span>(host, start=<span class="num">1</span>, end=<span class="num">100</span>):
+    <span class="builtin">print</span>(f<span class="str">"🔍 扫描 {host} 的端口 {start}~{end}:"</span>)
+    open_ports = []
+    <span class="kw">with</span> concurrent.futures.ThreadPoolExecutor(max_workers=<span class="num">20</span>) <span class="kw">as</span> executor:
+        futures = {executor.submit(scan_port, host, p): p <span class="kw">for</span> p <span class="kw">in</span> <span class="builtin">range</span>(start, end + <span class="num">1</span>)}
+        <span class="kw">for</span> future <span class="kw">in</span> concurrent.futures.as_completed(futures):
+            result = future.result()
+            <span class="kw">if</span> result:
+                service = {
+                    <span class="num">22</span>: <span class="str">"SSH"</span>, <span class="num">80</span>: <span class="str">"HTTP"</span>, <span class="num">443</span>: <span class="str">"HTTPS"</span>,
+                    <span class="num">3306</span>: <span class="str">"MySQL"</span>, <span class="num">6379</span>: <span class="str">"Redis"</span>, <span class="num">8080</span>: <span class="str">"HTTP-Alt"</span>,
+                }.get(result, <span class="str">"?"</span>)
+                open_ports.append((result, service))
+                <span class="builtin">print</span>(f<span class="str">"  ✅ 端口 {result:&gt;5} 开放 ({service})"</span>)
+
+    <span class="kw">if</span> <span class="kw">not</span> open_ports:
+        <span class="builtin">print</span>(<span class="str">"  ❌ 未发现开放端口"</span>)
+    <span class="kw">return</span> open_ports
+
+<span class="cm"># 扫描本地常用端口</span>
+<span class="cm"># port_scanner("127.0.0.1", 1, 100)</span></pre>
+
+<h3>6.4 非阻塞 Socket</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+<span class="kw">import</span> <span class="builtin">select</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="kw">def</span> <span class="fn">nonblocking_connect</span>(host, port, timeout=<span class="num">3</span>):
+    <span class="str">"""非阻塞连接 + select 轮询"""</span>
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setblocking(False)
+    <span class="kw">try</span>:
+        s.connect((host, port))
+    <span class="kw">except</span> BlockingIOError:
+        <span class="kw">pass</span>  <span class="cm"># 预期异常 — 连接已在后台进行</span>
+
+    <span class="builtin">print</span>(f<span class="str">"非阻塞连接 {host}:{port}..."</span>)
+    _, ready, _ = select.select([], [s], [], timeout)
+
+    <span class="kw">if</span> ready:
+        <span class="builtin">print</span>(<span class="str">"✅ 连接成功！"</span>)
+        s.setblocking(True)
+        s.close()
+        <span class="kw">return</span> True
+    <span class="kw">else</span>:
+        <span class="builtin">print</span>(<span class="str">"❌ 连接超时"</span>)
+        s.close()
+        <span class="kw">return</span> False
+
+<span class="cm"># 并发检查多个地址</span>
+start = time.time()
+<span class="kw">for</span> host, port <span class="kw">in</span> [(<span class="str">"8.8.8.8"</span>, <span class="num">53</span>), (<span class="str">"1.1.1.1"</span>, <span class="num">53</span>)]:
+    nonblocking_connect(host, port, timeout=<span class="num">2</span>)
+<span class="builtin">print</span>(f<span class="str">"总耗时: {time.time() - start:.2f}s"</span>)</pre>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">🌐</span> 7. HTTP 客户端与服务器</h2>
+
+<h3>7.1 用 urllib 发送 HTTP 请求</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">urllib.request</span> <span class="kw">import</span> Request, urlopen
+<span class="kw">from</span> <span class="builtin">urllib.parse</span> <span class="kw">import</span> urlencode
+
+<span class="cm"># GET 请求</span>
+url = <span class="str">"https://httpbin.org/get?"</span> + urlencode({<span class="str">"q"</span>: <span class="str">"python"</span>, <span class="str">"limit"</span>: <span class="num">10</span>})
+req = Request(url, headers={<span class="str">"User-Agent"</span>: <span class="str">"Mozilla/5.0"</span>})
+<span class="kw">with</span> urlopen(req, timeout=<span class="num">5</span>) <span class="kw">as</span> resp:
+    <span class="builtin">print</span>(<span class="str">"状态:"</span>, resp.status)
+    <span class="builtin">print</span>(<span class="str">"内容 (前 200):"</span>, resp.read().decode()[:<span class="num">200</span>])
+
+<span class="cm"># POST 请求</span>
+data = urlencode({<span class="str">"name"</span>: <span class="str">"test"</span>, <span class="str">"value"</span>: <span class="num">42</span>}).encode()
+req = Request(<span class="str">"https://httpbin.org/post"</span>, data=data,
+              headers={<span class="str">"Content-Type"</span>: <span class="str">"application/x-www-form-urlencoded"</span>})
+<span class="kw">with</span> urlopen(req) <span class="kw">as</span> resp:
+    <span class="builtin">print</span>(<span class="str">"POST 状态:"</span>, resp.status)</pre>
+
+<h3>7.2 async HTTP 客户端（aiohttp）</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install aiohttp</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+<span class="kw">import</span> <span class="builtin">aiohttp</span>
+
+<span class="kw">async def</span> <span class="fn">fetch</span>(session, url):
+    <span class="kw">async with</span> session.get(url) <span class="kw">as</span> resp:
+        <span class="kw">return</span> <span class="kw">await</span> resp.text()
+
+<span class="kw">async def</span> <span class="fn">concurrent_http</span>():
+    urls = [
+        <span class="str">"https://httpbin.org/get"</span>,
+        <span class="str">"https://httpbin.org/ip"</span>,
+        <span class="str">"https://httpbin.org/user-agent"</span>,
+    ]
+    <span class="kw">async with</span> aiohttp.ClientSession() <span class="kw">as</span> session:
+        tasks = [fetch(session, url) <span class="kw">for</span> url <span class="kw">in</span> urls]
+        results = <span class="kw">await</span> asyncio.gather(*tasks)
+        <span class="kw">for</span> url, html <span class="kw">in</span> <span class="builtin">zip</span>(urls, results):
+            <span class="builtin">print</span>(f<span class="str">"{url}: {html[:80]}..."</span>)
+
+<span class="cm"># asyncio.run(concurrent_http())</span>
+<span class="builtin">print</span>(<span class="str">"异步 HTTP 客户端 — 同时发起 3 个请求"</span>)</pre>
+
+<h3>7.3 理解 Cookie 与 Session</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">SimpleCookieSession</span>:
+    <span class="str">"""模拟 Cookie + Session 机制"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._store = {}    <span class="cm"># {session_id: user_data}</span>
+        self._cookies = {}  <span class="cm"># {domain: {name: value}}</span>
+
+    <span class="kw">def</span> <span class="fn">login</span>(self, username, password):
+        <span class="builtin">print</span>(f<span class="str">"用户 {username} 登录..."</span>)
+        <span class="kw">import</span> <span class="builtin">uuid</span>
+        session_id = <span class="builtin">str</span>(uuid.uuid4())
+        self._store[session_id] = {<span class="str">"user"</span>: username, <span class="str">"login_time"</span>: <span class="str">"2026-07-01"</span>}
+        <span class="cm"># 服务器在响应头 Set-Cookie 下发 session_id</span>
+        self._cookies[<span class="str">"session_id"</span>] = session_id
+        <span class="builtin">print</span>(f<span class="str">"  → Set-Cookie: session_id={session_id[:8]}..."</span>)
+        <span class="kw">return</span> session_id
+
+    <span class="kw">def</span> <span class="fn">request</span>(self, path):
+        session_id = self._cookies.get(<span class="str">"session_id"</span>)
+        <span class="kw">if</span> <span class="kw">not</span> session_id <span class="kw">or</span> session_id <span class="kw">not in</span> self._store:
+            <span class="kw">return</span> <span class="str">"401 Unauthorized — 请先登录"</span>
+        user = self._store[session_id]
+        <span class="kw">return</span> f<span class="str">"200 OK — 欢迎 {user['user']}，访问 {path}"</span>
+
+session = SimpleCookieSession()
+<span class="builtin">print</span>(session.request(<span class="str">"/profile"</span>))   <span class="cm"># 未登录</span>
+session.login(<span class="str">"张三"</span>, <span class="str">"pass123"</span>)
+<span class="builtin">print</span>(session.request(<span class="str">"/profile"</span>))   <span class="cm"># 已登录</span></pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">🔍</span> 8. DNS 解析</h2>
+
+<h3>8.1 DNS 递归查询模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">DNSSimulator</span>:
+    <span class="str">"""模拟 DNS 分级解析过程"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.root_servers = {<span class="str">"a.root-servers.net"</span>}
+        self.tld_servers = {
+            <span class="str">"com"</span>: {<span class="str">"a.gtld-servers.net"</span>},
+            <span class="str">"cn"</span>: {<span class="str">"a.dns.cn"</span>},
+            <span class="str">"org"</span>: {<span class="str">"a.iana-servers.net"</span>},
+        }
+        self.auth_servers = {
+            <span class="str">"example.com"</span>: {<span class="str">"192.168.1.1"</span>},
+            <span class="str">"baidu.com"</span>: {<span class="str">"220.181.38.148"</span>},
+            <span class="str">"google.com"</span>: {<span class="str">"142.250.80.4"</span>},
+        }
+
+    <span class="kw">def</span> <span class="fn">resolve</span>(self, domain, depth=<span class="num">0</span>):
+        indent = <span class="str">"  "</span> * depth
+        <span class="builtin">print</span>(f<span class="str">"{indent}查询 {domain}"</span>)
+
+        <span class="cm"># 检查权威服务器</span>
+        <span class="kw">if</span> domain <span class="kw">in</span> self.auth_servers:
+            ip = <span class="builtin">list</span>(self.auth_servers[domain])[<span class="num">0</span>]
+            <span class="builtin">print</span>(f<span class="str">"{indent}✅ 权威服务器返回: {domain} → {ip}"</span>)
+            <span class="kw">return</span> ip
+
+        <span class="cm"># 递归解析</span>
+        parts = domain.split(<span class="str">"."</span>)
+        tld = parts[-<span class="num">1</span>]
+
+        <span class="kw">if</span> depth == <span class="num">0</span>:
+            <span class="builtin">print</span>(f<span class="str">"{indent}① 询问根服务器..."</span>)
+        <span class="kw">elif</span> depth == <span class="num">1</span>:
+            <span class="builtin">print</span>(f<span class="str">"{indent}② 询问 {tld} TLD 服务器..."</span>)
+        <span class="kw">else</span>:
+            <span class="builtin">print</span>(f<span class="str">"{indent}③ 询问权威服务器..."</span>)
+
+        <span class="kw">return</span> self.resolve(domain, depth + <span class="num">1</span>)
+
+dns = DNSSimulator()
+<span class="builtin">print</span>(<span class="str">"=== DNS 递归查询过程 ===\n"</span>)
+result = dns.resolve(<span class="str">"example.com"</span>)</pre>
+
+<h3>8.2 使用 dnspython 查询 DNS 记录</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install dnspython</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">dns.resolver</span>
+
+<span class="kw">def</span> <span class="fn">query_dns</span>(domain, record_type=<span class="str">"A"</span>):
+    <span class="str">"""查询 DNS 记录"""</span>
+    <span class="kw">try</span>:
+        answers = dns.resolver.resolve(domain, record_type)
+        <span class="builtin">print</span>(f<span class="str">"{record_type} 记录 {domain}:"</span>)
+        <span class="kw">for</span> rdata <span class="kw">in</span> answers:
+            <span class="builtin">print</span>(f<span class="str">"  → {rdata}"</span>)
+    <span class="kw">except</span> dns.resolver.NoAnswer:
+        <span class="builtin">print</span>(f<span class="str">"没有 {record_type} 记录"</span>)
+    <span class="kw">except</span> dns.resolver.NXDOMAIN:
+        <span class="builtin">print</span>(<span class="str">"域名不存在"</span>)
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        <span class="builtin">print</span>(<span class="str">"错误:"</span>, e)
+
+<span class="cm"># 查询示例 (需要网络)</span>
+<span class="cm"># query_dns("google.com", "A")</span>
+<span class="cm"># query_dns("google.com", "MX")</span>
+<span class="cm"># query_dns("google.com", "AAAA")</span></pre>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">🔒</span> 9. 网络安全基础</h2>
+
+<h3>9.1 TLS/SSL 握手</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">ssl</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+
+<span class="kw">def</span> <span class="fn">inspect_tls</span>(host=<span class="str">"www.example.com"</span>, port=<span class="num">443</span>):
+    <span class="str">"""查看 TLS 证书信息"""</span>
+    context = ssl.create_default_context()
+    <span class="kw">with</span> socket.create_connection((host, port), timeout=<span class="num">5</span>) <span class="kw">as</span> sock:
+        <span class="kw">with</span> context.wrap_socket(sock, server_hostname=host) <span class="kw">as</span> tls_sock:
+            cert = tls_sock.getpeercert()
+
+            <span class="builtin">print</span>(<span class="str">"TLS 版本:"</span>, tls_sock.version())
+            <span class="builtin">print</span>(<span class="str">"加密套件:"</span>, tls_sock.cipher())
+            <span class="builtin">print</span>(<span class="str">"证书颁发者:"</span>, cert.get(<span class="str">"issuer"</span>))
+            <span class="builtin">print</span>(<span class="str">"证书主题:"</span>, cert.get(<span class="str">"subject"</span>))
+            <span class="builtin">print</span>(<span class="str">"有效起止:"</span>, cert.get(<span class="str">"notBefore"</span>), <span class="str">"~"</span>, cert.get(<span class="str">"notAfter"</span>))
+            <span class="builtin">print</span>(<span class="str">"SAN(域名列表):"</span>)
+            <span class="kw">for</span> entry <span class="kw">in</span> cert.get(<span class="str">"subjectAltName"</span>, []):
+                <span class="builtin">print</span>(f<span class="str">"    {entry[1]}"</span>)
+
+<span class="cm"># inspect_tls("www.baidu.com")</span>
+<span class="builtin">print</span>(<span class="str">"TLS 检查工具（需要网络）"</span>)</pre>
+
+<h3>9.2 HTTPS 请求 vs HTTP 对比</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+<span class="kw">import</span> <span class="builtin">requests</span>
+
+<span class="kw">def</span> <span class="fn">compare_http_vs_https</span>():
+    <span class="str">"""对比 HTTP 和 HTTPS 的耗时差距"""</span>
+    url_http = <span class="str">"http://httpbin.org/get"</span>
+    url_https = <span class="str">"https://httpbin.org/get"</span>
+
+    <span class="cm"># 预热</span>
+    requests.get(url_https)
+
+    <span class="kw">for</span> name, url <span class="kw">in</span> [(<span class="str">"HTTP"</span>, url_http), (<span class="str">"HTTPS"</span>, url_https)]:
+        times = []
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>):
+            start = time.time()
+            <span class="kw">try</span>:
+                requests.get(url, timeout=<span class="num">5</span>)
+                times.append(time.time() - start)
+            <span class="kw">except</span>:
+                <span class="kw">pass</span>
+        <span class="kw">if</span> times:
+            <span class="builtin">print</span>(f<span class="str">"{name}: 平均 {sum(times)/len(times)*1000:.0f}ms"</span>)
+
+<span class="cm"># compare_http_vs_https()</span>
+<span class="builtin">print</span>(<span class="str">"HTTPS 对比 HTTP — TLS 握手会增加 1~2 RTT 延迟"</span>)</pre>
+
+<h3>9.3 常见攻击模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 1. SQL 注入（模拟）</span>
+<span class="kw">def</span> <span class="fn">simulate_sql_injection</span>():
+    <span class="builtin">print</span>(<span class="str">"=== SQL 注入 ==="</span>)
+    username = <span class="str">"admin' OR '1'='1"</span>  <span class="cm"># 用户输入</span>
+    <span class="cm"># 不安全写法</span>
+    query = f<span class="str">"SELECT * FROM users WHERE username = '{username}' AND password = 'xxx'"</span>
+    <span class="builtin">print</span>(<span class="str">"恶意 SQL:"</span>, query)
+    <span class="builtin">print</span>(<span class="str">"→ 返回所有用户！\n"</span>)
+    <span class="cm"># 安全写法（参数化查询）</span>
+    <span class="builtin">print</span>(<span class="str">"✅ 防范: 使用参数化查询 (cursor.execute('SELECT * FROM users WHERE username = ?', (username,)))"</span>)
+
+<span class="cm"># 2. XSS（跨站脚本）</span>
+<span class="kw">def</span> <span class="fn">simulate_xss</span>():
+    <span class="builtin">print</span>(<span class="str">"\n=== XSS 攻击 ==="</span>)
+    comment = <span class="str">"&lt;script&gt;alert('窃取cookie');&lt;/script&gt;"</span>
+    <span class="builtin">print</span>(<span class="str">"恶意评论:"</span>, comment)
+    <span class="builtin">print</span>(<span class="str">"✅ 防范: 输出时做 HTML 转义"</span>)
+    <span class="kw">import</span> <span class="builtin">html</span>
+    safe = html.escape(comment)
+    <span class="builtin">print</span>(<span class="str">"  转义后:"</span>, safe)
+
+<span class="cm"># 3. CSRF 模拟</span>
+<span class="kw">def</span> <span class="fn">simulate_csrf</span>():
+    <span class="builtin">print</span>(<span class="str">"\n=== CSRF（跨站请求伪造） ==="</span>)
+    <span class="builtin">print</span>(<span class="str">"攻击者构造链接: &lt;img src='http://bank.com/transfer?to=attacker&amp;amount=10000'&gt;"</span>)
+    <span class="builtin">print</span>(<span class="str">"✅ 防范: CSRF Token / SameSite Cookie / 验证 Referer"</span>)
+
+<span class="cm"># 4. 中间人攻击</span>
+<span class="kw">def</span> <span class="fn">simulate_mitm</span>():
+    <span class="builtin">print</span>(<span class="str">"\n=== 中间人攻击 (MITM) ==="</span>)
+    <span class="builtin">print</span>(<span class="str">"攻击者在 WiFi 热点上截获 HTTP 请求中的密码"</span>)
+    <span class="builtin">print</span>(<span class="str">"✅ 防范: 全程 HTTPS + HSTS + 证书固定"</span>)
+
+simulate_sql_injection()
+simulate_xss()
+simulate_csrf()
+simulate_mitm()</pre>
+
+<h3>9.4 数据加密演示</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">hashlib</span> <span class="kw">import</span> sha256
+<span class="kw">import</span> <span class="builtin">base64</span>
+
+<span class="cm"># 1. 哈希（不可逆）</span>
+data = <span class="str">"我的密码"</span>
+hash_val = sha256(data.encode()).hexdigest()
+<span class="builtin">print</span>(<span class="str">"SHA-256:"</span>, hash_val)
+
+<span class="cm"># 2. Base64 编码（非加密，只是编码）</span>
+encoded = base64.b64encode(<span class="str">b"Hello, Network!"</span>)
+<span class="builtin">print</span>(<span class="str">"Base64:",</span> encoded.decode())
+
+<span class="cm"># 3. HTTPS 中的混合加密</span>
+<span class="builtin">print</span>(<span class="str">"""
+HTTPS 加密流程（简化）:
+1. 客户端 → 服务器:  支持哪些加密套件?
+2. 服务器 → 客户端:  选 AES-GCM + RSA，发送证书(公钥)
+3. 客户端验证证书 → 生成随机"预主密钥" → 用公钥加密发送
+4. 服务器用私钥解密得到"预主密钥"
+5. 双方用预主密钥派生出对称密钥
+6. 后续通信全部用对称加密 (AES-GCM)
+   ← → 安全的加密通道建立完成！
+"""</span>)</pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">📡</span> 10. 网络分析与抓包</h2>
+
+<h3>10.1 模拟网络延迟和丢包</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">random</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="kw">class</span> <span class="cls">UnreliableNetwork</span>:
+    <span class="str">"""模拟不可靠网络（延迟 + 丢包）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, min_delay=<span class="num">0.05</span>, max_delay=<span class="num">0.3</span>, loss_rate=<span class="num">0.1</span>):
+        self.min_delay = min_delay
+        self.max_delay = max_delay
+        self.loss_rate = loss_rate
+
+    <span class="kw">def</span> <span class="fn">send</span>(self, packet):
+        delay = random.uniform(self.min_delay, self.max_delay)
+        time.sleep(delay)
+
+        <span class="kw">if</span> random.random() < self.loss_rate:
+            <span class="kw">return</span> <span class="kw">None</span>  <span class="cm"># 丢包</span>
+
+        <span class="cm"># 模拟比特翻转（极小概率）</span>
+        <span class="kw">if</span> random.random() < <span class="num">0.01</span>:
+            corrupted = <span class="builtin">bytearray</span>(packet)
+            idx = random.randint(<span class="num">0</span>, <span class="builtin">len</span>(corrupted) - <span class="num">1</span>)
+            corrupted[idx] ^= <span class="num">0xFF</span>
+            <span class="kw">return</span> <span class="builtin">bytes</span>(corrupted)
+
+        <span class="kw">return</span> packet
+
+<span class="cm"># 测试不可靠网络</span>
+net = UnreliableNetwork(loss_rate=<span class="num">0.2</span>)  <span class="cm"># 20% 丢包</span>
+sent = <span class="num">0</span>
+received = <span class="num">0</span>
+corrupted = <span class="num">0</span>
+
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">20</span>):
+    pkt = f<span class="str">"packet-{i}"</span>.encode()
+    result = net.send(pkt)
+    sent += <span class="num">1</span>
+    <span class="kw">if</span> result <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="builtin">print</span>(f<span class="str">"❌ 丢失 packet-{i}"</span>)
+    <span class="kw">elif</span> result != pkt:
+        <span class="builtin">print</span>(f<span class="str">"⚠ 损坏 packet-{i}: {result.hex()[:20]}..."</span>)
+        corrupted += <span class="num">1</span>
+    <span class="kw">else</span>:
+        <span class="builtin">print</span>(f<span class="str">"✅ 到达 packet-{i}"</span>)
+        received += <span class="num">1</span>
+
+<span class="builtin">print</span>(f<span class="str">"\n发送 {sent}，到达 {received}，损坏 {corrupted}，丢失 {sent - received - corrupted}"</span>)</pre>
+
+<h3>10.2 网络带宽计算</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">estimate_transfer_time</span>(file_size_mb: <span class="builtin">float</span>, bandwidth_mbps: <span class="builtin">float</span>) -> <span class="builtin">float</span>:
+    <span class="str">"""估算传输时间（考虑 TCP 开销）"""</span>
+    <span class="cm"># 理想速度</span>
+    ideal_time = file_size_mb * <span class="num">8</span> / bandwidth_mbps  <span class="cm"># 秒</span>
+    <span class="cm"># TCP 开销系数 ~1.1~1.3</span>
+    overhead = <span class="num">1.2</span>
+    actual_time = ideal_time * overhead
+    <span class="kw">return</span> actual_time
+
+<span class="builtin">print</span>(<span class="str">"文件传输时间估算"</span>)
+<span class="builtin">print</span>(<span class="str">"-"</span>*<span class="num">40</span>)
+<span class="kw">for</span> size, bw <span class="kw">in</span> [(<span class="num">100</span>, <span class="num">100</span>), (<span class="num">100</span>, <span class="num">10</span>), (<span class="num">1024</span>, <span class="num">500</span>), (<span class="num">10</span>, <span class="num">1</span>)]:
+    t = estimate_transfer_time(size, bw)
+    <span class="builtin">print</span>(f<span class="str">"  {size}MB @ {bw}Mbps → 约 {t:.1f}s"</span>)</pre>
+
+<h3>10.3 ping 延迟统计</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">statistics</span>
+
+<span class="kw">class</span> <span class="cls">PingStats</span>:
+    <span class="str">"""分析 ping 延迟统计"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, rtts):
+        self.rtts = rtts
+
+    <span class="kw">def</span> <span class="fn">report</span>(self):
+        <span class="kw">return</span> {
+            <span class="str">"最小"</span>: <span class="builtin">min</span>(self.rtts),
+            <span class="str">"最大"</span>: <span class="builtin">max</span>(self.rtts),
+            <span class="str">"平均"</span>: statistics.mean(self.rtts),
+            <span class="str">"中位数"</span>: statistics.median(self.rtts),
+            <span class="str">"标准差"</span>: statistics.stdev(self.rtts) <span class="kw">if</span> <span class="builtin">len</span>(self.rtts) > <span class="num">1</span> <span class="kw">else</span> <span class="num">0</span>,
+            <span class="str">"抖动(Jitter)"</span>: <span class="builtin">max</span>(self.rtts) - <span class="builtin">min</span>(self.rtts),
+        }
+
+<span class="cm"># 模拟 ping 数据</span>
+sample_rtts = [<span class="num">12.3</span>, <span class="num">11.8</span>, <span class="num">15.2</span>, <span class="num">10.9</span>, <span class="num">13.1</span>, <span class="num">45.2</span>, <span class="num">12.0</span>, <span class="num">11.5</span>, <span class="num">14.8</span>, <span class="num">12.7</span>]
+stats = PingStats(sample_rtts)
+<span class="builtin">print</span>(<span class="str">"Ping 统计报告 (ms):"</span>)
+<span class="kw">for</span> k, v <span class="kw">in</span> stats.report().items():
+    <span class="builtin">print</span>(f<span class="str">"  {k}: {v:.2f}"</span>)</pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">🌍</span> 11. CDN &amp; 负载均衡</h2>
+
+<h3>11.1 CDN 工作原理</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">random</span>
+
+<span class="kw">class</span> <span class="cls">CDN</span>:
+    <span class="str">"""模拟 CDN 节点选择（基于地理位置）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.edge_nodes = {
+            <span class="str">"中国-华北"</span>: {<span class="str">"ip"</span>: <span class="str">"202.106.0.1"</span>, <span class="str">"load"</span>: <span class="num">0.6</span>},
+            <span class="str">"中国-华东"</span>: {<span class="str">"ip"</span>: <span class="str">"101.227.0.1"</span>, <span class="str">"load"</span>: <span class="num">0.8</span>},
+            <span class="str">"中国-华南"</span>: {<span class="str">"ip"</span>: <span class="str">"121.14.0.1"</span>, <span class="str">"load"</span>: <span class="num">0.3</span>},
+            <span class="str">"美西"</span>: {<span class="str">"ip"</span>: <span class="str">"13.32.0.1"</span>, <span class="str">"load"</span>: <span class="num">0.5</span>},
+            <span class="str">"欧洲"</span>: {<span class="str">"ip"</span>: <span class="str">"52.84.0.1"</span>, <span class="str">"load"</span>: <span class="num">0.4</span>},
+        }
+
+    <span class="kw">def</span> <span class="fn">get_nearest</span>(self, user_region):
+        node = self.edge_nodes.get(user_region)
+        <span class="kw">if</span> node:
+            <span class="kw">return</span> node[<span class="str">"ip"</span>], user_region
+        <span class="cm"># 就近路由</span>
+        <span class="kw">if</span> <span class="str">"中国"</span> <span class="kw">in</span> user_region:
+            region = <span class="str">"中国-华东"</span>
+        <span class="kw">elif</span> user_region <span class="kw">in</span> [<span class="str">"日本"</span>, <span class="str">"韩国"</span>]:
+            region = <span class="str">"中国-华北"</span>
+        <span class="kw">else</span>:
+            region = <span class="str">"美西"</span>
+        <span class="kw">return</span> self.edge_nodes[region][<span class="str">"ip"</span>], region
+
+<span class="cm"># 模拟用户访问</span>
+cdn = CDN()
+<span class="kw">for</span> user <span class="kw">in</span> [<span class="str">"北京"</span>, <span class="str">"广州"</span>, <span class="str">"纽约"</span>, <span class="str">"东京"</span>]:
+    ip, region = cdn.get_nearest(user)
+    <span class="builtin">print</span>(f<span class="str">"用户 {user} → {region} ({ip})"</span>)</pre>
+
+<h3>11.2 负载均衡策略</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">itertools</span>
+
+<span class="kw">class</span> <span class="cls">LoadBalancer</span>:
+    <span class="str">"""常见负载均衡策略"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, servers):
+        self.servers = servers
+        self._rr = itertools.cycle(servers)
+        self._connections = {s: <span class="num">0</span> <span class="kw">for</span> s <span class="kw">in</span> servers}
+
+    <span class="kw">def</span> <span class="fn">round_robin</span>(self):
+        <span class="str">"""轮询 — 依次分配"""</span>
+        <span class="kw">return</span> <span class="builtin">next</span>(self._rr)
+
+    <span class="kw">def</span> <span class="fn">least_connections</span>(self):
+        <span class="str">"""最少连接 — 分配当前连接数最少的"""</span>
+        <span class="kw">return</span> <span class="builtin">min</span>(self._connections, key=self._connections.get)
+
+    <span class="kw">def</span> <span class="fn">weighted</span>(self, weights):
+        <span class="str">"""加权轮询 — 性能强的服务器分配更多请求"""</span>
+        total = <span class="builtin">sum</span>(weights)
+        choices = []
+        <span class="kw">for</span> server, weight <span class="kw">in</span> <span class="builtin">zip</span>(self.servers, weights):
+            choices.extend([server] * weight)
+        <span class="kw">return</span> random.choice(choices)
+
+servers = [<span class="str">"Server-A"</span>, <span class="str">"Server-B"</span>, <span class="str">"Server-C"</span>]
+lb = LoadBalancer(servers)
+
+<span class="builtin">print</span>(<span class="str">"轮询调度:"</span>)
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">6</span>):
+    <span class="builtin">print</span>(f<span class="str">"  请求 {i+1} → {lb.round_robin()}"</span>)
+
+<span class="builtin">print</span>(<span class="str">"\n加权轮询 (权重 3:2:1):"</span>)
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">6</span>):
+    <span class="builtin">print</span>(f<span class="str">"  请求 {i+1} → {lb.weighted([3, 2, 1])}"</span>)</pre>
+
+<h3>11.3 网络性能指标</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">network_performance</span>():
+    <span class="str">"""
+    关键性能指标解读
+    带宽: 管道有多粗（Mbps 或 Gbps）
+    延迟: 水有多快到达（ms）
+    RTT:  往返时间 = 2 × 单向延迟
+    吞吐量: 实际传输速率
+    抖动:  延迟变化的标准差
+    丢包率: 丢失包 / 总包
+    """</span>
+    metrics = {
+        <span class="str">"带宽(Bandwidth)"</span>: <span class="str">"水管粗细，最大传输速率"</span>,
+        <span class="str">"延迟(Latency)"</span>: <span class="str">"数据从 A 到 B 的时间"</span>,
+        <span class="str">"RTT"</span>: <span class="str">"往返时间 = 2 × 单向延迟"</span>,
+        <span class="str">"吞吐量(Throughput)"</span>: <span class="str">"实际传输速率 ≤ 带宽"</span>,
+        <span class="str">"抖动(Jitter)"</span>: <span class="str">"延迟的波动，影响实时通信质量"</span>,
+        <span class="str">"丢包率(Packet Loss)"</span>: <span class="str">"网络拥堵导致丢包百分比"</span>,
+        <span class="str">"MTU"</span>: <span class="str">"最大传输单元 (以太网 1500B)"</span>,
+        <span class="str">"BDP"</span>: <span class="str">"带宽延迟积 = 带宽 × RTT (决定 TCP 窗口大小)"</span>,
+    }
+    <span class="builtin">print</span>(<span class="str">"{:<22} {:<50}"</span>.format(<span class="str">"指标"</span>, <span class="str">"说明"</span>))
+    <span class="builtin">print</span>(<span class="str">"-"</span>*<span class="num">72</span>)
+    <span class="kw">for</span> k, v <span class="kw">in</span> metrics.items():
+        <span class="builtin">print</span>(<span class="str">"{:<22} {:<50}"</span>.format(k, v))
+
+network_performance()</pre>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">🎯</span> 12. 面试高频题 &amp; 实验</h2>
+
+<h3>12.1 面试必问题</h3>
+<div class="card-grid">
+  <div class="card"><h4>1. 浏览器输入 URL 后发生了什么？</h4><p>DNS → TCP 三次握手 → TLS 握手(HTTPS) → HTTP 请求 → 服务器处理 → HTTP 响应 → 浏览器渲染</p></div>
+  <div class="card"><h4>2. TCP 为什么三次握手不是两次？</h4><p>防止已失效的连接请求到达服务器。两次握手：客户端 SYN 延迟重发 → 服务器误建连接 → 浪费资源</p></div>
+  <div class="card"><h4>3. HTTP/1.1 vs HTTP/2 vs HTTP/3</h4><p>1.1: 队头阻塞 / 2: 多路复用 + 二进制分帧 / 3: QUIC (UDP) 解决 TCP 队头阻塞</p></div>
+  <div class="card"><h4>4. HTTPS 加密过程？</h4><p>混合加密：非对称(RSA/ECDHE)交换对称密钥 → 对称加密(AES)传输数据</p></div>
+  <div class="card"><h4>5. Cookie vs Token vs Session</h4><p>Cookie 客户端存储 / Session 服务端存储 / Token 自包含(JWT)，无状态</p></div>
+  <div class="card"><h4>6. 从输入 URL 到页面显示完整流程</h4><p>DNS(1ms) → TCP(1RTT) → TLS(2RTT) → HTTP(1RTT) → 解析HTML+CSS+JS → 渲染</p></div>
+</div>
+
+<h3>12.2 小实验：计算网络延迟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 工具函数：根据物理距离估算理论最低延迟</span>
+<span class="kw">def</span> <span class="fn">min_latency_by_distance</span>(distance_km):
+    <span class="str">"""光在光纤中的速度约 200,000 km/s"""</span>
+    speed_in_fiber = <span class="num">200_000</span>  <span class="cm"># km/s</span>
+    one_way = distance_km / speed_in_fiber * <span class="num">1000</span>  <span class="cm"># ms</span>
+    rtt = one_way * <span class="num">2</span>
+    <span class="kw">return</span> one_way, rtt
+
+<span class="builtin">print</span>(<span class="str">"物理极限延迟（光在光纤中）:"</span>)
+<span class="builtin">print</span>(<span class="str">"-"</span>*<span class="num">50</span>)
+routes = [
+    (<span class="str">"北京 → 上海"</span>, <span class="num">1200</span>),
+    (<span class="str">"北京 → 纽约"</span>, <span class="num">11000</span>),
+    (<span class="str">"北京 → 伦敦"</span>, <span class="num">8200</span>),
+    (<span class="str">"北京 → 东京"</span>, <span class="num">2100</span>),
+    (<span class="str">"上海 → 旧金山"</span>, <span class="num">9500</span>),
+]
+<span class="kw">for</span> route, dist <span class="kw">in</span> routes:
+    one_way, rtt = min_latency_by_distance(dist)
+    <span class="builtin">print</span>(f<span class="str">"  {route:15} {dist:>5}km → 单向 {one_way:.1f}ms, RTT {rtt:.1f}ms"</span>)
+
+<span class="builtin">print</span>(<span class="str">"""
+实际延迟远高于理论值，因为:
+• 路由器处理转发 (每跳 ~1ms)
+• 光纤不在直线路径上
+• 排队延迟 (bufferbloat)
+• TCP 握手开销
+"""</span>)</pre>
+
+<h3>12.3 小实验：判断 IP 是否在中国</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">is_chinese_ip</span>(ip: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+    <span class="str">"""简单的中国 IP 段判断（仅示例，实际用 GeoIP 库）"""</span>
+    cn_ranges = [
+        (<span class="str">"1.0.1.0"</span>, <span class="str">"1.0.3.255"</span>),
+        (<span class="str">"14.0.0.0"</span>, <span class="str">"14.223.255.255"</span>),
+        (<span class="str">"36.0.0.0"</span>, <span class="str">"36.255.255.255"</span>),
+        (<span class="str">"39.0.0.0"</span>, <span class="str">"39.255.255.255"</span>),
+        (<span class="str">"42.0.0.0"</span>, <span class="str">"42.255.255.255"</span>),
+        (<span class="str">"58.14.0.0"</span>, <span class="str">"58.255.255.255"</span>),
+        (<span class="str">"61.48.0.0"</span>, <span class="str">"61.255.255.255"</span>),
+        (<span class="str">"101.0.0.0"</span>, <span class="str">"101.255.255.255"</span>),
+        (<span class="str">"103.0.0.0"</span>, <span class="str">"103.255.255.255"</span>),
+        (<span class="str">"110.0.0.0"</span>, <span class="str">"119.255.255.255"</span>),
+        (<span class="str">"120.0.0.0"</span>, <span class="str">"139.255.255.255"</span>),
+        (<span class="str">"140.75.0.0"</span>, <span class="str">"140.255.255.255"</span>),
+        (<span class="str">"144.0.0.0"</span>, <span class="str">"144.255.255.255"</span>),
+        (<span class="str">"153.0.0.0"</span>, <span class="str">"153.255.255.255"</span>),
+        (<span class="str">"159.226.0.0"</span>, <span class="str">"159.226.255.255"</span>),
+        (<span class="str">"163.0.0.0"</span>, <span class="str">"163.255.255.255"</span>),
+        (<span class="str">"166.111.0.0"</span>, <span class="str">"166.111.255.255"</span>),
+        (<span class="str">"167.139.0.0"</span>, <span class="str">"167.139.255.255"</span>),
+        (<span class="str">"168.160.0.0"</span>, <span class="str">"168.160.255.255"</span>),
+        (<span class="str">"171.0.0.0"</span>, <span class="str">"171.255.255.255"</span>),
+        (<span class="str">"175.0.0.0"</span>, <span class="str">"175.255.255.255"</span>),
+        (<span class="str">"180.76.0.0"</span>, <span class="str">"180.255.255.255"</span>),
+        (<span class="str">"182.0.0.0"</span>, <span class="str">"182.255.255.255"</span>),
+        (<span class="str">"183.0.0.0"</span>, <span class="str">"183.255.255.255"</span>),
+        (<span class="str">"192.168.0.0"</span>, <span class="str">"192.168.255.255"</span>),
+        (<span class="str">"202.0.0.0"</span>, <span class="str">"202.255.255.255"</span>),
+        (<span class="str">"203.0.0.0"</span>, <span class="str">"203.255.255.255"</span>),
+        (<span class="str">"210.0.0.0"</span>, <span class="str">"210.255.255.255"</span>),
+        (<span class="str">"218.0.0.0"</span>, <span class="str">"218.255.255.255"</span>),
+        (<span class="str">"219.0.0.0"</span>, <span class="str">"219.255.255.255"</span>),
+        (<span class="str">"220.0.0.0"</span>, <span class="str">"220.255.255.255"</span>),
+        (<span class="str">"221.0.0.0"</span>, <span class="str">"221.255.255.255"</span>),
+        (<span class="str">"222.0.0.0"</span>, <span class="str">"222.255.255.255"</span>),
+        (<span class="str">"223.0.0.0"</span>, <span class="str">"223.255.255.255"</span>),
+    ]
+
+    <span class="kw">def</span> <span class="fn">ip_to_int</span>(ip_str):
+        parts = [<span class="builtin">int</span>(x) <span class="kw">for</span> x <span class="kw">in</span> ip_str.split(<span class="str">"."</span>)]
+        <span class="kw">return</span> (parts[<span class="num">0</span>] << <span class="num">24</span>) + (parts[<span class="num">1</span>] << <span class="num">16</span>) + (parts[<span class="num">2</span>] << <span class="num">8</span>) + parts[<span class="num">3</span>]
+
+    ip_int = ip_to_int(ip)
+    <span class="kw">for</span> start, end <span class="kw">in</span> cn_ranges:
+        <span class="kw">if</span> ip_to_int(start) <= ip_int <= ip_to_int(end):
+            <span class="kw">return</span> True
+    <span class="kw">return</span> False
+
+<span class="co"># 测试</span>
+ips = [<span class="str">"220.181.38.148"</span>, <span class="str">"8.8.8.8"</span>, <span class="str">"202.106.0.1"</span>, <span class="str">"13.32.0.1"</span>]
+<span class="kw">for</span> ip <span class="kw">in</span> ips:
+    <span class="builtin">print</span>(f<span class="str">"{ip:>15} → {'🇨🇳 中国' if is_chinese_ip(ip) else '🌍 境外'}"</span>)</pre>
+
+<h3>12.4 完整网络实验：HTTP 文件下载 + 进度条</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">requests</span>
+<span class="kw">from</span> <span class="builtin">tqdm</span> <span class="kw">import</span> tqdm
+
+<span class="kw">def</span> <span class="fn">download_with_progress</span>(url: <span class="builtin">str</span>, save_path: <span class="builtin">str</span>):
+    <span class="str">"""带进度条的文件下载（展现 HTTP Range 分片）"""</span>
+    response = requests.get(url, stream=<span class="kw">True</span>)
+    total_size = <span class="builtin">int</span>(response.headers.get(<span class="str">"content-length"</span>, <span class="num">0</span>))
+
+    <span class="builtin">print</span>(f<span class="str">"文件大小: {total_size/1024/1024:.1f} MB"</span>)
+    <span class="builtin">print</span>(f<span class="str">"Content-Type: {response.headers.get('content-type')}"</span>)
+    <span class="builtin">print</span>(f<span class="str">"Accept-Ranges: {response.headers.get('accept-ranges', '无')}"</span>)
+
+    <span class="kw">with</span> <span class="builtin">open</span>(save_path, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+        <span class="kw">with</span> tqdm(total=total_size, unit=<span class="str">"B"</span>, unit_scale=<span class="kw">True</span>,
+                   desc=<span class="str">"下载中"</span>, ncols=<span class="num">80</span>) <span class="kw">as</span> pbar:
+            <span class="kw">for</span> chunk <span class="kw">in</span> response.iter_content(chunk_size=<span class="num">64</span>*<span class="num">1024</span>):
+                <span class="kw">if</span> chunk:
+                    f.write(chunk)
+                    pbar.update(<span class="builtin">len</span>(chunk))
+
+    <span class="builtin">print</span>(<span class="str">"✅ 下载完成！"</span>)
+
+<span class="builtin">print</span>(<span class="str">"下载脚本就绪（需要 tqdm 库: pip install tqdm）"</span>)</pre>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  🌐 计算机网络 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

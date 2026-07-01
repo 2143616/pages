@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据库 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--orange), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; color: var(--teal); }
+section h4 { font-size: 1rem; font-weight: 600; margin: 16px 0 8px; color: var(--pink); }
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🗄 数据库 从入门到精通</h1>
+  <p>SQL · 关系模型 · 索引 · 事务 · ORM · NoSQL — 理论 + Python 实战</p>
+  <div class="tags">
+    <span>🐍 Python + SQLite</span>
+    <span>🗃 SQL 标准</span>
+    <span>📘 教学文档</span>
+    <span>🎯 面试准备</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. 数据库基础概念</a></li>
+    <li><a href="#sec2">2. SQL — 数据定义 (DDL)</a></li>
+    <li><a href="#sec3">3. SQL — 数据操作 (DML)</a></li>
+    <li><a href="#sec4">4. SQL — 数据查询 (DQL)</a></li>
+    <li><a href="#sec5">5. 高级查询 &amp; 子查询</a></li>
+    <li><a href="#sec6">6. 表连接 (JOIN)</a></li>
+    <li><a href="#sec7">7. 索引</a></li>
+    <li><a href="#sec8">8. 数据库设计 &amp; 范式</a></li>
+    <li><a href="#sec9">9. 事务与 ACID</a></li>
+    <li><a href="#sec10">10. Python SQLite 实战</a></li>
+    <li><a href="#sec11">11. SQLAlchemy ORM</a></li>
+    <li><a href="#sec12">12. NoSQL 入门</a></li>
+    <li><a href="#sec13">13. 综合实战</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. 数据库基础概念</h2>
+
+<p><strong>数据库（Database）</strong> 是以一定方式组织、存储和管理数据的仓库。核心目标是<strong>持久化</strong>、<strong>高效查询</strong>、<strong>并发控制</strong>和<strong>安全</strong>。</p>
+
+<h3>关系型 vs 非关系型</h3>
+<table>
+  <tr><th>特性</th><th>关系型 (SQL)</th><th>非关系型 (NoSQL)</th></tr>
+  <tr><td>数据模型</td><td>表（行+列），严格 Schema</td><td>文档/KV/图/列族，灵活 Schema</td></tr>
+  <tr><td>代表</td><td>MySQL, PostgreSQL, SQLite</td><td>MongoDB, Redis, Neo4j, Cassandra</td></tr>
+  <tr><td>查询语言</td><td>SQL（统一标准）</td><td>各 API 不同</td></tr>
+  <tr><td>ACID</td><td>原生支持</td><td>部分支持（BASE）</td></tr>
+  <tr><td>适用</td><td>金融、ERP、电商（强一致）</td><td>日志、缓存、社交（高并发）</td></tr>
+</table>
+
+<h3>数据库核心术语</h3>
+<div class="card-grid">
+  <div class="card"><h4>🗂 表 (Table)</h4><p>数据的逻辑容器，由行和列组成。如：users, orders, products</p></div>
+  <div class="card"><h4>🔑 主键 (Primary Key)</h4><p>唯一标识一行。不能为 NULL，自动建索引。如：user_id</p></div>
+  <div class="card"><h4>🔗 外键 (Foreign Key)</h4><p>引用另一张表的主键，维护数据的参照完整性</p></div>
+  <div class="card"><h4>📊 索引 (Index)</h4><p>加速查询的"目录"。类似书的目录页，查询数据更快</p></div>
+  <div class="card"><h4>📐 视图 (View)</h4><p>虚拟表，本质是保存的 SQL 查询结果。不存数据</p></div>
+  <div class="card"><h4>⚡ 事务 (Transaction)</h4><p>一组操作要么全做，要么全不做。保证数据一致性</p></div>
+</div>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">sqlite3</span>
+
+<span class="cm"># 连接数据库（创建内存数据库）</span>
+conn = sqlite3.connect(<span class="str">":memory:"</span>)
+cursor = conn.cursor()
+
+<span class="cm"># 查看 SQLite 版本</span>
+cursor.execute(<span class="str">"SELECT sqlite_version()"</span>)
+<span class="builtin">print</span>(<span class="str">"SQLite 版本:"</span>, cursor.fetchone()[<span class="num">0</span>])
+
+<span class="cm"># 关闭连接</span>
+conn.close()</pre>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">🏗</span> 2. SQL — 数据定义 (DDL)</h2>
+<p>DDL（Data Definition Language）定义数据库结构：创建、修改、删除表。</p>
+
+<h3>2.1 CREATE TABLE</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 创建用户表</span>
+CREATE TABLE users (
+    user_id  INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT    NOT NULL UNIQUE,
+    email    TEXT    NOT NULL UNIQUE,
+    age      INTEGER CHECK(age >= 0 AND age <= 150),
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT  DEFAULT (datetime('now'))
+);
+
+<span class="cm">-- 创建文章表</span>
+CREATE TABLE posts (
+    post_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT    NOT NULL,
+    content    TEXT    NOT NULL,
+    author_id  INTEGER NOT NULL,
+    tags       TEXT    DEFAULT '',
+    published  INTEGER DEFAULT 0,
+    created_at TEXT    DEFAULT (datetime('now')),
+    FOREIGN KEY (author_id) REFERENCES users(user_id)
+);</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">create_tables</span>(conn):
+    cursor = conn.cursor()
+    cursor.executescript(<span class="str">"""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id  INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT    NOT NULL UNIQUE,
+            email    TEXT    NOT NULL UNIQUE,
+            age      INTEGER DEFAULT 18,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT  DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS posts (
+            post_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            title      TEXT    NOT NULL,
+            content    TEXT    NOT NULL,
+            author_id  INTEGER NOT NULL,
+            tags       TEXT    DEFAULT '',
+            published  INTEGER DEFAULT 0,
+            created_at TEXT    DEFAULT (datetime('now')),
+            FOREIGN KEY (author_id) REFERENCES users(user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS comments (
+            comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id    INTEGER NOT NULL,
+            author_id  INTEGER NOT NULL,
+            body       TEXT    NOT NULL,
+            created_at TEXT    DEFAULT (datetime('now')),
+            FOREIGN KEY (post_id)   REFERENCES posts(post_id),
+            FOREIGN KEY (author_id) REFERENCES users(user_id)
+        );
+    """</span>)
+    conn.commit()
+    <span class="builtin">print</span>(<span class="str">"✅ 三张表创建成功"</span>)</pre>
+
+<h3>2.2 修改表结构</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 添加列</span>
+ALTER TABLE users ADD COLUMN phone TEXT;
+
+<span class="cm">-- 修改列名 (SQLite 不支持，需重建)</span>
+<span class="cm">-- 删除列 (SQLite 3.35+ 支持)</span>
+ALTER TABLE users DROP COLUMN phone;
+
+<span class="cm">-- 重命名表</span>
+ALTER TABLE users RENAME TO members;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">alter_table_demo</span>(conn):
+    cursor = conn.cursor()
+    <span class="cm"># 查看当前表结构</span>
+    cursor.execute(<span class="str">"PRAGMA table_info(users)"</span>)
+    <span class="builtin">print</span>(<span class="str">"当前 users 表结构:"</span>)
+    <span class="kw">for</span> col <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {col[0]:&gt;2}. {col[1]:15} {col[2]:10}"</span>)
+
+    <span class="cm"># 添加列</span>
+    cursor.execute(<span class="str">"ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''"</span>)
+    conn.commit()
+    <span class="builtin">print</span>(<span class="str">"✅ 已添加 bio 列"</span>)</pre>
+
+<h3>2.3 DROP 与 TRUNCATE</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 删除整个表（结构和数据）</span>
+DROP TABLE IF EXISTS temp_data;
+
+<span class="cm">-- 清空数据但保留结构（SQLite 用 DELETE FROM）</span>
+DELETE FROM temp_data;    <span class="cm">-- 或 TRUNCATE TABLE (MySQL/PG)</span></pre>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">✏️</span> 3. SQL — 数据操作 (DML)</h2>
+<p>DML（Data Manipulation Language）对表中的数据进行增、删、改。</p>
+
+<h3>3.1 INSERT</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 插入单行</span>
+INSERT INTO users (username, email, age)
+VALUES ('张三', 'zhang@example.com', 25);
+
+<span class="cm">-- 插入多行</span>
+INSERT INTO users (username, email, age) VALUES
+    ('李四', 'li@example.com', 30),
+    ('王五', 'wang@example.com', 22);
+
+<span class="cm">-- 插入并返回 ID（不同数据库语法不同）</span>
+INSERT INTO users (username, email) VALUES ('赵六', 'zhao@test.com');
+<span class="cm">-- SQLite/MySQL: SELECT last_insert_rowid()</span>
+<span class="cm">-- PostgreSQL:   INSERT ... RETURNING user_id</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">insert_data</span>(conn):
+    cursor = conn.cursor()
+    users = [
+        (<span class="str">"张三"</span>, <span class="str">"zhang@example.com"</span>, <span class="num">25</span>),
+        (<span class="str">"李四"</span>, <span class="str">"li@example.com"</span>, <span class="num">30</span>),
+        (<span class="str">"王五"</span>, <span class="str">"wang@example.com"</span>, <span class="num">22</span>),
+        (<span class="str">"赵六"</span>, <span class="str">"zhao@test.com"</span>, <span class="num">28</span>),
+        (<span class="str">"孙七"</span>, <span class="str">"sun@test.com"</span>, <span class="num">35</span>),
+    ]
+
+    cursor.executemany(
+        <span class="str">"INSERT INTO users (username, email, age) VALUES (?, ?, ?)"</span>,
+        users
+    )
+    conn.commit()
+    <span class="builtin">print</span>(f<span class="str">"✅ 插入了 {cursor.rowcount} 条用户"</span>)
+
+    <span class="cm"># 插入文章</span>
+    posts = [
+        (<span class="str">"Python 入门"</span>, <span class="str">"Python 是一门优雅的语言..."</span>, <span class="num">1</span>, <span class="str">"python,教程"</span>),
+        (<span class="str">"数据库基础"</span>, <span class="str">"关系型数据库以表为单位..."</span>, <span class="num">2</span>, <span class="str">"数据库,SQL"</span>),
+        (<span class="str">"网络编程"</span>, <span class="str">"Socket 是网络编程的基础..."</span>, <span class="num">1</span>, <span class="str">"网络,socket"</span>),
+        (<span class="str">"算法设计"</span>, <span class="str">"排序算法是计算机科学的基石..."</span>, <span class="num">3</span>, <span class="str">"算法,排序"</span>),
+        (<span class="str">"机器学习"</span>, <span class="str">"机器学习是人工智能的核心..."</span>, <span class="num">2</span>, <span class="str">"AI,ML"</span>),
+    ]
+    cursor.executemany(
+        <span class="str">"INSERT INTO posts (title, content, author_id, tags) VALUES (?, ?, ?, ?)"</span>,
+        posts
+    )
+    conn.commit()
+    <span class="builtin">print</span>(f<span class="str">"✅ 插入了 {cursor.rowcount} 篇文章"</span>)
+
+    <span class="cm"># 获取最后插入的 ID</span>
+    last_id = cursor.lastrowid
+    <span class="builtin">print</span>(f<span class="str">"最后插入的 user_id: {last_id}"</span>)</pre>
+
+<h3>3.2 UPDATE</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 更新单列</span>
+UPDATE users SET age = 26 WHERE username = '张三';
+
+<span class="cm">-- 更新多列</span>
+UPDATE users SET age = 26, email = 'zhang_new@example.com' WHERE user_id = 1;
+
+<span class="cm">-- 不带 WHERE 则更新全部（⚠ 危险！）</span>
+<span class="cm">-- UPDATE users SET age = 0;</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">update_data</span>(conn):
+    cursor = conn.cursor()
+    <span class="cm"># 参数化查询 — 防止 SQL 注入</span>
+    cursor.execute(
+        <span class="str">"UPDATE users SET age = ? WHERE username = ?"</span>,
+        (<span class="num">26</span>, <span class="str">"张三"</span>)
+    )
+    conn.commit()
+    <span class="builtin">print</span>(f<span class="str">"✅ 更新了 {cursor.rowcount} 行"</span>)</pre>
+
+<h3>3.3 DELETE</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 删除特定行</span>
+DELETE FROM users WHERE username = '孙七';
+
+<span class="cm">-- 清空表（保留结构）</span>
+DELETE FROM temp_data;   <span class="cm">-- 或 TRUNCATE TABLE temp_data;</span>
+
+<span class="cm">-- ⚠ 删除全部</span>
+<span class="cm">-- DELETE FROM users;</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">delete_data</span>(conn):
+    cursor = conn.cursor()
+    cursor.execute(<span class="str">"DELETE FROM users WHERE username = ?"</span>, (<span class="str">"孙七"</span>,))
+    conn.commit()
+    <span class="builtin">print</span>(f<span class="str">"✅ 删除了 {cursor.rowcount} 行"</span>)</pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">🔍</span> 4. SQL — 数据查询 (DQL)</h2>
+<p>查询是数据库里最核心、最灵活的操作。一条 SELECT 可以做各种组合。</p>
+
+<h3>4.1 基础查询</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 查询全部列</span>
+SELECT * FROM users;
+
+<span class="cm">-- 查询指定列</span>
+SELECT username, email, age FROM users;
+
+<span class="cm">-- 取别名</span>
+SELECT username AS name, email, age FROM users;
+
+<span class="cm">-- 去重</span>
+SELECT DISTINCT age FROM users;
+
+<span class="cm">-- 限制条数</span>
+SELECT * FROM users LIMIT 3;
+SELECT * FROM users LIMIT 2 OFFSET 1;  <span class="cm">-- 跳过1条取2条</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">basic_query</span>(conn):
+    cursor = conn.cursor()
+
+    cursor.execute(<span class="str">"SELECT username, email, age FROM users"</span>)
+    rows = cursor.fetchall()     <span class="cm"># 所有结果</span>
+    <span class="builtin">print</span>(<span class="str">"所有用户:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> rows:
+        <span class="builtin">print</span>(f<span class="str">"  {row[0]:6} | {row[1]:20} | {row[2]:3}岁"</span>)
+
+    cursor.execute(<span class="str">"SELECT * FROM posts LIMIT 3"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n前 3 篇文章:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  #{row[0]} {row[1]}"</span>)</pre>
+
+<h3>4.2 WHERE 条件</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 比较运算符</span>
+SELECT * FROM users WHERE age >= 25;
+SELECT * FROM users WHERE age BETWEEN 20 AND 30;
+SELECT * FROM users WHERE username != '张三';
+
+<span class="cm">-- 多条件</span>
+SELECT * FROM users WHERE age >= 25 AND is_active = 1;
+SELECT * FROM users WHERE age < 20 OR age > 35;
+
+<span class="cm">-- IN 操作</span>
+SELECT * FROM users WHERE username IN ('张三', '李四', '王五');
+
+<span class="cm">-- 模糊匹配 LIKE</span>
+SELECT * FROM users WHERE email LIKE '%@example.com';
+SELECT * FROM users WHERE username LIKE '张%';  <span class="cm">-- 以"张"开头</span>
+SELECT * FROM posts WHERE title LIKE '%Python%';  <span class="cm">-- 包含 Python</span>
+
+<span class="cm">-- NULL 判断</span>
+SELECT * FROM users WHERE age IS NULL;
+SELECT * FROM users WHERE age IS NOT NULL;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">where_query</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm"># 条件查询</span>
+    cursor.execute(<span class="str">"SELECT * FROM users WHERE age >= ? AND age <= ?"</span>, (<span class="num">25</span>, <span class="num">35</span>))
+    <span class="builtin">print</span>(<span class="str">"年龄 25-35 的用户:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {row[1]} ({row[3]}岁)"</span>)
+
+    <span class="cm"># LIKE 模糊查询</span>
+    cursor.execute(<span class="str">"SELECT title FROM posts WHERE title LIKE ?"</span>, (<span class="str">"%Python%"</span>,))
+    <span class="builtin">print</span>(<span class="str">"\n包含 'Python' 的文章:"</span>)
+    <span class="kw">for</span> title <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  → {title[0]}"</span>)</pre>
+
+<h3>4.3 排序与分页</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 升序 / 降序</span>
+SELECT * FROM users ORDER BY age ASC;
+SELECT * FROM users ORDER BY age DESC;
+
+<span class="cm">-- 多字段排序</span>
+SELECT * FROM posts ORDER BY created_at DESC, title ASC;
+
+<span class="cm">-- 分页（MySQL/PG 用 LIMIT + OFFSET）</span>
+<span class="cm">-- 第 1 页 (每页 2 条)</span>
+SELECT * FROM posts ORDER BY post_id LIMIT 2 OFFSET 0;
+<span class="cm">-- 第 2 页</span>
+SELECT * FROM posts ORDER BY post_id LIMIT 2 OFFSET 2;
+<span class="cm">-- 第 N 页: LIMIT page_size OFFSET (page - 1) * page_size</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">pagination_query</span>(conn, page=<span class="num">1</span>, page_size=<span class="num">2</span>):
+    cursor = conn.cursor()
+    offset = (page - <span class="num">1</span>) * page_size
+
+    cursor.execute(
+        <span class="str">"SELECT * FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?"</span>,
+        (page_size, offset)
+    )
+    rows = cursor.fetchall()
+
+    <span class="cm"># 总条数</span>
+    cursor.execute(<span class="str">"SELECT COUNT(*) FROM posts"</span>)
+    total = cursor.fetchone()[<span class="num">0</span>]
+
+    <span class="builtin">print</span>(f<span class="str">"第 {page} 页 (共 {total} 条, 每页 {page_size} 条):"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> rows:
+        <span class="builtin">print</span>(f<span class="str">"  #{row[0]} {row[1]} ({row[6]})"</span>)
+
+    total_pages = (total + page_size - <span class="num">1</span>) // page_size
+    <span class="builtin">print</span>(f<span class="str">"  共 {total_pages} 页"</span>)</pre>
+
+<h3>4.4 聚合函数与 GROUP BY</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 常用聚合函数</span>
+SELECT COUNT(*) FROM users;           <span class="cm">-- 总行数</span>
+SELECT AVG(age) FROM users;           <span class="cm">-- 平均年龄</span>
+SELECT MAX(age), MIN(age) FROM users; <span class="cm">-- 最大/最小年龄</span>
+SELECT SUM(age) FROM users;           <span class="cm">-- 年龄总和</span>
+
+<span class="cm">-- GROUP BY 分组统计</span>
+SELECT age, COUNT(*) AS count
+FROM users
+GROUP BY age
+ORDER BY count DESC;
+
+<span class="cm">-- HAVING 过滤分组结果（WHERE 无法过滤聚合结果）</span>
+SELECT author_id, COUNT(*) AS post_count
+FROM posts
+GROUP BY author_id
+HAVING post_count >= 2;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">aggregate_query</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm"># 基本聚合</span>
+    cursor.execute(<span class="str">"SELECT COUNT(*), AVG(age), MAX(age), MIN(age) FROM users"</span>)
+    count, avg, mx, mn = cursor.fetchone()
+    <span class="builtin">print</span>(f<span class="str">"用户统计: {count}人, 平均{avg:.1f}岁, 最大{mx}岁, 最小{mn}岁"</span>)
+
+    <span class="cm"># 按年龄分组</span>
+    cursor.execute(<span class="str">"SELECT age, COUNT(*) FROM users GROUP BY age ORDER BY age"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n年龄分布:"</span>)
+    <span class="kw">for</span> age, cnt <span class="kw">in</span> cursor.fetchall():
+        bar = <span class="str">"█"</span> * cnt
+        <span class="builtin">print</span>(f<span class="str">"  {age:>2}岁: {bar} ({cnt}人)"</span>)
+
+    <span class="cm"># 统计每位作者的文章数</span>
+    cursor.execute(<span class="str">"""
+        SELECT u.username, COUNT(p.post_id) AS post_count
+        FROM users u
+        LEFT JOIN posts p ON u.user_id = p.author_id
+        GROUP BY u.user_id
+        ORDER BY post_count DESC
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"\n文章数量统计:"</span>)
+    <span class="kw">for</span> name, cnt <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name}: {cnt} 篇"</span>)</pre>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🧩</span> 5. 高级查询 &amp; 子查询</h2>
+
+<h3>5.1 子查询</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 标量子查询（返回单值）</span>
+SELECT username,
+       (SELECT COUNT(*) FROM posts WHERE author_id = users.user_id) AS post_count
+FROM users;
+
+<span class="cm">-- 行子查询（返回单行）</span>
+SELECT * FROM users
+WHERE (age, username) = (SELECT MAX(age), username FROM users);
+
+<span class="cm">-- 表子查询（IN）</span>
+SELECT * FROM posts
+WHERE author_id IN (SELECT user_id FROM users WHERE age > 25);
+
+<span class="cm">-- EXISTS 检查存在性</span>
+SELECT * FROM users u
+WHERE EXISTS (SELECT 1 FROM posts p WHERE p.author_id = u.user_id);</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">subquery_demo</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm">-- 每个用户的文章数（标量子查询）</span>
+    cursor.execute(<span class="str">"""
+        SELECT username, email,
+               (SELECT COUNT(*) FROM posts WHERE author_id = users.user_id) AS post_count
+        FROM users
+        ORDER BY post_count DESC
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"用户文章数（子查询）:"</span>)
+    <span class="kw">for</span> name, email, cnt <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name:6} | {email:20} | {cnt} 篇"</span>)
+
+    <span class="cm">-- 找写过文章的用户（EXISTS）</span>
+    cursor.execute(<span class="str">"""
+        SELECT user_id, username FROM users u
+        WHERE EXISTS (SELECT 1 FROM posts p WHERE p.author_id = u.user_id)
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"\n发过文章的用户:"</span>)
+    <span class="kw">for</span> uid, name <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name} (ID:{uid})"</span>)</pre>
+
+<h3>5.2 窗口函数</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 窗口函数：为每行计算一个基于"窗口"的值</span>
+
+<span class="cm">-- ROW_NUMBER: 按年龄排序编号</span>
+SELECT username, age,
+       ROW_NUMBER() OVER (ORDER BY age DESC) AS rank
+FROM users;
+
+<span class="cm">-- RANK / DENSE_RANK: 排名（考虑并列）</span>
+SELECT username, age,
+       RANK()       OVER (ORDER BY age DESC) AS r1,
+       DENSE_RANK() OVER (ORDER BY age DESC) AS r2
+FROM users;
+
+<span class="cm">-- SUM 窗口函数：累计求和</span>
+SELECT post_id, title, author_id,
+       COUNT(*) OVER (PARTITION BY author_id) AS author_total
+FROM posts;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">window_function_demo</span>(conn):
+    cursor = conn.cursor()
+    <span class="cm"># SQLite 3.25+ 支持窗口函数</span>
+    cursor.execute(<span class="str">"""
+        SELECT username, age,
+               ROW_NUMBER() OVER (ORDER BY age DESC) AS rn,
+               DENSE_RANK() OVER (ORDER BY age DESC) AS dr
+        FROM users
+        ORDER BY age DESC
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"年龄排行（窗口函数）:"</span>)
+    <span class="builtin">print</span>(<span class="str">"  {:8} {:4} {:7} {:7}"</span>.format(<span class="str">"姓名"</span>, <span class="str">"年龄"</span>, <span class="str">"行号"</span>, <span class="str">"排名"</span>))
+    <span class="kw">for</span> name, age, rn, dr <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name:8} {age:3} {rn:7} {dr:7}"</span>)</pre>
+
+<h3>5.3 UNION &amp; CASE</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- UNION 合并结果集</span>
+SELECT username AS name, '用户' AS type FROM users
+UNION ALL
+SELECT title, '文章' FROM posts;
+
+<span class="cm">-- CASE 条件表达式</span>
+SELECT username, age,
+    CASE
+        WHEN age < 25 THEN '青年'
+        WHEN age < 35 THEN '壮年'
+        ELSE '中年'
+    END AS age_group
+FROM users;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">case_demo</span>(conn):
+    cursor = conn.cursor()
+    cursor.execute(<span class="str">"""
+        SELECT username, age,
+            CASE
+                WHEN age < 25 THEN '👤 青年'
+                WHEN age < 35 THEN '👨 壮年'
+                ELSE            '🧑 中年'
+            END AS age_group
+        FROM users
+        ORDER BY age
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"年龄段分组:"</span>)
+    <span class="kw">for</span> name, age, grp <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name:6} {age:3}岁 → {grp}"</span>)</pre>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">🔗</span> 6. 表连接 (JOIN)</h2>
+<p>关系型数据库的"关系"二字核心就在 JOIN——把多张表按关联字段连接起来。</p>
+
+<h3>6.1 INNER JOIN</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 文章 + 作者（只返回匹配上的）</span>
+SELECT p.title, u.username
+FROM posts p
+INNER JOIN users u ON p.author_id = u.user_id;
+
+<span class="cm">-- 三表连接：文章 + 作者 + 评论</span>
+SELECT p.title, u.username AS author, c.body AS comment
+FROM posts p
+JOIN users u    ON p.author_id = u.user_id
+JOIN comments c ON c.post_id = p.post_id;</pre>
+
+<h3>6.2 LEFT / RIGHT / FULL JOIN</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- LEFT JOIN: 左表全部保留，右表无匹配则 NULL</span>
+SELECT u.username, p.title
+FROM users u
+LEFT JOIN posts p ON u.user_id = p.author_id;
+<span class="cm">-- 结果：所有用户都会出现，没写文章的 title 为 NULL</span>
+
+<span class="cm">-- 找出没写文章的用户</span>
+SELECT u.username
+FROM users u
+LEFT JOIN posts p ON u.user_id = p.author_id
+WHERE p.post_id IS NULL;
+
+<span class="cm">-- FULL OUTER JOIN: 两张表全部保留（SQLite 不直接支持）</span>
+<span class="cm">-- MySQL 不直接支持 FULL JOIN，用 UNION 模拟</span></pre>
+
+<h3>6.3 自连接</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 创建部门表演示自连接</span>
+CREATE TABLE employees (
+    emp_id   INTEGER PRIMARY KEY,
+    name     TEXT,
+    manager_id INTEGER REFERENCES employees(emp_id)
+);
+
+<span class="cm">-- 查询员工 + 上级领导</span>
+SELECT e.name AS employee, m.name AS manager
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.emp_id;</pre>
+
+<h3>6.4 JOIN 综合示例</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">join_demo</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm"># 文章 + 作者名称</span>
+    cursor.execute(<span class="str">"""
+        SELECT p.title, u.username, p.created_at
+        FROM posts p
+        JOIN users u ON p.author_id = u.user_id
+        ORDER BY p.created_at DESC
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"文章与作者:"</span>)
+    <span class="kw">for</span> title, author, dt <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  📝 {title:12} | ✍ {author:6} | {dt}"</span>)
+
+    <span class="cm"># LEFT JOIN：所有用户及其文章</span>
+    cursor.execute(<span class="str">"""
+        SELECT u.username, COALESCE(p.title, '(未写文章)')
+        FROM users u
+        LEFT JOIN posts p ON u.user_id = p.author_id
+        ORDER BY u.user_id
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"\n所有用户与文章:"</span>)
+    <span class="kw">for</span> name, title <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name:6} → {title}"</span>)</pre>
+
+<div class="highlight">
+  <strong>💡 JOIN 记忆口诀：</strong>
+  <br>• <strong>INNER JOIN</strong> = 取交集，两边都有才返回
+  <br>• <strong>LEFT JOIN</strong> = 左表全保留，右表无匹配给 NULL
+  <br>• <strong>RIGHT JOIN</strong> = 右表全保留（MySQL 支持，SQLite 不支持）
+  <br>• <strong>FULL JOIN</strong> = 两表并集（两边全保留）
+  <br>• <strong>CROSS JOIN</strong> = 笛卡尔积（每行 × 每行，很少用）
+</div>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">📑</span> 7. 索引</h2>
+<p><strong>索引（Index）</strong> 是数据库高效查询的核心机制——以空间换时间，类似书的目录。</p>
+
+<h3>7.1 索引类型</h3>
+<table>
+  <tr><th>索引类型</th><th>底层结构</th><th>适用场景</th></tr>
+  <tr><td>B+ Tree 索引</td><td>平衡多路搜索树</td><td>大多数场景（等值/范围/排序）</td></tr>
+  <tr><td>哈希索引</td><td>哈希表</td><td>等值查询（不支持范围）</td></tr>
+  <tr><td>全文索引</td><td>倒排索引</td><td>LIKE / 文本搜索</td></tr>
+  <tr><td>空间索引</td><td>R-Tree</td><td>地理位置查询</td></tr>
+  <tr><td>位图索引</td><td>位图</td><td>低基数列（性别/状态）</td></tr>
+</table>
+
+<h3>7.2 索引操作</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 创建单列索引</span>
+CREATE INDEX idx_users_email ON users(email);
+
+<span class="cm">-- 创建唯一索引</span>
+CREATE UNIQUE INDEX idx_users_username ON users(username);
+
+<span class="cm">-- 创建复合索引（多列顺序重要）</span>
+CREATE INDEX idx_posts_author_date ON posts(author_id, created_at DESC);
+<span class="cm">-- 查询 WHERE author_id = ? ORDER BY created_at DESC => 走此索引</span>
+
+<span class="cm">-- 删除索引</span>
+DROP INDEX IF EXISTS idx_users_email;
+
+<span class="cm">-- EXPLAIN 查看查询是否走索引</span>
+EXPLAIN QUERY PLAN SELECT * FROM users WHERE email = 'test@test.com';</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">index_demo</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm"># 创建索引</span>
+    cursor.executescript(<span class="str">"""
+        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+        CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id);
+        CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
+    """</span>)
+    conn.commit()
+    <span class="builtin">print</span>(<span class="str">"✅ 索引创建完成"</span>)
+
+    <span class="cm"># 查看索引列表</span>
+    cursor.execute(<span class="str">"SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n数据库中的索引:"</span>)
+    <span class="kw">for</span> idx_name, tbl <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  📌 {idx_name:25} → {tbl}"</span>)
+
+    <span class="cm"># EXPLAIN QUERY PLAN：分析查询是否使用索引</span>
+    cursor.execute(<span class="str">"EXPLAIN QUERY PLAN SELECT * FROM users WHERE email = 'test@test.com'"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n查询计划:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(<span class="str">"  "</span>, row)</pre>
+
+<h3>7.3 索引注意事项</h3>
+<div class="card-grid">
+  <div class="card"><h4>✅ 适合建索引</h4><p>WHERE 频繁的列、JOIN 关联的列、ORDER BY 的列、唯一约束列</p></div>
+  <div class="card"><h4>❌ 不要建索引</h4><p>小表（<100行）、频繁更新/插入的表、值极少变化的列（如性别）</p></div>
+  <div class="card"><h4>📏 复合索引最左前缀</h4><p>索引 (a, b, c) -> WHERE a=1 走索引; WHERE b=2 不走; WHERE a=1 AND b=2 走</p></div>
+  <div class="card"><h4>🔄 维护成本</h4><p>索引会降低 INSERT/UPDATE/DELETE 速度（因为要同时更新索引树）</p></div>
+</div>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">explain_comparison</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="cm"># 不加索引的查询</span>
+    cursor.execute(<span class="str">"EXPLAIN QUERY PLAN SELECT * FROM users WHERE age = 25"</span>)
+    <span class="builtin">print</span>(<span class="str">"无索引的查询计划:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall():
+        detail = row[<span class="num">3</span>] <span class="kw">if</span> <span class="builtin">len</span>(row) > <span class="num">3</span> <span class="kw">else</span> row
+        <span class="builtin">print</span>(f<span class="str">"  → {detail} (全表扫描)"</span>)
+
+    <span class="cm"># 加索引后</span>
+    cursor.execute(<span class="str">"CREATE INDEX IF NOT EXISTS idx_users_age ON users(age)"</span>)
+    cursor.execute(<span class="str">"EXPLAIN QUERY PLAN SELECT * FROM users WHERE age = 25"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n有索引的查询计划:"</span>)
+    <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall():
+        detail = row[<span class="num">3</span>] <span class="kw">if</span> <span class="builtin">len</span>(row) > <span class="num">3</span> <span class="kw">else</span> row
+        <span class="builtin">print</span>(f<span class="str">"  → {detail} (走索引)"</span>)</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">📐</span> 8. 数据库设计 &amp; 范式</h2>
+
+<h3>8.1 实体-关系图 (ER 图)</h3>
+<p>数据库设计的第一步：把现实世界抽象成<strong>实体（Entity）</strong>和<strong>关系（Relationship）</strong>。</p>
+<pre><span class="lang-label">ER 图示例：博客系统</span>
+┌──────────┐     1:N     ┌──────────┐     1:N     ┌──────────┐
+│  users   │────────────→│  posts   │────────────→│ comments │
+├──────────┤             ├──────────┤             ├──────────┤
+│ user_id  │             │ post_id  │             │comment_id│
+│ username │             │ title    │             │ body     │
+│ email    │             │ content  │             │ post_id  │
+│ age      │             │ author_id│──FK──→users  │ author_id│──FK──→users
+│ is_active│             │ tags     │             │ created_at│
+│ created_at│             │ created_at│             └──────────┘
+└──────────┘             └──────────┘</pre>
+
+<h3>8.2 三大范式</h3>
+<table>
+  <tr><th>范式</th><th>规则</th><th>违反示例</th></tr>
+  <tr><td><strong>1NF</strong> (第一范式)</td><td>每列不可再分（原子性）</td><td>tags 列存 "Python,SQL,数据库" → 违反</td></tr>
+  <tr><td><strong>2NF</strong> (第二范式)</td><td>满足 1NF，且非主键列完全依赖于主键</td><td>订单表: (order_id, product_id, product_name, qty) → product_name 只依赖 product_id，不是全部主键</td></tr>
+  <tr><td><strong>3NF</strong> (第三范式)</td><td>满足 2NF，且非主键列不传递依赖于主键</td><td>员工表: (emp_id, dept_id, dept_name) → dept_name 通过 dept_id 传递依赖于 emp_id</td></tr>
+</table>
+
+<h3>8.3 设计实践：反范式</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 反范式设计（合理使用，提升查询性能）</span>
+
+<span class="cm"># 范式化设计（推荐）</span>
+schema_normalized = <span class="str">"""
+    -- posts 表不存作者名字，只存 author_id
+    -- 查询时 JOIN users 获取名字
+    SELECT p.title, u.username FROM posts p JOIN users u ON p.author_id = u.user_id;
+"""</span>
+
+<span class="cm"># 反范式化（冗余存储，减少 JOIN）</span>
+schema_denormalized = <span class="str">"""
+    -- 在 posts 表直接存 author_name
+    -- 查询无需 JOIN，但更新用户名时要同步更新所有文章
+    SELECT title, author_name FROM posts WHERE ...;
+"""</span>
+
+<span class="builtin">print</span>(<span class="str">"范式 vs 反范式：设计时先按范式，性能瓶颈时再反范式"</span>)</pre>
+
+<h3>8.4 实战：博客数据库设计</h3>
+<pre><span class="lang-label">SQL</span>
+<span class="cm">-- 完整的博客系统 Schema</span>
+CREATE TABLE users (
+    user_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    username   TEXT    NOT NULL UNIQUE,
+    email      TEXT    NOT NULL UNIQUE,
+    password   TEXT    NOT NULL,
+    age        INTEGER DEFAULT 18,
+    role       TEXT    DEFAULT 'user' CHECK(role IN ('user', 'admin')),
+    is_active  INTEGER DEFAULT 1,
+    created_at TEXT    DEFAULT (datetime('now')),
+    updated_at TEXT    DEFAULT (datetime('now'))
+);
+
+CREATE TABLE categories (
+    cat_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name     TEXT    NOT NULL UNIQUE,
+    slug     TEXT    NOT NULL UNIQUE,
+    parent_id INTEGER REFERENCES categories(cat_id)
+);
+
+CREATE TABLE posts (
+    post_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT    NOT NULL,
+    slug       TEXT    NOT NULL UNIQUE,
+    content    TEXT    NOT NULL,
+    excerpt    TEXT    DEFAULT '',
+    author_id  INTEGER NOT NULL REFERENCES users(user_id),
+    cat_id     INTEGER REFERENCES categories(cat_id),
+    status     TEXT    DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
+    view_count INTEGER DEFAULT 0,
+    created_at TEXT    DEFAULT (datetime('now')),
+    updated_at TEXT    DEFAULT (datetime('now'))
+);
+
+CREATE TABLE comments (
+    comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id    INTEGER NOT NULL REFERENCES posts(post_id),
+    author_id  INTEGER NOT NULL REFERENCES users(user_id),
+    parent_id  INTEGER REFERENCES comments(comment_id),
+    body       TEXT    NOT NULL,
+    created_at TEXT    DEFAULT (datetime('now'))
+);
+
+CREATE TABLE tags (
+    tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name   TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE post_tags (
+    post_id INTEGER NOT NULL REFERENCES posts(post_id),
+    tag_id  INTEGER NOT NULL REFERENCES tags(tag_id),
+    PRIMARY KEY (post_id, tag_id)
+);
+
+<span class="cm">-- 索引</span>
+CREATE INDEX idx_posts_author   ON posts(author_id);
+CREATE INDEX idx_posts_status   ON posts(status);
+CREATE INDEX idx_posts_created  ON posts(created_at DESC);
+CREATE INDEX idx_comments_post  ON comments(post_id);
+CREATE INDEX idx_comments_author ON comments(author_id);</pre>
+
+<div class="highlight">
+  <strong>🎯 设计原则：</strong>
+  <br>1. 先按 <strong>3NF</strong> 设计，反范式化作为性能优化手段
+  <br>2. 主键尽量用<strong>自增整数 / UUID</strong>，不要用业务字段
+  <br>3. 多对多关系用<strong>中间表</strong>（如 post_tags）
+  <br>4. 时间字段统一用 <strong>ISO 8601</strong> 格式
+  <br>5. 适当加上 <strong>CHECK</strong> 约束和数据默认值
+</div>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">⚖️</span> 9. 事务与 ACID</h2>
+
+<h3>9.1 ACID 特性</h3>
+<div class="card-grid">
+  <div class="card"><h4>A — 原子性</h4><p>事务里的操作要么全做，要么全不做。如转账：A扣钱+B加钱，有一条失败就回滚</p></div>
+  <div class="card"><h4>C — 一致性</h4><p>事务前后数据满足所有约束（主键、外键、CHECK）。不违反业务规则</p></div>
+  <div class="card"><h4>I — 隔离性</h4><p>并发执行的事务互不干扰。通过隔离级别控制</p></div>
+  <div class="card"><h4>D — 持久性</h4><p>事务一旦提交，数据就永久保存（写入磁盘）</p></div>
+</div>
+
+<h3>9.2 隔离级别</h3>
+<table>
+  <tr><th>隔离级别</th><th>脏读</th><th>不可重复读</th><th>幻读</th></tr>
+  <tr><td>READ UNCOMMITTED</td><td>⚠ 可能</td><td>⚠ 可能</td><td>⚠ 可能</td></tr>
+  <tr><td>READ COMMITTED</td><td>✅ 不会</td><td>⚠ 可能</td><td>⚠ 可能</td></tr>
+  <tr><td>REPEATABLE READ</td><td>✅ 不会</td><td>✅ 不会</td><td>⚠ 可能</td></tr>
+  <tr><td>SERIALIZABLE</td><td>✅ 不会</td><td>✅ 不会</td><td>✅ 不会</td></tr>
+</table>
+
+<h3>9.3 Python 事务演示</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">transaction_demo</span>(conn):
+    cursor = conn.cursor()
+
+    <span class="builtin">print</span>(<span class="str">"=== 事务演示：银行转账 ===\n"</span>)
+
+    <span class="cm"># 建表</span>
+    cursor.execute(<span class="str">"""
+        CREATE TABLE IF NOT EXISTS accounts (
+            acc_id INTEGER PRIMARY KEY,
+            name    TEXT    NOT NULL,
+            balance REAL    NOT NULL DEFAULT 0
+        )
+    """</span>)
+    cursor.execute(<span class="str">"DELETE FROM accounts"</span>)
+    cursor.execute(<span class="str">"INSERT INTO accounts VALUES (1, 'Alice', 1000)"</span>)
+    cursor.execute(<span class="str">"INSERT INTO accounts VALUES (2, 'Bob', 500)"</span>)
+    conn.commit()
+
+    <span class="kw">def</span> <span class="fn">show_balance</span>():
+        cursor.execute(<span class="str">"SELECT * FROM accounts"</span>)
+        <span class="kw">for</span> acc_id, name, bal <span class="kw">in</span> cursor.fetchall():
+            <span class="builtin">print</span>(f<span class="str">"  {name:8} 余额: ${bal:>7.2f}"</span>)
+
+    <span class="builtin">print</span>(<span class="str">"转账前余额:"</span>)
+    show_balance()
+
+    <span class="cm"># 事务开始：Alice 转 $200 给 Bob</span>
+    <span class="kw">try</span>:
+        conn.execute(<span class="str">"BEGIN TRANSACTION"</span>)
+
+        <span class="cm"># 1. Alice 扣钱</span>
+        cursor.execute(
+            <span class="str">"UPDATE accounts SET balance = balance - 200 WHERE acc_id = 1"</span>
+        )
+        <span class="cm"># 检查 Alice 余额是否足够</span>
+        cursor.execute(<span class="str">"SELECT balance FROM accounts WHERE acc_id = 1"</span>)
+        <span class="kw">if</span> cursor.fetchone()[<span class="num">0</span>] < <span class="num">0</span>:
+            <span class="kw">raise</span> ValueError(<span class="str">"余额不足！"</span>)
+
+        <span class="cm"># 2. Bob 加钱</span>
+        cursor.execute(
+            <span class="str">"UPDATE accounts SET balance = balance + 200 WHERE acc_id = 2"</span>
+        )
+
+        <span class="cm"># 3. 提交</span>
+        conn.commit()
+        <span class="builtin">print</span>(<span class="str">"\n✅ 转账成功! Alice → Bob $200"</span>)
+
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        conn.rollback()
+        <span class="builtin">print</span>(f<span class="str">"\n❌ 转账失败! 回滚事务: {e}"</span>)
+
+    <span class="builtin">print</span>(<span class="str">"\n转账后余额:"</span>)
+    show_balance()
+
+<span class="cm"># 测试</span>
+<span class="cm"># conn = sqlite3.connect(":memory:")</span>
+<span class="cm"># transaction_demo(conn)</span></pre>
+
+<h3>9.4 死锁演示</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="kw">def</span> <span class="fn">deadlock_demo</span>():
+    <span class="str">"""
+    模拟数据库死锁：
+    事务1: UPDATE A → UPDATE B
+    事务2: UPDATE B → UPDATE A
+    """</span>
+    db = sqlite3.connect(<span class="str">":memory:"</span>)
+    db.execute(<span class="str">"CREATE TABLE t (id INT PRIMARY KEY, val INT)"</span>)
+    db.execute(<span class="str">"INSERT INTO t VALUES (1, 10), (2, 20)"</span>)
+    db.commit()
+    db.execute(<span class="str">"PRAGMA journal_mode=WAL"</span>)
+
+    results = []
+
+    <span class="kw">def</span> <span class="fn">tx1</span>():
+        conn = sqlite3.connect(<span class="str">":memory:"</span>)
+        conn.execute(<span class="str">"INSERT INTO t VALUES (1, 10), (2, 20)"</span>)
+        conn.commit()
+        <span class="kw">try</span>:
+            conn.execute(<span class="str">"BEGIN IMMEDIATE"</span>)
+            conn.execute(<span class="str">"UPDATE t SET val = val * 2 WHERE id = 1"</span>)
+            time.sleep(<span class="num">0.05</span>)
+            conn.execute(<span class="str">"UPDATE t SET val = val * 2 WHERE id = 2"</span>)
+            conn.commit()
+            results.append(<span class="str">"tx1 OK"</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            results.append(f<span class="str">"tx1 ERROR: {e}"</span>)
+        <span class="kw">finally</span>:
+            conn.close()
+
+    <span class="kw">def</span> <span class="fn">tx2</span>():
+        conn = sqlite3.connect(<span class="str">":memory:"</span>)
+        conn.execute(<span class="str">"INSERT INTO t VALUES (1, 10), (2, 20)"</span>)
+        conn.commit()
+        <span class="kw">try</span>:
+            conn.execute(<span class="str">"BEGIN IMMEDIATE"</span>)
+            conn.execute(<span class="str">"UPDATE t SET val = val + 5 WHERE id = 2"</span>)
+            time.sleep(<span class="num">0.05</span>)
+            conn.execute(<span class="str">"UPDATE t SET val = val + 5 WHERE id = 1"</span>)
+            conn.commit()
+            results.append(<span class="str">"tx2 OK"</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            results.append(f<span class="str">"tx2 ERROR: {e}"</span>)
+        <span class="kw">finally</span>:
+            conn.close()
+
+    t1 = threading.Thread(target=tx1)
+    t2 = threading.Thread(target=tx2)
+    t1.start(); t2.start()
+    t1.join(); t2.join()
+
+    <span class="builtin">print</span>(<span class="str">"死锁测试结果:"</span>)
+    <span class="kw">for</span> r <span class="kw">in</span> results:
+        <span class="builtin">print</span>(<span class="str">"  "</span>, r)
+    <span class="builtin">print</span>(<span class="str">"✅ 解决：按固定顺序获取资源 或 设置超时重试"</span>)</pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">🐍</span> 10. Python SQLite 实战</h2>
+
+<h3>10.1 连接管理</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">sqlite3</span>
+<span class="kw">from</span> <span class="builtin">contextlib</span> <span class="kw">import</span> contextmanager
+
+<span class="nd">@contextmanager</span>
+<span class="kw">def</span> <span class="fn">get_db</span>(db_path=<span class="str">":memory:"</span>):
+    <span class="str">"""上下文管理器：自动提交/关闭连接"""</span>
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  <span class="cm"># 按列名访问结果</span>
+    conn.execute(<span class="str">"PRAGMA foreign_keys = ON"</span>)
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> conn
+        conn.commit()
+    <span class="kw">except</span> Exception:
+        conn.rollback()
+        <span class="kw">raise</span>
+    <span class="kw">finally</span>:
+        conn.close()
+
+<span class="cm"># 使用</span>
+<span class="kw">with</span> get_db() <span class="kw">as</span> db:
+    cursor = db.execute(<span class="str">"SELECT sqlite_version()"</span>)
+    row = cursor.fetchone()
+    <span class="builtin">print</span>(<span class="str">"版本:"</span>, row[<span class="num">0</span>])</pre>
+
+<h3>10.2 参数化查询（防 SQL 注入）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ❌ 错误：字符串拼接（SQL 注入风险）</span>
+user_input = <span class="str">"admin' OR '1'='1"</span>
+<span class="cm"># cursor.execute(f"SELECT * FROM users WHERE username = '{user_input}'")</span>
+<span class="cm"># → 变成: SELECT * FROM users WHERE username = 'admin' OR '1'='1'</span>
+<span class="cm"># 返回所有用户！</span>
+
+<span class="cm"># ✅ 正确：参数化查询（? 占位符）</span>
+<span class="kw">def</span> <span class="fn">safe_query</span>(conn, username):
+    cursor = conn.execute(
+        <span class="str">"SELECT * FROM users WHERE username = ?"</span>,
+        (username,)         <span class="cm"># 传给 ? 的值，数据库自动转义</span>
+    )
+    <span class="kw">return</span> cursor.fetchall()
+
+<span class="cm"># 批量插入用 executemany</span>
+users = [
+    (<span class="str">"用户A"</span>, <span class="str">"a@test.com"</span>, <span class="num">20</span>),
+    (<span class="str">"用户B"</span>, <span class="str">"b@test.com"</span>, <span class="num">25</span>),
+]
+conn.executemany(
+    <span class="str">"INSERT INTO users (username, email, age) VALUES (?, ?, ?)"</span>,
+    users
+)</pre>
+
+<h3>10.3 事务、回滚与 Savepoint</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">savepoint_demo</span>(conn):
+    <span class="str">"""Savepoint: 事务内的子事务，可以部分回滚"""</span>
+    cursor = conn.cursor()
+
+    <span class="kw">try</span>:
+        cursor.execute(<span class="str">"BEGIN"</span>)
+
+        cursor.execute(<span class="str">"INSERT INTO users (username, email) VALUES ('A', 'a@t.com')"</span>)
+
+        <span class="cm"># 设置保存点</span>
+        cursor.execute(<span class="str">"SAVEPOINT sp1"</span>)
+        cursor.execute(<span class="str">"INSERT INTO users (username, email) VALUES ('B', 'b@t.com')"</span>)
+        cursor.execute(<span class="str">"INSERT INTO users (username, email) VALUES ('C', 'c@t.com')"</span>)
+
+        <span class="cm"># 模拟出错，回滚到保存点</span>
+        <span class="builtin">print</span>(<span class="str">"模拟插入 C 出错，回滚到 savepoint..."</span>)
+        cursor.execute(<span class="str">"ROLLBACK TO SAVEPOINT sp1"</span>)
+
+        <span class="cm"># 释放保存点</span>
+        cursor.execute(<span class="str">"RELEASE SAVEPOINT sp1"</span>)
+
+        conn.commit()
+        <span class="builtin">print</span>(<span class="str">"✅ 提交成功 (B和C被回滚，只有A插入)"</span>)
+
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        conn.rollback()
+        <span class="builtin">print</span>(<span class="str">"❌ 回滚:"</span>, e)</pre>
+
+<h3>10.4 Row Factory + 字典结果</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">row_factory_demo</span>(conn):
+    <span class="str">"""使用 sqlite3.Row 按列名访问"""</span>
+    conn.row_factory = sqlite3.Row
+    cursor = conn.execute(<span class="str">"SELECT * FROM users LIMIT 3"</span>)
+
+    <span class="kw">for</span> row <span class="kw">in</span> cursor:
+        <span class="cm"># 既可以用索引访问</span>
+        <span class="builtin">print</span>(row[<span class="num">1</span>], <span class="str">"|"</span>, end=<span class="str">" "</span>)
+        <span class="cm"># 也可以用列名访问</span>
+        <span class="builtin">print</span>(row[<span class="str">"email"</span>], <span class="str">"|"</span>, row[<span class="str">"age"</span>])
+
+    <span class="cm"># 转成字典</span>
+    conn.row_factory = <span class="kw">lambda</span> c, row: {d[<span class="num">0</span>]: row[i] <span class="kw">for</span> i, d <span class="kw">in</span> <span class="builtin">enumerate</span>(c.description)}
+    cursor = conn.execute(<span class="str">"SELECT username, email FROM users LIMIT 2"</span>)
+    <span class="builtin">print</span>(<span class="str">"\n字典结果:"</span>)
+    <span class="kw">for</span> d <span class="kw">in</span> cursor.fetchall():
+        <span class="builtin">print</span>(<span class="str">"  "</span>, d)</pre>
+
+<h3>10.5 数据库备份</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">backup_database</span>(source_path, target_path):
+    <span class="str">"""在线备份 SQLite 数据库"""</span>
+    src = sqlite3.connect(source_path)
+    dst = sqlite3.connect(target_path)
+
+    <span class="kw">try</span>:
+        src.backup(dst)
+        <span class="builtin">print</span>(f<span class="str">"✅ 备份完成: {source_path} → {target_path}"</span>)
+    <span class="kw">finally</span>:
+        src.close()
+        dst.close()
+
+<span class="cm"># 使用</span>
+<span class="cm"># backup_database("app.db", "app_backup.db")</span></pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">🧩</span> 11. SQLAlchemy ORM</h2>
+<p><strong>ORM（Object-Relational Mapping）</strong> 让你用 Python 对象操作数据库，不用手写 SQL。SQLAlchemy 是 Python 最强大的 ORM。</p>
+
+<h3>11.1 安装与基本模型</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install sqlalchemy</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">sqlalchemy</span> <span class="kw">import</span> create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, func
+<span class="kw">from</span> <span class="builtin">sqlalchemy.orm</span> <span class="kw">import</span> DeclarativeBase, Session, relationship, sessionmaker
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+
+<span class="cm"># 1. 创建引擎</span>
+engine = create_engine(<span class="str">"sqlite:///blog_orm.db"</span>, echo=<span class="kw">True</span>)
+
+<span class="cm"># 2. 定义基类</span>
+<span class="kw">class</span> <span class="cls">Base</span>(DeclarativeBase):
+    <span class="kw">pass</span>
+
+<span class="cm"># 3. 定义模型</span>
+<span class="kw">class</span> <span class="cls">User</span>(Base):
+    __tablename__ = <span class="str">"users"</span>
+
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(<span class="num">50</span>), nullable=False, unique=True)
+    email = Column(String(<span class="num">120</span>), nullable=False, unique=True)
+    age = Column(Integer, default=<span class="num">18</span>)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    <span class="cm"># 关系（ORM 层面的连接）</span>
+    posts = relationship(<span class="str">"Post"</span>, back_populates=<span class="str">"author"</span>)
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        <span class="kw">return</span> f<span class="str">"<User {self.username}>"</span>
+
+<span class="kw">class</span> <span class="cls">Post</span>(Base):
+    __tablename__ = <span class="str">"posts"</span>
+
+    post_id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(<span class="num">200</span>), nullable=False)
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey(<span class="str">"users.user_id"</span>), nullable=False)
+    published = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    author = relationship(<span class="str">"User"</span>, back_populates=<span class="str">"posts"</span>)
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        <span class="kw">return</span> f<span class="str">"<Post {self.title}>"</span>
+
+<span class="cm"># 4. 创建表</span>
+Base.metadata.create_all(engine)
+
+<span class="cm"># 5. 创建会话工厂</span>
+SessionLocal = sessionmaker(bind=engine)</pre>
+
+<h3>11.2 CRUD 操作</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">orm_crud_demo</span>():
+    <span class="str">"""ORM 增删改查"""</span>
+    session = SessionLocal()
+
+    <span class="cm"># === CREATE ===</span>
+    user1 = User(username=<span class="str">"张三"</span>, email=<span class="str">"zhang@orm.com"</span>, age=<span class="num">25</span>)
+    user2 = User(username=<span class="str">"李四"</span>, email=<span class="str">"li@orm.com"</span>, age=<span class="num">30</span>)
+    session.add(user1)
+    session.add(user2)
+    session.commit()
+    <span class="builtin">print</span>(<span class="str">"创建用户:"</span>, user1.user_id, user2.user_id)
+
+    <span class="cm"># === READ ===</span>
+    <span class="cm"># 按主键查</span>
+    user = session.get(User, <span class="num">1</span>)
+    <span class="builtin">print</span>(<span class="str">"查询 ID=1:"</span>, user.username)
+
+    <span class="cm"># 条件过滤</span>
+    users = session.query(User).filter(User.age >= <span class="num">25</span>).all()
+    <span class="builtin">print</span>(<span class="str">"年龄≥25:"</span>, [u.username <span class="kw">for</span> u <span class="kw">in</span> users])
+
+    <span class="cm"># === UPDATE ===</span>
+    user = session.query(User).filter_by(username=<span class="str">"张三"</span>).first()
+    <span class="kw">if</span> user:
+        user.age = <span class="num">26</span>
+        session.commit()
+        <span class="builtin">print</span>(<span class="str">"更新后年龄:"</span>, user.age)
+
+    <span class="cm"># === DELETE ===</span>
+    user = session.query(User).filter_by(username=<span class="str">"李四"</span>).first()
+    <span class="kw">if</span> user:
+        session.delete(user)
+        session.commit()
+        <span class="builtin">print</span>(<span class="str">"删除用户: 李四"</span>)
+
+    session.close()</pre>
+
+<h3>11.3 ORM 关系查询</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">orm_relationship_demo</span>():
+    <span class="str">"""利用 ORM 关系操作关联数据"""</span>
+    session = SessionLocal()
+
+    <span class="cm"># 创建用户并关联文章</span>
+    author = User(username=<span class="str">"王五"</span>, email=<span class="str">"wang@orm.com"</span>)
+    post1 = Post(title=<span class="str">"ORM 入门"</span>, content=<span class="str">"ORM 是对象关系映射..."</span>, author=author)
+    post2 = Post(title=<span class="str">"SQLAlchemy 进阶"</span>, content=<span class="str">"Query API 详解..."</span>, author=author)
+    session.add(author)
+    session.commit()
+
+    <span class="cm"># 通过 author 访问文章 (posts)</span>
+    author = session.query(User).filter_by(username=<span class="str">"王五"</span>).first()
+    <span class="builtin">print</span>(f<span class="str">"{author.username} 的文章:"</span>)
+    <span class="kw">for</span> post <span class="kw">in</span> author.posts:
+        <span class="builtin">print</span>(f<span class="str">"  → {post.title}"</span>)
+
+    <span class="cm"># 通过 post 访问作者 (author)</span>
+    post = session.query(Post).filter_by(title=<span class="str">"ORM 入门"</span>).first()
+    <span class="builtin">print</span>(f<span class="str">"\n文章 '{post.title}' 作者: {post.author.username}"</span>)
+
+    <span class="cm"># JOIN 查询（ORM 方式）</span>
+    results = session.query(Post, User).join(User).all()
+    <span class="builtin">print</span>(<span class="str">"\n文章 + 作者 (JOIN):"</span>)
+    <span class="kw">for</span> post, user <span class="kw">in</span> results:
+        <span class="builtin">print</span>(f<span class="str">"  {post.title} — {user.username}"</span>)
+
+    session.close()</pre>
+
+<h3>11.4 SQLAlchemy vs 原生 SQL 对比</h3>
+<table>
+  <tr><th>操作</th><th>原生 SQL</th><th>SQLAlchemy ORM</th></tr>
+  <tr><td>插入</td><td><code>INSERT INTO users ...</code></td><td><code>session.add(User(...))</code></td></tr>
+  <tr><td>查询</td><td><code>SELECT * FROM users WHERE age > 25</code></td><td><code>session.query(User).filter(User.age > 25)</code></td></tr>
+  <tr><td>更新</td><td><code>UPDATE users SET age=26 WHERE id=1</code></td><td><code>user.age = 26; session.commit()</code></td></tr>
+  <tr><td>删除</td><td><code>DELETE FROM users WHERE id=1</code></td><td><code>session.delete(user)</code></td></tr>
+  <tr><td>JOIN</td><td><code>SELECT ... FROM posts JOIN users</code></td><td><code>session.query(Post).join(User)</code></td></tr>
+</table>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">🍃</span> 12. NoSQL 入门</h2>
+
+<h3>12.1 MongoDB 文档数据库</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install pymongo</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pymongo</span> <span class="kw">import</span> MongoClient
+
+<span class="cm"># 连接（不需要预定义 Schema）</span>
+client = MongoClient(<span class="str">"mongodb://localhost:27017"</span>)
+db = client[<span class="str">"blog"</span>]
+users_col = db[<span class="str">"users"</span>]
+
+<span class="cm"># 插入（文档 = JSON 对象）</span>
+user = {
+    <span class="str">"username"</span>: <span class="str">"张三"</span>,
+    <span class="str">"email"</span>: <span class="str">"zhang@mongo.com"</span>,
+    <span class="str">"age"</span>: <span class="num">25</span>,
+    <span class="str">"tags"</span>: [<span class="str">"python"</span>, <span class="str">"database"</span>],
+    <span class="str">"address"</span>: {<span class="str">"city"</span>: <span class="str">"北京"</span>, <span class="str">"street"</span>: <span class="str">"中关村"</span>},
+}
+result = users_col.insert_one(user)
+<span class="builtin">print</span>(<span class="str">"插入 ID:"</span>, result.inserted_id)
+
+<span class="cm"># 查询</span>
+<span class="kw">for</span> u <span class="kw">in</span> users_col.find({<span class="str">"age"</span>: {<span class="str">"$gte"</span>: <span class="num">25</span>}}):
+    <span class="builtin">print</span>(u[<span class="str">"username"</span>], u[<span class="str">"email"</span>])
+
+<span class="cm"># MongoDB vs SQL 概念对照</span>
+comparison = [
+    (<span class="str">"数据库"</span>, <span class="str">"Database"</span>, <span class="str">"Database"</span>),
+    (<span class="str">"表"</span>, <span class="str">"Table"</span>, <span class="str">"Collection"</span>),
+    (<span class="str">"行"</span>, <span class="str">"Row"</span>, <span class="str">"Document (JSON)"</span>),
+    (<span class="str">"列"</span>, <span class="str">"Column"</span>, <span class="str">"Field"</span>),
+    (<span class="str">"主键"</span>, <span class="str">"PRIMARY KEY"</span>, <span class="str">"_id"</span>),
+    (<span class="str">"索引"</span>, <span class="str">"CREATE INDEX"</span>, <span class="str">"create_index()"</span>),
+    (<span class="str">"Schema"</span>, <span class="str">"严格定义"</span>, <span class="str">"灵活（无 Schema）"</span>),
+]
+<span class="builtin">print</span>(<span class="str">"\nSQL vs MongoDB 对照:"</span>)
+<span class="kw">for</span> name, sql, mongo <span class="kw">in</span> comparison:
+    <span class="builtin">print</span>(f<span class="str">"  {name:14} | SQL: {sql:15} | MongoDB: {mongo}"</span>)</pre>
+
+<h3>12.2 Redis 缓存 / KV 存储</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install redis</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">redis</span>
+
+<span class="cm"># 连接</span>
+r = redis.Redis(host=<span class="str">"localhost"</span>, port=<span class="num">6379</span>, db=<span class="num">0</span>)
+
+<span class="cm"># String（缓存）</span>
+r.set(<span class="str">"user:1:name"</span>, <span class="str">"张三"</span>)
+r.setex(<span class="str">"session:abc123"</span>, <span class="num">3600</span>, <span class="str">"user_id=1"</span>)  <span class="cm"># 1 小时过期</span>
+<span class="builtin">print</span>(r.get(<span class="str">"user:1:name"</span>))          <span class="cm"># b'张三'</span>
+
+<span class="cm"># Hash（类似 Python dict）</span>
+r.hset(<span class="str">"user:1"</span>, mapping={<span class="str">"name"</span>: <span class="str">"张三"</span>, <span class="str">"age"</span>: <span class="num">25</span>, <span class="str">"email"</span>: <span class="str">"z@t.com"</span>})
+<span class="builtin">print</span>(r.hgetall(<span class="str">"user:1"</span>))             <span class="cm"># {b'name': b'...', ...}</span>
+<span class="builtin">print</span>(r.hget(<span class="str">"user:1"</span>, <span class="str">"name"</span>))       <span class="cm"># b'张三'</span>
+
+<span class="cm"># List（队列）</span>
+r.lpush(<span class="str">"queue:email"</span>, <span class="str">"email1"</span>, <span class="str">"email2"</span>)
+item = r.rpop(<span class="str">"queue:email"</span>)          <span class="cm"># 出队</span>
+<span class="builtin">print</span>(<span class="str">"出队:"</span>, item)
+
+<span class="cm"># Set 集合运算</span>
+r.sadd(<span class="str">"user:1:friends"</span>, <span class="str">"user2"</span>, <span class="str">"user3"</span>)
+r.sadd(<span class="str">"user:2:friends"</span>, <span class="str">"user1"</span>, <span class="str">"user3"</span>)
+common = r.sinter(<span class="str">"user:1:friends"</span>, <span class="str">"user:2:friends"</span>)  <span class="cm"># 共同好友</span>
+<span class="builtin">print</span>(<span class="str">"共同好友:"</span>, common)
+
+<span class="cm"># Redis 常用数据类型</span>
+types = [
+    (<span class="str">"String"</span>, <span class="str">"缓存、计数器、Session"</span>),
+    (<span class="str">"Hash"</span>, <span class="str">"用户信息、对象存储"</span>),
+    (<span class="str">"List"</span>, <span class="str">"消息队列、时间线"</span>),
+    (<span class="str">"Set"</span>, <span class="str">"标签、共同好友、去重"</span>),
+    (<span class="str">"Sorted Set"</span>, <span class="str">"排行榜、延迟队列"</span>),
+]
+<span class="builtin">print</span>(<span class="str">"\nRedis 数据类型:"</span>)
+<span class="kw">for</span> name, use <span class="kw">in</span> types:
+    <span class="builtin">print</span>(f<span class="str">"  {name:12} → {use}"</span>)</pre>
+
+<h3>12.3 选型对照</h3>
+<table>
+  <tr><th>场景</th><th>推荐</th><th>原因</th></tr>
+  <tr><td>金融交易、强一致</td><td>PostgreSQL / MySQL</td><td>ACID + 事务</td></tr>
+  <tr><td>用户评论、灵活 Schema</td><td>MongoDB</td><td>无 Schema，文档嵌套</td></tr>
+  <tr><td>热点数据缓存</td><td>Redis</td><td>纯内存，微秒级延迟</td></tr>
+  <tr><td>社交图谱、好友推荐</td><td>Neo4j (图数据库)</td><td>关系查询毫秒级</td></tr>
+  <tr><td>时序数据、监控</td><td>InfluxDB / TimescaleDB</td><td>时序优化、降采样</td></tr>
+  <tr><td>全文搜索</td><td>Elasticsearch</td><td>倒排索引、模糊搜索</td></tr>
+</table>
+</section>
+
+<!-- ============= 13 ============= -->
+<section id="sec13">
+<h2><span class="emoji">🚀</span> 13. 综合实战</h2>
+
+<h3>13.1 完整的数据导入导出工具</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">csv</span>
+<span class="kw">import</span> <span class="builtin">json</span>
+<span class="kw">import</span> <span class="builtin">io</span>
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> List, Dict
+
+<span class="kw">class</span> <span class="cls">DatabaseToolkit</span>:
+    <span class="str">"""数据库工具包 —— 导入、导出、报表"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, db_path=<span class="str">"app.db"</span>):
+        self.conn = sqlite3.connect(db_path)
+        self.conn.row_factory = sqlite3.Row
+
+    <span class="kw">def</span> <span class="fn">export_to_csv</span>(self, table: <span class="builtin">str</span>, output_file: <span class="builtin">str</span>):
+        cursor = self.conn.execute(f<span class="str">"SELECT * FROM {table}"</span>)
+        rows = cursor.fetchall()
+        <span class="kw">if</span> <span class="kw">not</span> rows: <span class="kw">return</span>
+
+        columns = [d[<span class="num">0</span>] <span class="kw">for</span> d <span class="kw">in</span> cursor.description]
+        <span class="kw">with</span> <span class="builtin">open</span>(output_file, <span class="str">"w"</span>, newline=<span class="str">""</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+            writer = csv.writer(f)
+            writer.writerow(columns)
+            writer.writerows([[row[c] <span class="kw">for</span> c <span class="kw">in</span> columns] <span class="kw">for</span> row <span class="kw">in</span> rows])
+        <span class="builtin">print</span>(f<span class="str">"✅ 导出 {table} → {output_file} ({len(rows)} 行)"</span>)
+
+    <span class="kw">def</span> <span class="fn">export_to_json</span>(self, table: <span class="builtin">str</span>, output_file: <span class="builtin">str</span>):
+        cursor = self.conn.execute(f<span class="str">"SELECT * FROM {table}"</span>)
+        rows = [<span class="builtin">dict</span>(row) <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall()]
+        <span class="cm"># JSON 序列化 datetime 等</span>
+        <span class="kw">def</span> <span class="fn">serialize</span>(v):
+            <span class="kw">if</span> <span class="builtin">isinstance</span>(v, (datetime,)):
+                <span class="kw">return</span> v.isoformat()
+            <span class="kw">return</span> v
+        <span class="kw">for</span> row <span class="kw">in</span> rows:
+            <span class="kw">for</span> k <span class="kw">in</span> row:
+                row[k] = serialize(row[k])
+
+        <span class="kw">with</span> <span class="builtin">open</span>(output_file, <span class="str">"w"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+            json.dump(rows, f, ensure_ascii=<span class="kw">False</span>, indent=<span class="num">2</span>)
+        <span class="builtin">print</span>(f<span class="str">"✅ 导出 {table} → {output_file} ({len(rows)} 行)"</span>)
+
+    <span class="kw">def</span> <span class="fn">import_from_csv</span>(self, table: <span class="builtin">str</span>, csv_file: <span class="builtin">str</span>):
+        <span class="kw">with</span> <span class="builtin">open</span>(csv_file, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+            reader = csv.DictReader(f)
+            rows = [row <span class="kw">for</span> row <span class="kw">in</span> reader]
+
+        <span class="kw">if</span> <span class="kw">not</span> rows: <span class="kw">return</span>
+        columns = <span class="builtin">list</span>(rows[<span class="num">0</span>].keys())
+        placeholders = <span class="str">", "</span>.join([<span class="str">"?"</span>] * <span class="builtin">len</span>(columns))
+        sql = f<span class="str">"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"</span>
+        values = [[row[c] <span class="kw">for</span> c <span class="kw">in</span> columns] <span class="kw">for</span> row <span class="kw">in</span> rows]
+        self.conn.executemany(sql, values)
+        self.conn.commit()
+        <span class="builtin">print</span>(f<span class="str">"✅ 从 {csv_file} 导入 {table} ({len(rows)} 行)"</span>)
+
+    <span class="kw">def</span> <span class="fn">generate_report</span>(self):
+        <span class="str">"""生成数据库统计报告"""</span>
+        cursor = self.conn.cursor()
+        report = {}
+
+        cursor.execute(<span class="str">"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"</span>)
+        tables = [row[<span class="num">0</span>] <span class="kw">for</span> row <span class="kw">in</span> cursor.fetchall()]
+
+        <span class="kw">for</span> table <span class="kw">in</span> tables:
+            cursor.execute(f<span class="str">"SELECT COUNT(*) FROM {table}"</span>)
+            row_count = cursor.fetchone()[<span class="num">0</span>]
+            cursor.execute(f<span class="str">"PRAGMA table_info({table})"</span>)
+            col_count = <span class="builtin">len</span>(cursor.fetchall())
+            report[table] = {<span class="str">"rows"</span>: row_count, <span class="str">"columns"</span>: col_count}
+
+        <span class="builtin">print</span>(<span class="str">"\n📊 数据库统计报告"</span>)
+        <span class="builtin">print</span>(<span class="str">"="</span> * <span class="num">50</span>)
+        total_rows = <span class="num">0</span>
+        <span class="kw">for</span> table, info <span class="kw">in</span> report.items():
+            <span class="builtin">print</span>(f<span class="str">"  {table:15} | {info['columns']:>3} 列 | {info['rows']:>6} 行"</span>)
+            total_rows += info[<span class="str">"rows"</span>]
+        <span class="builtin">print</span>(<span class="str">"="</span> * <span class="num">50</span>)
+        <span class="builtin">print</span>(f<span class="str">"  共 {len(tables)} 张表, {total_rows} 行数据"</span>)
+        <span class="kw">return</span> report
+
+    <span class="kw">def</span> <span class="fn">close</span>(self):
+        self.conn.close()</pre>
+
+<h3>13.2 从零开始的完整演示</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">if</span> __name__ == __name__:
+    <span class="builtin">print</span>(<span class="str">"=== 数据库完整演示 ===\n"</span>)
+
+    <span class="cm"># 1. 创建数据库 + 表</span>
+    conn = sqlite3.connect(<span class="str">":memory:"</span>)
+    cur = conn.cursor()
+    cur.executescript(<span class="str">"""
+        CREATE TABLE users(
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE,
+            age INTEGER DEFAULT 18
+        );
+        CREATE TABLE orders(
+            order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(user_id),
+            product TEXT NOT NULL,
+            price REAL NOT NULL,
+            qty INTEGER DEFAULT 1,
+            order_date TEXT DEFAULT (datetime('now'))
+        );
+    """</span>)
+
+    <span class="cm"># 2. 插入数据</span>
+    cur.executemany(<span class="str">"INSERT INTO users(name, email, age) VALUES (?,?,?)"</span>,
+        [(<span class="str">"Alice"</span>, <span class="str">"alice@t.com"</span>, <span class="num">25</span>),
+         (<span class="str">"Bob"</span>, <span class="str">"bob@t.com"</span>, <span class="num">32</span>),
+         (<span class="str">"Charlie"</span>, <span class="str">"charlie@t.com"</span>, <span class="num">28</span>)])
+    cur.executemany(<span class="str">"INSERT INTO orders(user_id, product, price, qty) VALUES (?,?,?,?)"</span>,
+        [(<span class="num">1</span>, <span class="str">"笔记本电脑"</span>, <span class="num">5999</span>, <span class="num">1</span>),
+         (<span class="num">1</span>, <span class="str">"鼠标"</span>, <span class="num">99</span>, <span class="num">2</span>),
+         (<span class="num">2</span>, <span class="str">"键盘"</span>, <span class="num">299</span>, <span class="num">1</span>),
+         (<span class="num">3</span>, <span class="str">"显示器"</span>, <span class="num">1999</span>, <span class="num">1</span>)])
+    conn.commit()
+
+    <span class="cm"># 3. 查询：用户消费总额</span>
+    cur.execute(<span class="str">"""
+        SELECT u.name,
+               COUNT(o.order_id) AS orders,
+               ROUND(SUM(o.price * o.qty), 2) AS total_spent
+        FROM users u
+        LEFT JOIN orders o ON u.user_id = o.user_id
+        GROUP BY u.user_id
+        ORDER BY total_spent DESC
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"用户消费统计:"</span>)
+    <span class="kw">for</span> name, cnt, total <span class="kw">in</span> cur.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  {name:10} | 订单 {cnt} 笔 | 总共 ¥{total:>8.2f}"</span>)
+
+    <span class="cm"># 4. 找出最贵订单</span>
+    cur.execute(<span class="str">"""
+        SELECT u.name, o.product, o.price * o.qty AS total
+        FROM orders o JOIN users u ON o.user_id = u.user_id
+        ORDER BY total DESC LIMIT 1
+    """</span>)
+    name, prod, total = cur.fetchone()
+    <span class="builtin">print</span>(f<span class="str">"\n🏆 最贵订单: {name} 购买了 {prod} (¥{total})"</span>)
+
+    <span class="cm"># 5. 使用窗口函数排名</span>
+    cur.execute(<span class="str">"""
+        SELECT name, age,
+               ROW_NUMBER() OVER (ORDER BY age DESC) AS rank
+        FROM users
+    """</span>)
+    <span class="builtin">print</span>(<span class="str">"\n用户年龄排名:"</span>)
+    <span class="kw">for</span> name, age, rn <span class="kw">in</span> cur.fetchall():
+        <span class="builtin">print</span>(f<span class="str">"  #{rn} {name:10} {age}岁"</span>)
+
+    conn.close()
+    <span class="builtin">print</span>(<span class="str">"\n✅ 完整演示结束!"</span>)</pre>
+
+<h3>13.3 SQL 面试高频题速查</h3>
+<div class="card-grid">
+  <div class="card"><h4>1. 第二高薪水</h4><p><code>SELECT MAX(salary) FROM emp WHERE salary < (SELECT MAX(salary) FROM emp)</code></p></div>
+  <div class="card"><h4>2. 部门最高薪</h4><p><code>SELECT dept, MAX(salary) FROM emp GROUP BY dept</code></p></div>
+  <div class="card"><h4>3. 连续登录 N 天</h4><p><code>DATE(login_date) - ROW_NUMBER() OVER (PARTITION BY uid ORDER BY date)</code> 分组</p></div>
+  <div class="card"><h4>4. 查重复邮箱</h4><p><code>SELECT email, COUNT(*) FROM users GROUP BY email HAVING COUNT(*) > 1</code></p></div>
+  <div class="card"><h4>5. 删除重复行</h4><p><code>DELETE FROM users WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY email)</code></p></div>
+  <div class="card"><h4>6. 累加求和</h4><p><code>SELECT date, amount, SUM(amount) OVER (ORDER BY date) AS cumulative FROM sales</code></p></div>
+</div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  🗄 数据库 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

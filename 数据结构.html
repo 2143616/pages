@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据结构 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--orange), var(--red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 {
+  font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px;
+  color: var(--teal);
+}
+section h4 {
+  font-size: 1rem; font-weight: 600; margin: 16px 0 8px;
+  color: var(--pink);
+}
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px;
+}
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>📊 数据结构 从入门到精通</h1>
+  <p>数组 · 链表 · 栈 · 队列 · 哈希表 · 树 · 图 · 高级结构 — Python 完整实现</p>
+  <div class="tags">
+    <span>🐍 Python 3</span>
+    <span>🧩 手写实现</span>
+    <span>📘 教学文档</span>
+    <span>🎯 面试准备</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. 数据结构总览</a></li>
+    <li><a href="#sec2">2. 数组与列表</a></li>
+    <li><a href="#sec3">3. 链表</a></li>
+    <li><a href="#sec4">4. 栈</a></li>
+    <li><a href="#sec5">5. 队列</a></li>
+    <li><a href="#sec6">6. 哈希表</a></li>
+    <li><a href="#sec7">7. 树与二叉树</a></li>
+    <li><a href="#sec8">8. 二叉搜索树 (BST)</a></li>
+    <li><a href="#sec9">9. 堆 &amp; 优先队列</a></li>
+    <li><a href="#sec10">10. 字典树 (Trie)</a></li>
+    <li><a href="#sec11">11. 图</a></li>
+    <li><a href="#sec12">12. 并查集</a></li>
+    <li><a href="#sec13">13. 线段树 &amp; 树状数组</a></li>
+    <li><a href="#sec14">14. 复杂度速查表</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">🧭</span> 1. 数据结构总览</h2>
+<p><strong>数据结构</strong> 是计算机存储、组织数据的方式。选择合适的数据结构可以<strong>极大地影响算法效率</strong>——一个好结构能让 O(n²) 变成 O(log n)。</p>
+
+<h3>两大维度</h3>
+<div class="card-grid">
+  <div class="card"><h4>📦 线性结构</h4><p>数据元素排列成一条线：数组、链表、栈、队列。遍历方式单一（前→后）</p></div>
+  <div class="card"><h4>🌳 非线性结构</h4><p>数据元素之间有层次/网状关系：树、图、集合。遍历方式多样（DFS / BFS）</p></div>
+</div>
+
+<h3>数据结构 vs. 算法</h3>
+<pre><span class="lang-label">名言</span>
+程序 = 数据结构 + 算法
+           — Niklaus Wirth
+
+数据结构决定「怎么存」，算法决定「怎么算」。
+选错了结构，再好的算法也救不了。
+
+例：
+  — 需要频繁按索引访问? → 数组 O(1)
+  — 需要频繁在中间插入? → 链表 O(1)
+  — 需要快速查找?        → 哈希表 O(1) / BST O(log n)</pre>
+
+<table>
+  <tr><th>场景</th><th>推荐结构</th><th>原因</th></tr>
+  <tr><td>表达式求值</td><td>栈</td><td>后进先出天然匹配括号/运算</td></tr>
+  <tr><td>任务排队</td><td>队列</td><td>先来先服务</td></tr>
+  <tr><td>路由器转发</td><td>字典树 (Trie)</td><td>IP 前缀匹配 O(len)</td></tr>
+  <tr><td>社交关系推荐</td><td>图</td><td>朋友关系 = 图的边</td></tr>
+  <tr><td>寻找最短路径</td><td>图 + Dijkstra</td><td>加权最短路径</td></tr>
+  <tr><td>稀疏数据查找</td><td>哈希表</td><td>平均 O(1) 查找</td></tr>
+</table>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">📋</span> 2. 数组与列表</h2>
+<p><strong>数组（Array）</strong> 是最基础的数据结构——连续内存地址存储同类元素。Python 的 <code>list</code> 是动态数组（ArrayList），底层用 C 数组实现，自动扩容。</p>
+
+<h3>特性</h3>
+<table>
+  <tr><th>操作</th><th>Python list</th><th>复杂度</th></tr>
+  <tr><td>按索引访问/修改</td><td><code>arr[i]</code></td><td>O(1)</td></tr>
+  <tr><td>尾部添加</td><td><code>arr.append(x)</code></td><td>平均 O(1)</td></tr>
+  <tr><td>尾部弹出</td><td><code>arr.pop()</code></td><td>O(1)</td></tr>
+  <tr><td>任意位置插入</td><td><code>arr.insert(i, x)</code></td><td>O(n) — 需要移动元素</td></tr>
+  <tr><td>任意位置删除</td><td><code>arr.pop(i)</code></td><td>O(n)</td></tr>
+  <tr><td>查找值</td><td><code>x in arr</code></td><td>O(n)</td></tr>
+  <tr><td>排序</td><td><code>arr.sort()</code></td><td>O(n log n)</td></tr>
+</table>
+
+<h3>常见操作</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 创建</span>
+arr = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+zeros = [<span class="num">0</span>] * <span class="num">10</span>
+matrix = [[<span class="num">0</span>] * <span class="num">4</span> <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">3</span>)]  <span class="cm"># 3×4 矩阵</span>
+
+<span class="cm"># 切片 — 前闭后开</span>
+<span class="builtin">print</span>(arr[<span class="num">1</span>:<span class="num">3</span>])     <span class="cm"># [2, 3]</span>
+<span class="builtin">print</span>(arr[::<span class="num">2</span>])       <span class="cm"># [1, 3, 5] → 步长</span>
+<span class="builtin">print</span>(arr[::-<span class="num">1</span>])      <span class="cm"># [5, 4, 3, 2, 1] → 反转</span>
+
+<span class="cm"># 遍历</span>
+<span class="kw">for</span> i, v <span class="kw">in</span> <span class="builtin">enumerate</span>(arr):
+    <span class="builtin">print</span>(i, v)
+
+<span class="cm"># 列表推导式 — 灵活创建</span>
+squares = [x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>) <span class="kw">if</span> x % <span class="num">2</span> == <span class="num">0</span>]
+<span class="builtin">print</span>(squares)  <span class="cm"># [0, 4, 16, 36, 64]</span></pre>
+
+<h3>手写动态数组（理解底层）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">DynamicArray</span>:
+    <span class="str">"""手动实现动态数组（模拟 Python list 底层）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, capacity=<span class="num">2</span>):
+        self._capacity = capacity
+        self._size = <span class="num">0</span>
+        self._data = [<span class="kw">None</span>] * capacity
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self): <span class="kw">return</span> self._size
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, i):
+        <span class="kw">if</span> i < <span class="num">0</span> <span class="kw">or</span> i >= self._size:
+            <span class="kw">raise</span> IndexError(<span class="str">"out of range"</span>)
+        <span class="kw">return</span> self._data[i]
+
+    <span class="kw">def</span> <span class="fn">append</span>(self, val):
+        <span class="kw">if</span> self._size == self._capacity:
+            self._resize(self._capacity * <span class="num">2</span>)  <span class="cm"># 翻倍扩容</span>
+        self._data[self._size] = val
+        self._size += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">pop</span>(self):
+        <span class="kw">if</span> self._size == <span class="num">0</span>:
+            <span class="kw">raise</span> IndexError(<span class="str">"pop from empty"</span>)
+        val = self._data[self._size - <span class="num">1</span>]
+        self._size -= <span class="num">1</span>
+        <span class="kw">if</span> self._size > <span class="num">0</span> <span class="kw">and</span> self._size <= self._capacity // <span class="num">4</span>:
+            self._resize(self._capacity // <span class="num">2</span>)  <span class="cm"># 缩容</span>
+        <span class="kw">return</span> val
+
+    <span class="kw">def</span> <span class="fn">_resize</span>(self, new_cap):
+        new_data = [<span class="kw">None</span>] * new_cap
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(self._size):
+            new_data[i] = self._data[i]
+        self._data = new_data
+        self._capacity = new_cap
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        <span class="kw">return</span> <span class="str">"["</span> + <span class="str">", "</span>.join(<span class="builtin">str</span>(self._data[i]) <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(self._size)) + <span class="str">"]"</span>
+
+<span class="cm"># 测试</span>
+da = DynamicArray()
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">8</span>): da.append(i)
+<span class="builtin">print</span>(da, <span class="str">"容量:"</span>, da._capacity)  <span class="cm"># [0, 1, 2, 3, 4, 5, 6, 7] 容量: 8</span></pre>
+
+<div class="highlight">
+  <strong>⚠️ 常见坑：</strong>
+  <br><code>[[0] * 5] * 3</code> 创建的不是 3 行 5 列——3 个引用指向同一个列表！应用列表推导式：<code>[[0] * 5 for _ in range(3)]</code>
+</div>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">⛓</span> 3. 链表</h2>
+<p><strong>链表（Linked List）</strong> 是由节点组成的线性结构，每个节点包含<strong>数据 + 指向下一个节点的指针</strong>。不同于数组的连续内存，链表的节点在内存中离散分布。</p>
+
+<h3>3.1 单向链表</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">ListNode</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, val=<span class="num">0</span>, next=<span class="kw">None</span>):
+        self.val = val
+        self.next = next
+
+<span class="kw">class</span> <span class="cls">LinkedList</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.head = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">append</span>(self, val):          <span class="cm"># 尾部添加</span>
+        <span class="kw">if</span> <span class="kw">not</span> self.head:
+            self.head = ListNode(val)
+            <span class="kw">return</span>
+        cur = self.head
+        <span class="kw">while</span> cur.next: cur = cur.next
+        cur.next = ListNode(val)
+
+    <span class="kw">def</span> <span class="fn">prepend</span>(self, val):         <span class="cm"># 头部添加</span>
+        self.head = ListNode(val, self.head)
+
+    <span class="kw">def</span> <span class="fn">delete</span>(self, val):          <span class="cm"># 删除第一个匹配值</span>
+        <span class="kw">if</span> <span class="kw">not</span> self.head: <span class="kw">return</span>
+        <span class="kw">if</span> self.head.val == val:
+            self.head = self.head.next
+            <span class="kw">return</span>
+        cur = self.head
+        <span class="kw">while</span> cur.next <span class="kw">and</span> cur.next.val != val:
+            cur = cur.next
+        <span class="kw">if</span> cur.next:
+            cur.next = cur.next.next
+
+    <span class="kw">def</span> <span class="fn">find</span>(self, val) -> <span class="builtin">int</span>:   <span class="cm"># 查找 → 索引</span>
+        cur, i = self.head, <span class="num">0</span>
+        <span class="kw">while</span> cur:
+            <span class="kw">if</span> cur.val == val: <span class="kw">return</span> i
+            cur = cur.next; i += <span class="num">1</span>
+        <span class="kw">return</span> -<span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">to_list</span>(self) -> <span class="builtin">list</span>:
+        result, cur = [], self.head
+        <span class="kw">while</span> cur:
+            result.append(cur.val)
+            cur = cur.next
+        <span class="kw">return</span> result
+
+<span class="cm"># 测试</span>
+ll = LinkedList()
+ll.append(<span class="num">1</span>); ll.append(<span class="num">2</span>); ll.append(<span class="num">3</span>)
+ll.prepend(<span class="num">0</span>)
+<span class="builtin">print</span>(ll.to_list())  <span class="cm"># [0, 1, 2, 3]</span>
+ll.delete(<span class="num">2</span>)
+<span class="builtin">print</span>(ll.to_list())  <span class="cm"># [0, 1, 3]</span></pre>
+
+<h3>3.2 反转链表（高频面试题）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">reverse_list</span>(head: ListNode) -> ListNode:
+    <span class="str">"""反转单向链表（迭代法）"""</span>
+    prev = <span class="kw">None</span>
+    cur = head
+    <span class="kw">while</span> cur:
+        next_node = cur.next   <span class="cm"># 保存下一个</span>
+        cur.next = prev        <span class="cm"># 指向前一个</span>
+        prev = cur             <span class="cm"># prev 前进</span>
+        cur = next_node        <span class="cm"># cur 前进</span>
+    <span class="kw">return</span> prev               <span class="cm"># 新的头</span>
+
+<span class="kw">def</span> <span class="fn">reverse_recursive</span>(head: ListNode) -> ListNode:
+    <span class="str">"""反转链表（递归法，更优雅）"""</span>
+    <span class="kw">if</span> <span class="kw">not</span> head <span class="kw">or</span> <span class="kw">not</span> head.next:
+        <span class="kw">return</span> head
+    new_head = reverse_recursive(head.next)
+    head.next.next = head       <span class="cm"># 让下一个节点指向自己</span>
+    head.next = <span class="kw">None</span>
+    <span class="kw">return</span> new_head
+
+<span class="cm"># 测试</span>
+ll = LinkedList()
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>): ll.append(i)
+<span class="builtin">print</span>(<span class="str">"原:"</span>, ll.to_list())
+ll.head = reverse_recursive(ll.head)
+<span class="builtin">print</span>(<span class="str">"反转后:"</span>, ll.to_list())</pre>
+
+<h3>3.3 双向链表</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">DListNode</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, val=<span class="num">0</span>, prev=<span class="kw">None</span>, next=<span class="kw">None</span>):
+        self.val = val
+        self.prev = prev
+        self.next = next
+
+<span class="kw">class</span> <span class="cls">DoublyLinkedList</span>:
+    <span class="str">"""双向链表（带哨兵头尾）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.head = DListNode()       <span class="cm"># 哨兵</span>
+        self.tail = DListNode()
+        self.head.next = self.tail
+        self.tail.prev = self.head
+        self._size = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self): <span class="kw">return</span> self._size
+
+    <span class="kw">def</span> <span class="fn">append</span>(self, val):
+        node = DListNode(val)
+        node.prev = self.tail.prev
+        node.next = self.tail
+        self.tail.prev.next = node
+        self.tail.prev = node
+        self._size += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">prepend</span>(self, val):
+        node = DListNode(val)
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+        self._size += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">pop_left</span>(self):
+        <span class="kw">if</span> self._size == <span class="num">0</span>: <span class="kw">raise</span> IndexError
+        node = self.head.next
+        val = node.val
+        self.head.next = node.next
+        node.next.prev = self.head
+        self._size -= <span class="num">1</span>
+        <span class="kw">return</span> val
+
+    <span class="kw">def</span> <span class="fn">pop_right</span>(self):
+        <span class="kw">if</span> self._size == <span class="num">0</span>: <span class="kw">raise</span> IndexError
+        node = self.tail.prev
+        val = node.val
+        self.tail.prev = node.prev
+        node.prev.next = self.tail
+        self._size -= <span class="num">1</span>
+        <span class="kw">return</span> val
+
+    <span class="kw">def</span> <span class="fn">to_list</span>(self):
+        result = []
+        cur = self.head.next
+        <span class="kw">while</span> cur <span class="kw">is not</span> self.tail:
+            result.append(cur.val)
+            cur = cur.next
+        <span class="kw">return</span> result</pre>
+
+<h3>3.4 快慢指针典型题</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">has_cycle</span>(head: ListNode) -> <span class="builtin">bool</span>:
+    <span class="str">"""检测链表是否有环（Floyd 判圈算法）"""</span>
+    slow = fast = head
+    <span class="kw">while</span> fast <span class="kw">and</span> fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        <span class="kw">if</span> slow <span class="kw">is</span> fast:
+            <span class="kw">return</span> True
+    <span class="kw">return</span> False
+
+<span class="kw">def</span> <span class="fn">find_middle</span>(head: ListNode) -> ListNode:
+    <span class="str">"""找链表中间节点"""</span>
+    slow = fast = head
+    <span class="kw">while</span> fast <span class="kw">and</span> fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    <span class="kw">return</span> slow
+
+<span class="kw">def</span> <span class="fn">get_intersection</span>(headA: ListNode, headB: ListNode) -> ListNode | <span class="kw">None</span>:
+    <span class="str">"""找出两个链表的交点（相交链表）"""</span>
+    a, b = headA, headB
+    <span class="kw">while</span> a <span class="kw">is not</span> b:
+        a = a.next <span class="kw">if</span> a <span class="kw">else</span> headB
+        b = b.next <span class="kw">if</span> b <span class="kw">else</span> headA
+    <span class="kw">return</span> a</pre>
+
+<table>
+  <tr><th>链表 vs 数组</th><th>数组</th><th>链表</th></tr>
+  <tr><td>按索引访问</td><td>O(1)</td><td>O(n)</td></tr>
+  <tr><td>中间插入/删除</td><td>O(n) — 移动元素</td><td>O(1) — 改指针</td></tr>
+  <tr><td>尾部操作</td><td>O(1)（摊销）</td><td>O(n) 或 O(1) 维护尾指针</td></tr>
+  <tr><td>内存占用</td><td>紧凑，无额外指针</td><td>每个节点多 1~2 个指针</td></tr>
+  <tr><td>缓存友好</td><td>✅ 连续内存利于 CPU 缓存</td><td>❌ 离散内存</td></tr>
+</table>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">📚</span> 4. 栈</h2>
+<p><strong>栈（Stack）</strong> 是<strong>后进先出（LIFO）</strong>的线性结构。只能在一端（栈顶）进行添加和删除——就像一叠盘子。</p>
+
+<h3>4.1 栈的实现</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># Python list 天然就是栈</span>
+stack = []
+stack.append(<span class="str">"a"</span>)     <span class="cm"># push — O(1)</span>
+stack.append(<span class="str">"b"</span>)
+top = stack.pop()      <span class="cm"># pop — O(1)</span>
+<span class="builtin">print</span>(top)            <span class="cm"># "b"</span>
+<span class="builtin">print</span>(stack[-<span class="num">1</span>])       <span class="cm"># peek 栈顶 — O(1)</span>
+
+<span class="cm"># 手写实现（链表栈）</span>
+<span class="kw">class</span> <span class="cls">Stack</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._items = []
+
+    <span class="kw">def</span> <span class="fn">push</span>(self, val):  self._items.append(val)
+    <span class="kw">def</span> <span class="fn">pop</span>(self):        <span class="kw">return</span> self._items.pop()
+    <span class="kw">def</span> <span class="fn">peek</span>(self):       <span class="kw">return</span> self._items[-<span class="num">1</span>]
+    <span class="kw">def</span> <span class="fn">is_empty</span>(self):   <span class="kw">return</span> <span class="builtin">len</span>(self._items) == <span class="num">0</span>
+    <span class="kw">def</span> <span class="fn">__len__</span>(self):     <span class="kw">return</span> <span class="builtin">len</span>(self._items)</pre>
+
+<h3>4.2 括号匹配</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">is_valid_brackets</span>(s: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+    <span class="str">"""判断括号是否有效匹配"""</span>
+    pairs = {<span class="str">")"</span>: <span class="str">"("</span>, <span class="str">"]"</span>: <span class="str">"["</span>, <span class="str">"}"</span>: <span class="str">"{"</span>}
+    stack = []
+    <span class="kw">for</span> ch <span class="kw">in</span> s:
+        <span class="kw">if</span> ch <span class="kw">in</span> pairs:
+            <span class="kw">if</span> <span class="kw">not</span> stack <span class="kw">or</span> stack.pop() != pairs[ch]:
+                <span class="kw">return</span> False
+        <span class="kw">else</span>:
+            stack.append(ch)
+    <span class="kw">return</span> <span class="kw">not</span> stack
+
+<span class="builtin">print</span>(is_valid_brackets(<span class="str">"({[]})"</span>))  <span class="cm"># True</span>
+<span class="builtin">print</span>(is_valid_brackets(<span class="str">"([)]"</span>))    <span class="cm"># False</span></pre>
+
+<h3>4.3 逆波兰表达式计算</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">eval_rpn</span>(tokens: <span class="builtin">list</span>[<span class="builtin">str</span>]) -> <span class="builtin">int</span>:
+    <span class="str">"""计算逆波兰表达式（后缀表达式）"""</span>
+    stack = []
+    operators = {<span class="str">"+"</span>, <span class="str">"-"</span>, <span class="str">"*"</span>, <span class="str">"/"</span>}
+    <span class="kw">for</span> t <span class="kw">in</span> tokens:
+        <span class="kw">if</span> t <span class="kw">in</span> operators:
+            b, a = stack.pop(), stack.pop()
+            <span class="kw">match</span> t:
+                <span class="kw">case</span> <span class="str">"+"</span>: stack.append(a + b)
+                <span class="kw">case</span> <span class="str">"-"</span>: stack.append(a - b)
+                <span class="kw">case</span> <span class="str">"*"</span>: stack.append(a * b)
+                <span class="kw">case</span> <span class="str">"/"</span>: stack.append(<span class="builtin">int</span>(a / b))  <span class="cm"># 向零取整</span>
+        <span class="kw">else</span>:
+            stack.append(<span class="builtin">int</span>(t))
+    <span class="kw">return</span> stack[<span class="num">0</span>]
+
+<span class="builtin">print</span>(eval_rpn([<span class="str">"2"</span>, <span class="str">"1"</span>, <span class="str">"+"</span>, <span class="str">"3"</span>, <span class="str">"*"</span>]))  <span class="cm"># (2+1)*3 = 9</span>
+<span class="builtin">print</span>(eval_rpn([<span class="str">"4"</span>, <span class="str">"13"</span>, <span class="str">"5"</span>, <span class="str">"/"</span>, <span class="str">"+"</span>]))    <span class="cm"># 4 + 13/5 = 6</span></pre>
+
+<h3>4.4 单调栈</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">next_greater_element</span>(nums: <span class="builtin">list</span>[<span class="builtin">int</span>]) -> <span class="builtin">list</span>[<span class="builtin">int</span>]:
+    <span class="str">"""下一个更大元素（单调递减栈）"""</span>
+    n = <span class="builtin">len</span>(nums)
+    result = [-<span class="num">1</span>] * n
+    stack = []                       <span class="cm"># 存索引（单调减）</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n):
+        <span class="kw">while</span> stack <span class="kw">and</span> nums[i] > nums[stack[-<span class="num">1</span>]]:
+            idx = stack.pop()
+            result[idx] = nums[i]
+        stack.append(i)
+    <span class="kw">return</span> result
+
+<span class="builtin">print</span>(next_greater_element([<span class="num">2</span>, <span class="num">1</span>, <span class="num">5</span>, <span class="num">3</span>, <span class="num">4</span>]))
+<span class="cm"># [5, 5, -1, 4, -1]</span></pre>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🚶</span> 5. 队列</h2>
+<p><strong>队列（Queue）</strong> 是<strong>先进先出（FIFO）</strong>的线性结构。一端进（队尾），一端出（队头）——就像排队。</p>
+
+<h3>5.1 普通队列</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># collections.deque 是最佳实现</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> deque
+
+q = deque()
+q.append(<span class="str">"a"</span>)      <span class="cm"># 队尾入队</span>
+q.append(<span class="str">"b"</span>)
+front = q.popleft()  <span class="cm"># 队头出队 — O(1)</span>
+<span class="builtin">print</span>(front)        <span class="cm"># "a"</span>
+
+<span class="cm"># 手写队列（链表实现）</span>
+<span class="kw">class</span> <span class="cls">Queue</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._items = deque()
+
+    <span class="kw">def</span> <span class="fn">enqueue</span>(self, val):   self._items.append(val)
+    <span class="kw">def</span> <span class="fn">dequeue</span>(self):       <span class="kw">return</span> self._items.popleft()
+    <span class="kw">def</span> <span class="fn">front</span>(self):         <span class="kw">return</span> self._items[<span class="num">0</span>]
+    <span class="kw">def</span> <span class="fn">is_empty</span>(self):      <span class="kw">return</span> <span class="builtin">len</span>(self._items) == <span class="num">0</span>
+    <span class="kw">def</span> <span class="fn">__len__</span>(self):        <span class="kw">return</span> <span class="builtin">len</span>(self._items)</pre>
+
+<h3>5.2 优先队列</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">heapq</span>
+
+<span class="cm"># Python 的 heapq 是最小堆</span>
+pq = []                        <span class="cm"># [(优先级, 值), ...]</span>
+heapq.heappush(pq, (<span class="num">3</span>, <span class="str">"任务3"</span>))
+heapq.heappush(pq, (<span class="num">1</span>, <span class="str">"任务1"</span>))   <span class="cm"># 优先级 1 最高</span>
+heapq.heappush(pq, (<span class="num">2</span>, <span class="str">"任务2"</span>))
+
+<span class="kw">while</span> pq:
+    priority, task = heapq.heappop(pq)
+    <span class="builtin">print</span>(f<span class="str">"执行: {task} (优先级 {priority})"</span>)
+<span class="cm"># 执行: 任务1 (优先级 1)</span>
+<span class="cm"># 执行: 任务2 (优先级 2)</span>
+<span class="cm"># 执行: 任务3 (优先级 3)</span></pre>
+
+<h3>5.3 循环队列（数组实现）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">CircularQueue</span>:
+    <span class="str">"""循环队列 — 用固定数组实现队列"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, capacity=<span class="num">5</span>):
+        self._data = [<span class="kw">None</span>] * capacity
+        self._cap = capacity
+        self._head = <span class="num">0</span>
+        self._tail = <span class="num">0</span>    <span class="cm"># 指向下一个插入位置</span>
+        self._size = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">enqueue</span>(self, val):
+        <span class="kw">if</span> self._size == self._cap:
+            <span class="kw">raise</span> OverflowError(<span class="str">"队列已满"</span>)
+        self._data[self._tail] = val
+        self._tail = (self._tail + <span class="num">1</span>) % self._cap
+        self._size += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">dequeue</span>(self):
+        <span class="kw">if</span> self._size == <span class="num">0</span>:
+            <span class="kw">raise</span> IndexError(<span class="str">"空队列"</span>)
+        val = self._data[self._head]
+        self._head = (self._head + <span class="num">1</span>) % self._cap
+        self._size -= <span class="num">1</span>
+        <span class="kw">return</span> val
+
+<span class="cm"># 测试</span>
+cq = CircularQueue(<span class="num">3</span>)
+cq.enqueue(<span class="str">"a"</span>); cq.enqueue(<span class="str">"b"</span>); cq.enqueue(<span class="str">"c"</span>)
+<span class="builtin">print</span>(cq.dequeue())  <span class="cm"># a</span>
+cq.enqueue(<span class="str">"d"</span>)      <span class="cm"># 覆盖旧位置</span>
+<span class="builtin">print</span>(cq.dequeue(), cq.dequeue(), cq.dequeue())  <span class="cm"># b, c, d</span></pre>
+
+<h3>5.4 双端队列（Deque）</h3>
+<pre><span class="lang-label">Python</span>
+dq = deque()
+dq.append(<span class="str">"右"</span>)           <span class="cm"># 右边进</span>
+dq.appendleft(<span class="str">"左"</span>)       <span class="cm"># 左边进</span>
+<span class="builtin">print</span>(dq)                <span class="cm"># deque(['左', '右'])</span>
+<span class="builtin">print</span>(dq.pop())           <span class="cm"># 右出 → '右'</span>
+<span class="builtin">print</span>(dq.popleft())       <span class="cm"># 左出 → '左'</span>
+
+<span class="cm"># 经典应用：滑动窗口最大值</span>
+<span class="kw">def</span> <span class="fn">max_sliding_window</span>(nums: <span class="builtin">list</span>[<span class="builtin">int</span>], k: <span class="builtin">int</span>) -> <span class="builtin">list</span>[<span class="builtin">int</span>]:
+    <span class="str">"""单调队列 — O(n) 解决滑动窗口最大值"""</span>
+    dq = deque()       <span class="cm"># 存索引，单调递减</span>
+    result = []
+    <span class="kw">for</span> i, v <span class="kw">in</span> <span class="builtin">enumerate</span>(nums):
+        <span class="cm"># 移除超出窗口的左端</span>
+        <span class="kw">if</span> dq <span class="kw">and</span> dq[<span class="num">0</span>] < i - k + <span class="num">1</span>:
+            dq.popleft()
+        <span class="cm"># 维护单调递减</span>
+        <span class="kw">while</span> dq <span class="kw">and</span> nums[dq[-<span class="num">1</span>]] <= v:
+            dq.pop()
+        dq.append(i)
+        <span class="kw">if</span> i >= k - <span class="num">1</span>:
+            result.append(nums[dq[<span class="num">0</span>]])
+    <span class="kw">return</span> result
+
+<span class="builtin">print</span>(max_sliding_window([<span class="num">1</span>,<span class="num">3</span>,-<span class="num">1</span>,-<span class="num">3</span>,<span class="num">5</span>,<span class="num">3</span>,<span class="num">6</span>,<span class="num">7</span>], <span class="num">3</span>))
+<span class="cm"># [3, 3, 5, 5, 6, 7]</span></pre>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">🔑</span> 6. 哈希表</h2>
+<p><strong>哈希表（Hash Table）</strong> 通过<strong>哈希函数</strong>将 <code>key</code> 映射到数组索引，实现<strong>平均 O(1)</strong> 的查找/插入/删除。Python 的 <code>dict</code> 和 <code>set</code> 就是最常用的哈希表实现。</p>
+
+<h3>6.1 哈希表核心概念</h3>
+<div class="card-grid">
+  <div class="card"><h4>🔢 哈希函数</h4><p>key → 整数（再取模得到索引）。好的哈希函数分布均匀、冲突少</p></div>
+  <div class="card"><h4>💥 哈希冲突</h4><p>两个不同 key 映射到同一索引。两种解决方式：<strong>链地址法</strong>（每个槽位挂链表）和<strong>开放地址法</strong>（探测空位）</p></div>
+  <div class="card"><h4>⚖ 负载因子</h4><p>元素数 / 槽位数。超过阈值（如 0.75）触发扩容重哈希（rehash）</p></div>
+</div>
+
+<h3>6.2 Python dict 操作</h3>
+<pre><span class="lang-label">Python</span>
+d = {}
+d[<span class="str">"name"</span>] = <span class="str">"张三"</span>      <span class="cm"># 插入 / 修改</span>
+<span class="builtin">print</span>(d[<span class="str">"name"</span>])          <span class="cm"># 访问 — O(1)</span>
+<span class="builtin">print</span>(d.get(<span class="str">"age"</span>, <span class="num">18</span>))   <span class="cm"># 安全访问，默认值 18</span>
+<span class="kw">del</span> d[<span class="str">"name"</span>]             <span class="cm"># 删除</span>
+<span class="builtin">print</span>(<span class="str">"name"</span> <span class="kw">in</span> d)         <span class="cm"># False — 存在性检查</span>
+
+<span class="cm"># set 操作</span>
+s = {<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>}
+s.add(<span class="num">4</span>)
+s.remove(<span class="num">2</span>)
+<span class="builtin">print</span>(<span class="num">1</span> <span class="kw">in</span> s)             <span class="cm"># True — O(1)</span>
+
+<span class="cm"># 遍历</span>
+<span class="kw">for</span> k, v <span class="kw">in</span> d.items():
+    <span class="builtin">print</span>(k, v)
+
+<span class="kw">for</span> k <span class="kw">in</span> d:               <span class="cm"># 等价于 d.keys()</span>
+    <span class="builtin">print</span>(k)
+
+<span class="cm"># dict 推导式</span>
+squares = {x: x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">5</span>)}
+<span class="cm"># {0: 0, 1: 1, 2: 4, 3: 9, 4: 16}</span></pre>
+
+<h3>6.3 手写哈希表（链地址法）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">HashTable</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, capacity=<span class="num">8</span>):
+        self._cap = capacity
+        self._size = <span class="num">0</span>
+        self._buckets = [[] <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(capacity)]
+
+    <span class="kw">def</span> <span class="fn">_hash</span>(self, key):
+        <span class="kw">return</span> <span class="builtin">hash</span>(key) % self._cap
+
+    <span class="kw">def</span> <span class="fn">_resize</span>(self, new_cap):
+        old_buckets = self._buckets
+        self._cap = new_cap
+        self._size = <span class="num">0</span>
+        self._buckets = [[] <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(new_cap)]
+        <span class="kw">for</span> bucket <span class="kw">in</span> old_buckets:
+            <span class="kw">for</span> k, v <span class="kw">in</span> bucket:
+                self[k] = v
+
+    <span class="kw">def</span> <span class="fn">__setitem__</span>(self, key, val):
+        idx = self._hash(key)
+        bucket = self._buckets[idx]
+        <span class="kw">for</span> i, (k, v) <span class="kw">in</span> <span class="builtin">enumerate</span>(bucket):
+            <span class="kw">if</span> k == key:
+                bucket[i] = (key, val)
+                <span class="kw">return</span>
+        bucket.append((key, val))
+        self._size += <span class="num">1</span>
+        <span class="kw">if</span> self._size > self._cap * <span class="num">0.75</span>:   <span class="cm"># 负载因子 > 0.75 → 扩容</span>
+            self._resize(self._cap * <span class="num">2</span>)
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, key):
+        idx = self._hash(key)
+        <span class="kw">for</span> k, v <span class="kw">in</span> self._buckets[idx]:
+            <span class="kw">if</span> k == key:
+                <span class="kw">return</span> v
+        <span class="kw">raise</span> KeyError(key)
+
+    <span class="kw">def</span> <span class="fn">__contains__</span>(self, key):
+        idx = self._hash(key)
+        <span class="kw">return</span> <span class="builtin">any</span>(k == key <span class="kw">for</span> k, _ <span class="kw">in</span> self._buckets[idx])
+
+    <span class="kw">def</span> <span class="fn">__len__</span>(self): <span class="kw">return</span> self._size
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(self):
+        items = []
+        <span class="kw">for</span> bucket <span class="kw">in</span> self._buckets:
+            items.extend(bucket)
+        <span class="kw">return</span> <span class="str">"{"</span> + <span class="str">", "</span>.join(f<span class="str">"{k!r}: {v!r}"</span> <span class="kw">for</span> k, v <span class="kw">in</span> items) + <span class="str">"}"</span>
+
+<span class="cm"># 测试</span>
+ht = HashTable()
+ht[<span class="str">"name"</span>] = <span class="str">"张三"</span>
+ht[<span class="str">"age"</span>] = <span class="num">25</span>
+<span class="builtin">print</span>(ht[<span class="str">"name"</span>])       <span class="cm"># 张三</span>
+<span class="builtin">print</span>(<span class="str">"age"</span> <span class="kw">in</span> ht)       <span class="cm"># True</span></pre>
+
+<h3>6.4 经典哈希表题目</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">two_sum</span>(nums: <span class="builtin">list</span>[<span class="builtin">int</span>], target: <span class="builtin">int</span>) -> <span class="builtin">list</span>[<span class="builtin">int</span>]:
+    <span class="str">"""两数之和 — 经典面试题"""</span>
+    seen = {}  <span class="cm"># {值: 索引}</span>
+    <span class="kw">for</span> i, v <span class="kw">in</span> <span class="builtin">enumerate</span>(nums):
+        complement = target - v
+        <span class="kw">if</span> complement <span class="kw">in</span> seen:
+            <span class="kw">return</span> [seen[complement], i]
+        seen[v] = i
+    <span class="kw">return</span> []
+
+<span class="kw">def</span> <span class="fn">first_non_repeating</span>(s: <span class="builtin">str</span>) -> <span class="builtin">str</span> | <span class="kw">None</span>:
+    <span class="str">"""第一个不重复字符"""</span>
+    freq = {}
+    <span class="kw">for</span> ch <span class="kw">in</span> s:
+        freq[ch] = freq.get(ch, <span class="num">0</span>) + <span class="num">1</span>
+    <span class="kw">for</span> ch <span class="kw">in</span> s:
+        <span class="kw">if</span> freq[ch] == <span class="num">1</span>:
+            <span class="kw">return</span> ch
+    <span class="kw">return</span> <span class="kw">None</span>
+
+<span class="kw">def</span> <span class="fn">group_anagrams</span>(words: <span class="builtin">list</span>[<span class="builtin">str</span>]) -> <span class="builtin">list</span>[<span class="builtin">list</span>[<span class="builtin">str</span>]]:
+    <span class="str">"""字母异位词分组"""</span>
+    groups = {}
+    <span class="kw">for</span> w <span class="kw">in</span> words:
+        key = <span class="str">""</span>.join(<span class="builtin">sorted</span>(w))
+        groups.setdefault(key, []).append(w)
+    <span class="kw">return</span> <span class="builtin">list</span>(groups.values())
+
+<span class="builtin">print</span>(two_sum([<span class="num">2</span>, <span class="num">7</span>, <span class="num">11</span>, <span class="num">15</span>], <span class="num">9</span>))        <span class="cm"># [0, 1]</span>
+<span class="builtin">print</span>(first_non_repeating(<span class="str">"abracadabra"</span>))  <span class="cm"># 'c'</span>
+<span class="builtin">print</span>(group_anagrams([<span class="str">"eat"</span>, <span class="str">"tea"</span>, <span class="str">"tan"</span>, <span class="str">"ate"</span>, <span class="str">"nat"</span>, <span class="str">"bat"</span>]))</pre>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">🌳</span> 7. 树与二叉树</h2>
+<p><strong>树（Tree）</strong> 是非线性结构——每个节点有 0 或多个子节点，没有环。最常用的是<strong>二叉树（Binary Tree）</strong>：每个节点最多两个子节点（左子树、右子树）。</p>
+
+<h3>7.1 二叉树遍历</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">TreeNode</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, val=<span class="num">0</span>, left=<span class="kw">None</span>, right=<span class="kw">None</span>):
+        self.val = val
+        self.left = left
+        self.right = right
+
+<span class="cm"># 构建一棵树</span>
+<span class="cm">#       1</span>
+<span class="cm">#      / \</span>
+<span class="cm">#     2   3</span>
+<span class="cm">#    / \   \</span>
+<span class="cm">#   4   5   6</span>
+root = TreeNode(<span class="num">1</span>)
+root.left = TreeNode(<span class="num">2</span>, TreeNode(<span class="num">4</span>), TreeNode(<span class="num">5</span>))
+root.right = TreeNode(<span class="num">3</span>, <span class="kw">None</span>, TreeNode(<span class="num">6</span>))
+
+<span class="cm"># 前序遍历 — 根 → 左 → 右</span>
+<span class="kw">def</span> <span class="fn">preorder</span>(node):
+    <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span>
+    <span class="builtin">print</span>(node.val, end=<span class="str">" "</span>)  <span class="cm"># 根</span>
+    preorder(node.left)          <span class="cm"># 左</span>
+    preorder(node.right)         <span class="cm"># 右</span>
+<span class="builtin">print</span>(<span class="str">"前序:"</span>, end=<span class="str">" "</span>); preorder(root)  <span class="cm"># 1 2 4 5 3 6</span>
+
+<span class="cm"># 中序遍历 — 左 → 根 → 右</span>
+<span class="kw">def</span> <span class="fn">inorder</span>(node):
+    <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span>
+    inorder(node.left)
+    <span class="builtin">print</span>(node.val, end=<span class="str">" "</span>)
+    inorder(node.right)
+<span class="builtin">print</span>(<span class="str">"\n中序:"</span>, end=<span class="str">" "</span>); inorder(root)  <span class="cm"># 4 2 5 1 3 6</span>
+
+<span class="cm"># 后序遍历 — 左 → 右 → 根</span>
+<span class="kw">def</span> <span class="fn">postorder</span>(node):
+    <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span>
+    postorder(node.left)
+    postorder(node.right)
+    <span class="builtin">print</span>(node.val, end=<span class="str">" "</span>)
+<span class="builtin">print</span>(<span class="str">"\n后序:"</span>, end=<span class="str">" "</span>); postorder(root)  <span class="cm"># 4 5 2 6 3 1</span>
+
+<span class="cm"># 层序遍历（BFS）</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> deque
+<span class="kw">def</span> <span class="fn">level_order</span>(root):
+    <span class="kw">if</span> <span class="kw">not</span> root: <span class="kw">return</span>
+    q = deque([root])
+    <span class="kw">while</span> q:
+        node = q.popleft()
+        <span class="builtin">print</span>(node.val, end=<span class="str">" "</span>)
+        <span class="kw">if</span> node.left: q.append(node.left)
+        <span class="kw">if</span> node.right: q.append(node.right)
+<span class="builtin">print</span>(<span class="str">"\n层序:"</span>, end=<span class="str">" "</span>); level_order(root)  <span class="cm"># 1 2 3 4 5 6</span></pre>
+
+<h3>7.2 二叉树深度</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">max_depth</span>(root: TreeNode) -> <span class="builtin">int</span>:
+    <span class="str">"""二叉树最大深度（递归）"""</span>
+    <span class="kw">if</span> <span class="kw">not</span> root: <span class="kw">return</span> <span class="num">0</span>
+    <span class="kw">return</span> <span class="num">1</span> + <span class="builtin">max</span>(max_depth(root.left), max_depth(root.right))
+
+<span class="kw">def</span> <span class="fn">is_balanced</span>(root: TreeNode) -> <span class="builtin">bool</span>:
+    <span class="str">"""判断平衡二叉树"""</span>
+    <span class="kw">def</span> <span class="fn">height</span>(node):
+        <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span> <span class="num">0</span>
+        left = height(node.left)
+        right = height(node.right)
+        <span class="kw">if</span> left == -<span class="num">1</span> <span class="kw">or</span> right == -<span class="num">1</span> <span class="kw">or</span> <span class="builtin">abs</span>(left - right) > <span class="num">1</span>:
+            <span class="kw">return</span> -<span class="num">1</span>
+        <span class="kw">return</span> <span class="num">1</span> + <span class="builtin">max</span>(left, right)
+    <span class="kw">return</span> height(root) != -<span class="num">1</span>
+
+<span class="builtin">print</span>(<span class="str">"深度:"</span>, max_depth(root))       <span class="cm"># 3</span>
+<span class="builtin">print</span>(<span class="str">"平衡:"</span>, is_balanced(root))     <span class="cm"># True</span></pre>
+
+<h3>7.3 二叉树序列化</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">serialize</span>(root: TreeNode) -> <span class="builtin">str</span>:
+    <span class="str">"""二叉树 → 字符串（前序 + # 标记空）"""</span>
+    arr = []
+    <span class="kw">def</span> <span class="fn">dfs</span>(node):
+        <span class="kw">if</span> <span class="kw">not</span> node:
+            arr.append(<span class="str">"#"</span>)
+            <span class="kw">return</span>
+        arr.append(<span class="builtin">str</span>(node.val))
+        dfs(node.left)
+        dfs(node.right)
+    dfs(root)
+    <span class="kw">return</span> <span class="str">","</span>.join(arr)
+
+<span class="kw">def</span> <span class="fn">deserialize</span>(data: <span class="builtin">str</span>) -> TreeNode:
+    <span class="str">"""字符串 → 二叉树"""</span>
+    vals = data.split(<span class="str">","</span>)
+    it = <span class="builtin">iter</span>(vals)
+
+    <span class="kw">def</span> <span class="fn">dfs</span>():
+        v = <span class="builtin">next</span>(it)
+        <span class="kw">if</span> v == <span class="str">"#"</span>: <span class="kw">return</span> <span class="kw">None</span>
+        node = TreeNode(<span class="builtin">int</span>(v))
+        node.left = dfs()
+        node.right = dfs()
+        <span class="kw">return</span> node
+    <span class="kw">return</span> dfs()
+
+s = serialize(root)
+<span class="builtin">print</span>(<span class="str">"序列化:"</span>, s)
+<span class="cm"># 1,2,4,#,#,5,#,#,3,#,6,#,#</span>
+root2 = deserialize(s)
+<span class="builtin">print</span>(<span class="str">"反序列化后层序:"</span>, end=<span class="str">" "</span>)
+level_order(root2)</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">🔍</span> 8. 二叉搜索树 (BST)</h2>
+<p><strong>二叉搜索树（Binary Search Tree）</strong> 满足：<br>
+左子树所有节点 < 根节点 < 右子树所有节点。<br>
+<strong>中序遍历 = 升序序列</strong>。</p>
+
+<h3>8.1 BST 实现</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">BST</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.root = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">insert</span>(self, val):
+        <span class="str">"""插入"""</span>
+        <span class="kw">if</span> <span class="kw">not</span> self.root:
+            self.root = TreeNode(val)
+            <span class="kw">return</span>
+        cur = self.root
+        <span class="kw">while</span> True:
+            <span class="kw">if</span> val < cur.val:
+                <span class="kw">if</span> <span class="kw">not</span> cur.left:
+                    cur.left = TreeNode(val); <span class="kw">break</span>
+                cur = cur.left
+            <span class="kw">else</span>:
+                <span class="kw">if</span> <span class="kw">not</span> cur.right:
+                    cur.right = TreeNode(val); <span class="kw">break</span>
+                cur = cur.right
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, val) -> TreeNode | <span class="kw">None</span>:
+        <span class="str">"""查找"""</span>
+        cur = self.root
+        <span class="kw">while</span> cur <span class="kw">and</span> cur.val != val:
+            cur = cur.left <span class="kw">if</span> val < cur.val <span class="kw">else</span> cur.right
+        <span class="kw">return</span> cur
+
+    <span class="kw">def</span> <span class="fn">delete</span>(self, val):
+        <span class="str">"""删除（递归实现）"""</span>
+        <span class="kw">def</span> <span class="fn">_delete</span>(node, val):
+            <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span> <span class="kw">None</span>
+            <span class="kw">if</span> val < node.val:
+                node.left = _delete(node.left, val)
+            <span class="kw">elif</span> val > node.val:
+                node.right = _delete(node.right, val)
+            <span class="kw">else</span>:  <span class="cm"># 找到要删除的节点</span>
+                <span class="kw">if</span> <span class="kw">not</span> node.left: <span class="kw">return</span> node.right
+                <span class="kw">if</span> <span class="kw">not</span> node.right: <span class="kw">return</span> node.left
+                <span class="cm"># 有两个子节点：找右子树的最小值</span>
+                min_node = node.right
+                <span class="kw">while</span> min_node.left: min_node = min_node.left
+                node.val = min_node.val
+                node.right = _delete(node.right, min_node.val)
+            <span class="kw">return</span> node
+        self.root = _delete(self.root, val)
+
+    <span class="kw">def</span> <span class="fn">to_sorted_list</span>(self) -> <span class="builtin">list</span>:
+        <span class="str">"""中序遍历 → 升序列表"""</span>
+        result = []
+        <span class="kw">def</span> <span class="fn">dfs</span>(node):
+            <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span>
+            dfs(node.left)
+            result.append(node.val)
+            dfs(node.right)
+        dfs(self.root)
+        <span class="kw">return</span> result
+
+<span class="cm"># 测试</span>
+bst = BST()
+<span class="kw">for</span> v <span class="kw">in</span> [<span class="num">5</span>, <span class="num">3</span>, <span class="num">7</span>, <span class="num">2</span>, <span class="num">4</span>, <span class="num">8</span>]: bst.insert(v)
+<span class="builtin">print</span>(<span class="str">"升序:"</span>, bst.to_sorted_list())  <span class="cm"># [2, 3, 4, 5, 7, 8]</span>
+<span class="builtin">print</span>(<span class="str">"查找 4:"</span>, bst.search(<span class="num">4</span>) <span class="kw">is not</span> <span class="kw">None</span>)  <span class="cm"># True</span>
+bst.delete(<span class="num">3</span>)
+<span class="builtin">print</span>(<span class="str">"删除 3 后:"</span>, bst.to_sorted_list())  <span class="cm"># [2, 4, 5, 7, 8]</span></pre>
+
+<h3>8.2 验证 BST</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">is_valid_bst</span>(root: TreeNode) -> <span class="builtin">bool</span>:
+    <span class="str">"""判断一棵树是不是 BST"""</span>
+    <span class="kw">def</span> <span class="fn">validate</span>(node, low=-<span class="builtin">float</span>(<span class="str">'inf'</span>), high=<span class="builtin">float</span>(<span class="str">'inf'</span>)):
+        <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span> True
+        <span class="kw">if</span> <span class="kw">not</span> (low < node.val < high): <span class="kw">return</span> False
+        <span class="kw">return</span> validate(node.left, low, node.val) <span class="kw">and</span> validate(node.right, node.val, high)
+    <span class="kw">return</span> validate(root)</pre>
+
+<h3>8.3 平衡二叉树 AVL 简介</h3>
+<p>BST 最坏情况（插入升序数据）退化成链表 O(n)。<strong>AVL 树</strong>通过 <strong>旋转</strong> 保证左右子树高度差 ≤ 1，所有操作 O(log n)。</p>
+
+<pre><span class="lang-label">四种旋转</span>
+    左左（LL）→ 右旋
+    右右（RR）→ 左旋
+    左右（LR）→ 左旋 + 右旋
+    右左（RL）→ 右旋 + 左旋
+
+            失衡节点
+            ┌──┐
+            │Z │
+            └──┘
+           /     \
+       左重?    右重?
+      (左高>右高+1)    (右高>左高+1)
+
+  LL: Z.left 左子节点的左子树插入 → 右旋 Z
+  LR: Z.left 左子节点的右子树插入 → 左旋 Z.left + 右旋 Z</pre>
+
+<div class="highlight">
+  <strong>💡 工程实践：</strong> 大多数场景直接用 <code>sortedcontainers</code> 库的 <code>SortedList</code> 或语言内置的有序集合，手写 AVL/红黑树只在竞赛或底层开发需要。
+</div>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">📊</span> 9. 堆 &amp; 优先队列</h2>
+<p><strong>堆（Heap）</strong> 是一棵<strong>完全二叉树</strong>，且父节点 ≤ 子节点（最小堆）或父节点 ≥ 子节点（最大堆）。<br>
+<strong>Python 的 <code>heapq</code> 是最小堆</strong>，用数组存储（索引 i 的子节点为 2i+1 和 2i+2）。</p>
+
+<h3>9.1 堆操作</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">heapq</span>
+
+arr = [<span class="num">5</span>, <span class="num">3</span>, <span class="num">8</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">7</span>]
+heapq.heapify(arr)             <span class="cm"># O(n) 建堆</span>
+<span class="builtin">print</span>(arr)                     <span class="cm"># [1, 2, 5, 3, 8, 7] — 堆结构</span>
+
+<span class="builtin">print</span>(heapq.heappop(arr))      <span class="cm"># 1 — 弹出最小值</span>
+heapq.heappush(arr, <span class="num">0</span>)         <span class="cm"># 插入 0</span>
+<span class="builtin">print</span>(arr[<span class="num">0</span>])                  <span class="cm"># 0 — 最小值查看</span>
+
+<span class="cm"># 最大堆技巧：存负数</span>
+max_heap = []
+heapq.heappush(max_heap, -<span class="num">3</span>)
+heapq.heappush(max_heap, -<span class="num">1</span>)
+heapq.heappush(max_heap, -<span class="num">5</span>)
+<span class="builtin">print</span>(-max_heap[<span class="num">0</span>])              <span class="cm"># 5 — 最大值</span></pre>
+
+<h3>9.2 手写堆</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">MinHeap</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, data=<span class="kw">None</span>):
+        self._arr = data <span class="kw">if</span> data <span class="kw">else</span> []
+        <span class="kw">if</span> self._arr:
+            <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="builtin">len</span>(self._arr)//<span class="num">2</span> - <span class="num">1</span>, -<span class="num">1</span>, -<span class="num">1</span>):
+                self._sift_down(i)
+
+    <span class="kw">def</span> <span class="fn">_sift_down</span>(self, i):
+        n = <span class="builtin">len</span>(self._arr)
+        <span class="kw">while</span> <span class="kw">True</span>:
+            smallest = i
+            left = <span class="num">2</span> * i + <span class="num">1</span>
+            right = <span class="num">2</span> * i + <span class="num">2</span>
+            <span class="kw">if</span> left < n <span class="kw">and</span> self._arr[left] < self._arr[smallest]:
+                smallest = left
+            <span class="kw">if</span> right < n <span class="kw">and</span> self._arr[right] < self._arr[smallest]:
+                smallest = right
+            <span class="kw">if</span> smallest == i: <span class="kw">break</span>
+            self._arr[i], self._arr[smallest] = self._arr[smallest], self._arr[i]
+            i = smallest
+
+    <span class="kw">def</span> <span class="fn">_sift_up</span>(self, i):
+        <span class="kw">while</span> i > <span class="num">0</span>:
+            parent = (i - <span class="num">1</span>) // <span class="num">2</span>
+            <span class="kw">if</span> self._arr[parent] <= self._arr[i]: <span class="kw">break</span>
+            self._arr[parent], self._arr[i] = self._arr[i], self._arr[parent]
+            i = parent
+
+    <span class="kw">def</span> <span class="fn">push</span>(self, val):
+        self._arr.append(val)
+        self._sift_up(<span class="builtin">len</span>(self._arr) - <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn">pop</span>(self):
+        <span class="kw">if</span> <span class="kw">not</span> self._arr: <span class="kw">raise</span> IndexError
+        val = self._arr[<span class="num">0</span>]
+        last = self._arr.pop()
+        <span class="kw">if</span> self._arr:
+            self._arr[<span class="num">0</span>] = last
+            self._sift_down(<span class="num">0</span>)
+        <span class="kw">return</span> val
+
+    <span class="kw">def</span> <span class="fn">peek</span>(self): <span class="kw">return</span> self._arr[<span class="num">0</span>]
+    <span class="kw">def</span> <span class="fn">__len__</span>(self): <span class="kw">return</span> <span class="builtin">len</span>(self._arr)
+
+<span class="cm"># 测试</span>
+h = MinHeap()
+<span class="kw">for</span> v <span class="kw">in</span> [<span class="num">9</span>, <span class="num">4</span>, <span class="num">7</span>, <span class="num">1</span>, <span class="num">3</span>, <span class="num">8</span>]: h.push(v)
+<span class="builtin">print</span>([h.pop() <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="builtin">len</span>(h))])
+<span class="cm"># [1, 3, 4, 7, 8, 9]</span></pre>
+
+<h3>9.3 堆的经典应用</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">top_k</span>(nums: <span class="builtin">list</span>[<span class="builtin">int</span>], k: <span class="builtin">int</span>) -> <span class="builtin">list</span>[<span class="builtin">int</span>]:
+    <span class="str">"""Top K 最大元素（最小堆）"""</span>
+    heap = nums[:k]
+    heapq.heapify(heap)
+    <span class="kw">for</span> v <span class="kw">in</span> nums[k:]:
+        <span class="kw">if</span> v > heap[<span class="num">0</span>]:
+            heapq.heapreplace(heap, v)
+    <span class="kw">return</span> heap
+
+<span class="kw">def</span> <span class="fn">median_stream</span>(nums: <span class="builtin">list</span>[<span class="builtin">int</span>]) -> <span class="builtin">list</span>[<span class="builtin">float</span>]:
+    <span class="str">"""数据流中位数（最大堆+最小堆）"""</span>
+    left = []   <span class="cm"># 最大堆（存负数）</span>
+    right = []  <span class="cm"># 最小堆</span>
+    result = []
+
+    <span class="kw">def</span> <span class="fn">add</span>(v):
+        <span class="kw">if</span> <span class="kw">not</span> left <span class="kw">or</span> v <= -left[<span class="num">0</span>]:
+            heapq.heappush(left, -v)
+        <span class="kw">else</span>:
+            heapq.heappush(right, v)
+        <span class="cm"># 平衡：|left| >= |right| 且差 ≤ 1</span>
+        <span class="kw">if</span> <span class="builtin">len</span>(left) > <span class="builtin">len</span>(right) + <span class="num">1</span>:
+            heapq.heappush(right, -heapq.heappop(left))
+        <span class="kw">elif</span> <span class="builtin">len</span>(right) > <span class="builtin">len</span>(left):
+            heapq.heappush(left, -heapq.heappop(right))
+
+    <span class="kw">def</span> <span class="fn">get_median</span>():
+        <span class="kw">if</span> <span class="builtin">len</span>(left) > <span class="builtin">len</span>(right):
+            <span class="kw">return</span> -left[<span class="num">0</span>]
+        <span class="kw">return</span> (-left[<span class="num">0</span>] + right[<span class="num">0</span>]) / <span class="num">2</span>
+
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        add(v)
+        result.append(get_median())
+    <span class="kw">return</span> result
+
+<span class="builtin">print</span>(top_k([<span class="num">3</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">4</span>], <span class="num">3</span>))             <span class="cm"># [4, 5, 6]</span>
+<span class="builtin">print</span>(median_stream([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]))                 <span class="cm"># [1, 1.5, 2, 2.5, 3]</span></pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">🔤</span> 10. 字典树 (Trie)</h2>
+<p><strong>字典树（Trie / 前缀树）</strong> 是一种多叉树，用于高效地存储和查询字符串集合。<br>
+每个节点代表一个前缀，从根到叶子的路径组成一个完整字符串。<br>
+查询"是否存在"或"以某前缀开头的所有词"——<strong>复杂度仅为 O(len(key))</strong>，与词库大小无关。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">TrieNode</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.children = {}   <span class="cm"># {字符: TrieNode}</span>
+        self.is_end = False  <span class="cm"># 是否是完整单词的结尾</span>
+
+<span class="kw">class</span> <span class="cls">Trie</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.root = TrieNode()
+
+    <span class="kw">def</span> <span class="fn">insert</span>(self, word: <span class="builtin">str</span>):
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> word:
+            <span class="kw">if</span> ch <span class="kw">not in</span> node.children:
+                node.children[ch] = TrieNode()
+            node = node.children[ch]
+        node.is_end = True
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, word: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+        <span class="str">"""是否完整存在"""</span>
+        node = self._find_prefix(word)
+        <span class="kw">return</span> node <span class="kw">is not</span> <span class="kw">None</span> <span class="kw">and</span> node.is_end
+
+    <span class="kw">def</span> <span class="fn">starts_with</span>(self, prefix: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+        <span class="str">"""是否有以 prefix 开头的词"""</span>
+        <span class="kw">return</span> self._find_prefix(prefix) <span class="kw">is not</span> <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">_find_prefix</span>(self, prefix: <span class="builtin">str</span>) -> TrieNode | <span class="kw">None</span>:
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> prefix:
+            <span class="kw">if</span> ch <span class="kw">not in</span> node.children:
+                <span class="kw">return</span> <span class="kw">None</span>
+            node = node.children[ch]
+        <span class="kw">return</span> node
+
+    <span class="kw">def</span> <span class="fn">autocomplete</span>(self, prefix: <span class="builtin">str</span>) -> <span class="builtin">list</span>[<span class="builtin">str</span>]:
+        <span class="str">"""前缀补全 — 返回所有匹配的完整词"""</span>
+        node = self._find_prefix(prefix)
+        <span class="kw">if</span> <span class="kw">not</span> node: <span class="kw">return</span> []
+        result = []
+
+        <span class="kw">def</span> <span class="fn">dfs</span>(n, path):
+            <span class="kw">if</span> n.is_end:
+                result.append(prefix + path)
+            <span class="kw">for</span> ch <span class="kw">in</span> <span class="builtin">sorted</span>(n.children.keys()):
+                dfs(n.children[ch], path + ch)
+        dfs(node, <span class="str">""</span>)
+        <span class="kw">return</span> result
+
+    <span class="kw">def</span> <span class="fn">delete</span>(self, word: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+        <span class="str">"""删除一个词"""</span>
+        <span class="kw">def</span> <span class="fn">_delete</span>(node, word, depth):
+            <span class="kw">if</span> depth == <span class="builtin">len</span>(word):
+                <span class="kw">if</span> <span class="kw">not</span> node.is_end: <span class="kw">return</span> False
+                node.is_end = False
+                <span class="kw">return</span> <span class="builtin">len</span>(node.children) == <span class="num">0</span>  <span class="cm"># 可删除?</span>
+            ch = word[depth]
+            <span class="kw">if</span> ch <span class="kw">not in</span> node.children: <span class="kw">return</span> False
+            should_delete = _delete(node.children[ch], word, depth + <span class="num">1</span>)
+            <span class="kw">if</span> should_delete:
+                <span class="kw">del</span> node.children[ch]
+                <span class="kw">return</span> <span class="kw">not</span> node.is_end <span class="kw">and</span> <span class="builtin">len</span>(node.children) == <span class="num">0</span>
+            <span class="kw">return</span> False
+        <span class="kw">return</span> _delete(self.root, word, <span class="num">0</span>)
+
+<span class="cm"># 测试</span>
+trie = Trie()
+<span class="kw">for</span> w <span class="kw">in</span> [<span class="str">"apple"</span>, <span class="str">"app"</span>, <span class="str">"application"</span>, <span class="str">"apt"</span>, <span class="str">"book"</span>]:
+    trie.insert(w)
+
+<span class="builtin">print</span>(trie.search(<span class="str">"app"</span>))        <span class="cm"># True</span>
+<span class="builtin">print</span>(trie.search(<span class="str">"appl"</span>))       <span class="cm"># False（不是完整词）</span>
+<span class="builtin">print</span>(trie.starts_with(<span class="str">"app"</span>))   <span class="cm"># True</span>
+<span class="builtin">print</span>(trie.autocomplete(<span class="str">"app"</span>))   <span class="cm"># ['app', 'apple', 'application']</span>
+trie.delete(<span class="str">"app"</span>)
+<span class="builtin">print</span>(trie.autocomplete(<span class="str">"app"</span>))   <span class="cm"># ['apple', 'application']</span></pre>
+
+<div class="highlight">
+  <strong>🔍 Trie vs 哈希表：</strong>
+  <br>• <strong>Trie</strong> 支持"前缀匹配"（所有以 xx 开头的词）、自动补全、词频统计
+  <br>• <strong>哈希表</strong> 只能精确查找，无法做前缀匹配
+  <br>• 空间上 Trie 会存公共前缀节省字符，但节点指针本身有开销
+</div>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">🕸</span> 11. 图</h2>
+<p><strong>图（Graph）</strong> 由<strong>顶点（Vertex）</strong>和<strong>边（Edge）</strong>组成。可以是有向/无向、加权/无权。几乎所有复杂关系都能用图建模——社交网络、地图导航、网页链接、依赖关系。</p>
+
+<h3>11.1 图的存储</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 方式一：邻接矩阵 — 适合稠密图</span>
+<span class="cm">#       A  B  C</span>
+<span class="cm">#   A  [0, 1, 1]</span>
+<span class="cm">#   B  [1, 0, 0]</span>
+<span class="cm">#   C  [1, 0, 0]</span>
+graph_matrix = [
+    [<span class="num">0</span>, <span class="num">1</span>, <span class="num">1</span>],  <span class="cm"># A → B, C</span>
+    [<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>],  <span class="cm"># B → A</span>
+    [<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>],  <span class="cm"># C → A</span>
+]
+
+<span class="cm"># 方式二：邻接表 — 适合稀疏图（最常用）</span>
+graph = {
+    <span class="str">"A"</span>: [<span class="str">"B"</span>, <span class="str">"C"</span>],
+    <span class="str">"B"</span>: [<span class="str">"A"</span>],
+    <span class="str">"C"</span>: [<span class="str">"A"</span>],
+}
+
+<span class="cm"># 加权邻接表</span>
+weighted_graph = {
+    <span class="str">"A"</span>: {<span class="str">"B"</span>: <span class="num">5</span>, <span class="str">"C"</span>: <span class="num">3</span>},
+    <span class="str">"B"</span>: {<span class="str">"A"</span>: <span class="num">5</span>, <span class="str">"D"</span>: <span class="num">2</span>},
+    <span class="str">"C"</span>: {<span class="str">"A"</span>: <span class="num">3</span>, <span class="str">"D"</span>: <span class="num">1</span>},
+    <span class="str">"D"</span>: {<span class="str">"B"</span>: <span class="num">2</span>, <span class="str">"C"</span>: <span class="num">1</span>},
+}</pre>
+
+<h3>11.2 深度优先搜索 (DFS)</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">dfs_recursive</span>(graph, start, visited=<span class="kw">None</span>):
+    <span class="kw">if</span> visited <span class="kw">is</span> <span class="kw">None</span>: visited = <span class="builtin">set</span>()
+    visited.add(start)
+    <span class="builtin">print</span>(start, end=<span class="str">" "</span>)
+    <span class="kw">for</span> neighbor <span class="kw">in</span> graph[start]:
+        <span class="kw">if</span> neighbor <span class="kw">not in</span> visited:
+            dfs_recursive(graph, neighbor, visited)
+    <span class="kw">return</span> visited
+
+<span class="kw">def</span> <span class="fn">dfs_iterative</span>(graph, start):
+    visited = <span class="builtin">set</span>()
+    stack = [start]
+    <span class="kw">while</span> stack:
+        node = stack.pop()
+        <span class="kw">if</span> node <span class="kw">not in</span> visited:
+            visited.add(node)
+            <span class="builtin">print</span>(node, end=<span class="str">" "</span>)
+            stack.extend(<span class="builtin">sorted</span>(graph[node], reverse=<span class="kw">True</span>))  <span class="cm"># 保证顺序</span>
+    <span class="kw">return</span> visited
+
+g = {<span class="str">"A"</span>: [<span class="str">"B"</span>, <span class="str">"C"</span>], <span class="str">"B"</span>: [<span class="str">"A"</span>, <span class="str">"D"</span>, <span class="str">"E"</span>], <span class="str">"C"</span>: [<span class="str">"A"</span>, <span class="str">"F"</span>],
+     <span class="str">"D"</span>: [<span class="str">"B"</span>], <span class="str">"E"</span>: [<span class="str">"B"</span>, <span class="str">"F"</span>], <span class="str">"F"</span>: [<span class="str">"C"</span>, <span class="str">"E"</span>]}
+<span class="builtin">print</span>(<span class="str">"DFS 递归:"</span>, end=<span class="str">" "</span>); dfs_recursive(g, <span class="str">"A"</span>)
+<span class="builtin">print</span>(<span class="str">"\nDFS 迭代:"</span>, end=<span class="str">" "</span>); dfs_iterative(g, <span class="str">"A"</span>)</pre>
+
+<h3>11.3 广度优先搜索 (BFS)</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">bfs</span>(graph, start):
+    visited = {start}
+    q = deque([start])
+    <span class="kw">while</span> q:
+        node = q.popleft()
+        <span class="builtin">print</span>(node, end=<span class="str">" "</span>)
+        <span class="kw">for</span> neighbor <span class="kw">in</span> graph[node]:
+            <span class="kw">if</span> neighbor <span class="kw">not in</span> visited:
+                visited.add(neighbor)
+                q.append(neighbor)
+    <span class="kw">return</span> visited
+
+<span class="builtin">print</span>(<span class="str">"BFS:"</span>, end=<span class="str">" "</span>); bfs(g, <span class="str">"A"</span>)  <span class="cm"># A B C D E F</span></pre>
+
+<h3>11.4 Dijkstra 最短路径</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">heapq</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> defaultdict
+
+<span class="kw">def</span> <span class="fn">dijkstra</span>(graph: <span class="builtin">dict</span>, start: <span class="builtin">str</span>) -> <span class="builtin">dict</span>:
+    <span class="str">"""Dijkstra 最短路径算法（优先队列优化）"""</span>
+    dist = {node: <span class="builtin">float</span>(<span class="str">"inf"</span>) <span class="kw">for</span> node <span class="kw">in</span> graph}
+    dist[start] = <span class="num">0</span>
+    pq = [(<span class="num">0</span>, start)]     <span class="cm"># (距离, 节点)</span>
+    visited = <span class="builtin">set</span>()
+
+    <span class="kw">while</span> pq:
+        d, node = heapq.heappop(pq)
+        <span class="kw">if</span> node <span class="kw">in</span> visited: <span class="kw">continue</span>
+        visited.add(node)
+
+        <span class="kw">for</span> neighbor, weight <span class="kw">in</span> graph[node].items():
+            new_dist = d + weight
+            <span class="kw">if</span> new_dist < dist[neighbor]:
+                dist[neighbor] = new_dist
+                heapq.heappush(pq, (new_dist, neighbor))
+
+    <span class="kw">return</span> dist
+
+<span class="cm"># 测试</span>
+wg = {
+    <span class="str">"A"</span>: {<span class="str">"B"</span>: <span class="num">5</span>, <span class="str">"C"</span>: <span class="num">3</span>},
+    <span class="str">"B"</span>: {<span class="str">"A"</span>: <span class="num">5</span>, <span class="str">"D"</span>: <span class="num">2</span>, <span class="str">"E"</span>: <span class="num">6</span>},
+    <span class="str">"C"</span>: {<span class="str">"A"</span>: <span class="num">3</span>, <span class="str">"D"</span>: <span class="num">1</span>},
+    <span class="str">"D"</span>: {<span class="str">"B"</span>: <span class="num">2</span>, <span class="str">"C"</span>: <span class="num">1</span>, <span class="str">"E"</span>: <span class="num">2</span>},
+    <span class="str">"E"</span>: {<span class="str">"B"</span>: <span class="num">6</span>, <span class="str">"D"</span>: <span class="num">2</span>},
+}
+dist = dijkstra(wg, <span class="str">"A"</span>)
+<span class="builtin">print</span>(<span class="str">"A 到各节点最短距离:"</span>, dist)
+<span class="cm"># {'A': 0, 'B': 5, 'C': 3, 'D': 4, 'E': 6}</span></pre>
+
+<h3>11.5 拓扑排序</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> defaultdict, deque
+
+<span class="kw">def</span> <span class="fn">topological_sort</span>(edges: <span class="builtin">list</span>[tuple[<span class="builtin">str</span>, <span class="builtin">str</span>]]) -> <span class="builtin">list</span>[<span class="builtin">str</span>]:
+    <span class="str">"""拓扑排序（Kahn 算法 — BFS 入度法）"""</span>
+    graph = defaultdict(<span class="builtin">list</span>)
+    in_degree = defaultdict(<span class="builtin">int</span>)
+
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
+        graph[u].append(v)
+        in_degree[v] += <span class="num">1</span>
+        <span class="kw">if</span> u <span class="kw">not in</span> in_degree: in_degree[u] = <span class="num">0</span>
+
+    q = deque([node <span class="kw">for</span> node <span class="kw">in</span> in_degree <span class="kw">if</span> in_degree[node] == <span class="num">0</span>])
+    result = []
+
+    <span class="kw">while</span> q:
+        node = q.popleft()
+        result.append(node)
+        <span class="kw">for</span> neighbor <span class="kw">in</span> graph[node]:
+            in_degree[neighbor] -= <span class="num">1</span>
+            <span class="kw">if</span> in_degree[neighbor] == <span class="num">0</span>:
+                q.append(neighbor)
+
+    <span class="cm"># 如果 result 长度 < 节点数 → 有环</span>
+    <span class="kw">return</span> result
+
+<span class="cm"># 课程依赖示例</span>
+edges = [
+    (<span class="str">"数据结构"</span>, <span class="str">"算法"</span>),
+    (<span class="str">"高等数学"</span>, <span class="str">"数据结构"</span>),
+    (<span class="str">"高等数学"</span>, <span class="str">"线性代数"</span>),
+    (<span class="str">"线性代数"</span>, <span class="str">"机器学习"</span>),
+    (<span class="str">"算法"</span>, <span class="str">"机器学习"</span>),
+    (<span class="str">"算法"</span>, <span class="str">"计算机视觉"</span>),
+]
+<span class="builtin">print</span>(topological_sort(edges))
+<span class="cm"># ['高等数学', '数据结构', '线性代数', '算法', '机器学习', '计算机视觉']</span></pre>
+
+<h3>11.6 最小生成树 (Kruskal)</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">kruskal_mst</span>(nodes, edges):
+    <span class="str">"""Kruskal 最小生成树（并查集实现）"""</span>
+    parent = {n: n <span class="kw">for</span> n <span class="kw">in</span> nodes}
+    <span class="kw">def</span> <span class="fn">find</span>(x):
+        <span class="kw">while</span> parent[x] != x:
+            parent[x] = parent[parent[x]]  <span class="cm"># 路径压缩</span>
+            x = parent[x]
+        <span class="kw">return</span> x
+    <span class="kw">def</span> <span class="fn">union</span>(a, b):
+        ra, rb = find(a), find(b)
+        <span class="kw">if</span> ra == rb: <span class="kw">return</span> False
+        parent[ra] = rb
+        <span class="kw">return</span> True
+
+    <span class="cm"># 按权重排序</span>
+    sorted_edges = <span class="builtin">sorted</span>(edges, key=<span class="kw">lambda</span> x: x[<span class="num">2</span>])
+    mst = []
+    total = <span class="num">0</span>
+    <span class="kw">for</span> u, v, w <span class="kw">in</span> sorted_edges:
+        <span class="kw">if</span> union(u, v):
+            mst.append((u, v, w))
+            total += w
+    <span class="kw">return</span> mst, total
+
+nodes = [<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"C"</span>, <span class="str">"D"</span>]
+edges = [
+    (<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="num">4</span>), (<span class="str">"A"</span>, <span class="str">"C"</span>, <span class="num">3</span>),
+    (<span class="str">"B"</span>, <span class="str">"C"</span>, <span class="num">2</span>), (<span class="str">"B"</span>, <span class="str">"D"</span>, <span class="num">1</span>),
+    (<span class="str">"C"</span>, <span class="str">"D"</span>, <span class="num">5</span>),
+]
+mst, total = kruskal_mst(nodes, edges)
+<span class="builtin">print</span>(<span class="str">"MST:"</span>, mst, <span class="str">"总权重:"</span>, total)</pre>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">🔗</span> 12. 并查集</h2>
+<p><strong>并查集（Disjoint Set Union, DSU）</strong> 用于高效地<strong>合并集合</strong>和<strong>判断元素是否在同一集合</strong>。<br>
+应用：连通分量、Kruskal 最小生成树、社交网络朋友关系。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">DSU</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, n):
+        self.parent = <span class="builtin">list</span>(<span class="builtin">range</span>(n))
+        self.rank = [<span class="num">1</span>] * n       <span class="cm"># 按秩合并优化</span>
+        self.components = n         <span class="cm"># 连通分量数</span>
+
+    <span class="kw">def</span> <span class="fn">find</span>(self, x):
+        <span class="str">"""查找根（带路径压缩）"""</span>
+        <span class="kw">while</span> self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]  <span class="cm"># 隔代压缩</span>
+            x = self.parent[x]
+        <span class="kw">return</span> x
+
+    <span class="cm"># 递归写法（更优雅）</span>
+    <span class="kw">def</span> <span class="fn">find_r</span>(self, x):
+        <span class="kw">if</span> self.parent[x] != x:
+            self.parent[x] = self.find_r(self.parent[x])
+        <span class="kw">return</span> self.parent[x]
+
+    <span class="kw">def</span> <span class="fn">union</span>(self, a, b) -> <span class="builtin">bool</span>:
+        <span class="str">"""合并两个集合，返回是否合并成功"""</span>
+        ra, rb = self.find_r(a), self.find_r(b)
+        <span class="kw">if</span> ra == rb: <span class="kw">return</span> False
+        <span class="cm"># 按秩合并：小树挂到大树上</span>
+        <span class="kw">if</span> self.rank[ra] < self.rank[rb]:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        <span class="kw">if</span> self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += <span class="num">1</span>
+        self.components -= <span class="num">1</span>
+        <span class="kw">return</span> True
+
+    <span class="kw">def</span> <span class="fn">connected</span>(self, a, b) -> <span class="builtin">bool</span>:
+        <span class="kw">return</span> self.find_r(a) == self.find_r(b)
+
+<span class="cm"># 测试</span>
+dsu = DSU(<span class="num">6</span>)
+dsu.union(<span class="num">0</span>, <span class="num">1</span>); dsu.union(<span class="num">1</span>, <span class="num">2</span>); dsu.union(<span class="num">3</span>, <span class="num">4</span>)
+<span class="builtin">print</span>(dsu.connected(<span class="num">0</span>, <span class="num">2</span>))  <span class="cm"># True</span>
+<span class="builtin">print</span>(dsu.connected(<span class="num">0</span>, <span class="num">3</span>))  <span class="cm"># False</span>
+<span class="builtin">print</span>(<span class="str">"连通分量:"</span>, dsu.components)  <span class="cm"># 3（{0,1,2}, {3,4}, {5}）</span></pre>
+
+<h3>应用：朋友圈最大人数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">largest_friend_group</span>(n: <span class="builtin">int</span>, friendships: <span class="builtin">list</span>[tuple[<span class="builtin">int</span>, <span class="builtin">int</span>]]) -> <span class="builtin">int</span>:
+    dsu = DSU(n)
+    <span class="kw">for</span> a, b <span class="kw">in</span> friendships:
+        dsu.union(a, b)
+
+    <span class="cm"># 统计每个根有多少元素</span>
+    size = {}
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n):
+        root = dsu.find_r(i)
+        size[root] = size.get(root, <span class="num">0</span>) + <span class="num">1</span>
+    <span class="kw">return</span> <span class="builtin">max</span>(size.values())
+
+<span class="builtin">print</span>(largest_friend_group(<span class="num">7</span>, [(<span class="num">0</span>,<span class="num">1</span>), (<span class="num">1</span>,<span class="num">2</span>), (<span class="num">3</span>,<span class="num">4</span>), (<span class="num">5</span>,<span class="num">6</span>), (<span class="num">4</span>,<span class="num">5</span>)]))  <span class="cm"># 3</span></pre>
+</section>
+
+<!-- ============= 13 ============= -->
+<section id="sec13">
+<h2><span class="emoji">📐</span> 13. 线段树 &amp; 树状数组</h2>
+<p>这两个结构解决<strong>区间查询</strong>和<strong>单点更新</strong>的高频问题——比如"求数组 [l, r] 的和/最大值"、"修改某个元素后立即再查询"。<br>
+暴力 O(n) vs 线段树 O(log n)。</p>
+
+<h3>13.1 树状数组（Fenwick Tree）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">FenwickTree</span>:
+    <span class="str">"""树状数组 — 单点更新 + 前缀和查询 O(log n)"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, n):
+        self.n = n
+        self.bit = [<span class="num">0</span>] * (n + <span class="num">1</span>)   <span class="cm"># 1-indexed</span>
+
+    <span class="kw">def</span> <span class="fn">add</span>(self, idx, delta):
+        <span class="str">"""在下标 idx 处增加 delta"""</span>
+        i = idx + <span class="num">1</span>                 <span class="cm"># 转 1-indexed</span>
+        <span class="kw">while</span> i <= self.n:
+            self.bit[i] += delta
+            i += i & -i               <span class="cm"># i += lowbit(i)</span>
+
+    <span class="kw">def</span> <span class="fn">sum</span>(self, idx):
+        <span class="str">"""前缀和 [0, idx)"""</span>
+        res = <span class="num">0</span>
+        i = idx
+        <span class="kw">while</span> i > <span class="num">0</span>:
+            res += self.bit[i]
+            i -= i & -i
+        <span class="kw">return</span> res
+
+    <span class="kw">def</span> <span class="fn">range_sum</span>(self, l, r):
+        <span class="str">"""区间和 [l, r)"""</span>
+        <span class="kw">return</span> self.sum(r) - self.sum(l)
+
+<span class="cm"># 测试</span>
+ft = FenwickTree(<span class="num">8</span>)
+arr = [<span class="num">3</span>, <span class="num">1</span>, <span class="num">4</span>, <span class="num">1</span>, <span class="num">5</span>, <span class="num">9</span>, <span class="num">2</span>, <span class="num">6</span>]
+<span class="kw">for</span> i, v <span class="kw">in</span> <span class="builtin">enumerate</span>(arr): ft.add(i, v)
+<span class="builtin">print</span>(ft.range_sum(<span class="num">0</span>, <span class="num">4</span>))   <span class="cm"># 3+1+4+1 = 9</span>
+<span class="builtin">print</span>(ft.range_sum(<span class="num">2</span>, <span class="num">6</span>))   <span class="cm"># 4+1+5+9 = 19</span>
+ft.add(<span class="num">3</span>, <span class="num">10</span>)               <span class="cm"># arr[3] += 10</span>
+<span class="builtin">print</span>(ft.range_sum(<span class="num">2</span>, <span class="num">6</span>))   <span class="cm"># 4+1+15+9 = 29</span></pre>
+
+<h3>13.2 线段树（Segment Tree）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">class</span> <span class="cls">SegmentTree</span>:
+    <span class="str">"""线段树 — 区间查询 + 单点更新 O(log n)"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, data):
+        self.n = <span class="builtin">len</span>(data)
+        self.tree = [<span class="num">0</span>] * (<span class="num">4</span> * self.n)
+        <span class="kw">if</span> self.n > <span class="num">0</span>:
+            self._build(data, <span class="num">0</span>, <span class="num">0</span>, self.n - <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn">_build</span>(self, data, node, l, r):
+        <span class="kw">if</span> l == r:
+            self.tree[node] = data[l]
+            <span class="kw">return</span>
+        mid = (l + r) // <span class="num">2</span>
+        self._build(data, node * <span class="num">2</span> + <span class="num">1</span>, l, mid)
+        self._build(data, node * <span class="num">2</span> + <span class="num">2</span>, mid + <span class="num">1</span>, r)
+        self.tree[node] = self.tree[node * <span class="num">2</span> + <span class="num">1</span>] + self.tree[node * <span class="num">2</span> + <span class="num">2</span>]
+
+    <span class="kw">def</span> <span class="fn">update</span>(self, idx, val):
+        <span class="kw">return</span> self._update(<span class="num">0</span>, <span class="num">0</span>, self.n - <span class="num">1</span>, idx, val)
+
+    <span class="kw">def</span> <span class="fn">_update</span>(self, node, l, r, idx, val):
+        <span class="kw">if</span> l == r:
+            self.tree[node] = val
+            <span class="kw">return</span>
+        mid = (l + r) // <span class="num">2</span>
+        <span class="kw">if</span> idx <= mid:
+            self._update(node * <span class="num">2</span> + <span class="num">1</span>, l, mid, idx, val)
+        <span class="kw">else</span>:
+            self._update(node * <span class="num">2</span> + <span class="num">2</span>, mid + <span class="num">1</span>, r, idx, val)
+        self.tree[node] = self.tree[node * <span class="num">2</span> + <span class="num">1</span>] + self.tree[node * <span class="num">2</span> + <span class="num">2</span>]
+
+    <span class="kw">def</span> <span class="fn">query</span>(self, ql, qr):
+        <span class="kw">return</span> self._query(<span class="num">0</span>, <span class="num">0</span>, self.n - <span class="num">1</span>, ql, qr)
+
+    <span class="kw">def</span> <span class="fn">_query</span>(self, node, l, r, ql, qr):
+        <span class="kw">if</span> ql <= l <span class="kw">and</span> r <= qr:
+            <span class="kw">return</span> self.tree[node]
+        <span class="kw">if</span> r < ql <span class="kw">or</span> l > qr:
+            <span class="kw">return</span> <span class="num">0</span>
+        mid = (l + r) // <span class="num">2</span>
+        <span class="kw">return</span> (self._query(node * <span class="num">2</span> + <span class="num">1</span>, l, mid, ql, qr) +
+                self._query(node * <span class="num">2</span> + <span class="num">2</span>, mid + <span class="num">1</span>, r, ql, qr))
+
+<span class="cm"># 测试</span>
+st = SegmentTree([<span class="num">1</span>, <span class="num">3</span>, <span class="num">5</span>, <span class="num">7</span>, <span class="num">9</span>, <span class="num">11</span>])
+<span class="builtin">print</span>(st.query(<span class="num">1</span>, <span class="num">4</span>))   <span class="cm"># 3+5+7+9 = 24</span>
+st.update(<span class="num">2</span>, <span class="num">10</span>)        <span class="cm"># arr[2] = 10</span>
+<span class="builtin">print</span>(st.query(<span class="num">1</span>, <span class="num">4</span>))   <span class="cm"># 3+10+7+9 = 29</span></pre>
+</section>
+
+<!-- ============= 14 ============= -->
+<section id="sec14">
+<h2><span class="emoji">📈</span> 14. 复杂度速查表</h2>
+
+<table>
+  <tr><th>数据结构</th><th>查找</th><th>插入</th><th>删除</th><th>额外</th></tr>
+  <tr><td>数组（无序）</td><td>O(n)</td><td>O(1) 尾部 / O(n) 中间</td><td>O(n)</td><td>索引 O(1)</td></tr>
+  <tr><td>有序数组</td><td>O(log n) 二分</td><td>O(n)</td><td>O(n)</td><td>-</td></tr>
+  <tr><td>单向链表</td><td>O(n)</td><td>O(1) 头部 / O(n) 尾部</td><td>O(1) 已知节点</td><td>-</td></tr>
+  <tr><td>双向链表</td><td>O(n)</td><td>O(1)</td><td>O(1)</td><td>-</td></tr>
+  <tr><td>栈（Stack）</td><td>-</td><td>O(1) push</td><td>O(1) pop</td><td>LIFO</td></tr>
+  <tr><td>队列（Queue）</td><td>-</td><td>O(1) enqueue</td><td>O(1) dequeue</td><td>FIFO</td></tr>
+  <tr><td>哈希表</td><td>O(1) 平均</td><td>O(1) 平均</td><td>O(1) 平均</td><td>最坏 O(n)</td></tr>
+  <tr><td>二叉搜索树（BST）</td><td>O(log n) 平均</td><td>O(log n) 平均</td><td>O(log n) 平均</td><td>最坏 O(n)</td></tr>
+  <tr><td>AVL / 红黑树</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>始终平衡</td></tr>
+  <tr><td>堆（Heap）</td><td>O(1) 最值</td><td>O(log n)</td><td>O(log n) 最值</td><td>-</td></tr>
+  <tr><td>Trie（前缀树）</td><td>O(key)</td><td>O(key)</td><td>O(key)</td><td>-</td></tr>
+  <tr><td>邻接表（图）</td><td>O(deg) 遍历邻居</td><td>O(1) 加边</td><td>O(1) 删边</td><td>-</td></tr>
+  <tr><td>并查集（DSU）</td><td>O(α(n)) find</td><td>-</td><td>-</td><td>α(n) ≈ O(1)</td></tr>
+  <tr><td>线段树</td><td>O(log n) 区间</td><td>O(log n) 单点</td><td>-</td><td>-</td></tr>
+  <tr><td>树状数组</td><td>O(log n) 前缀</td><td>O(log n) 单点</td><td>-</td><td>-</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>🎯 选型口诀：</strong>
+  <br>• 查找用<strong>哈希表</strong> O(1)（不考虑顺序）或 <strong>BST</strong> O(log n)（要排序）
+  <br>• FIFO 用<strong>队列</strong>，LIFO 用<strong>栈</strong>
+  <br>• 中间频繁插入/删除用<strong>链表</strong>
+  <br>• 区间查询/更新用<strong>线段树</strong>或<strong>树状数组</strong>
+  <br>• 快速找最值用<strong>堆</strong>
+  <br>• 前缀匹配/字符串集合用<strong>Trie</strong>
+  <br>• 连通性问题用<strong>并查集</strong>
+  <br>• 拓扑关系/最短路径用<strong>图</strong>
+</div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  📊 数据结构 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

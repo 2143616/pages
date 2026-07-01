@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>操作系统核心知识</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.7;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+/* header */
+.header {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+/* nav toc */
+.toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 4px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .92rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+/* section */
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.4rem; }
+section h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 20px 0 10px;
+  color: var(--teal);
+}
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+/* card */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+/* code */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-size: .85rem;
+  line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute;
+  top: 6px; right: 12px;
+  font-size: .7rem;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+/* syntax colors */
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+
+/* table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: .9rem;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  text-align: left;
+}
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+/* highlight box */
+.highlight {
+  background: var(--bg2);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 18px;
+  margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+/* footnote */
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🖥 操作系统核心知识</h1>
+  <p>进程 · 线程 · 同步 · 异步 · 内存 · 文件系统 — 从理论到 Python 实战</p>
+  <div class="tags">
+    <span>📘 教学文档</span>
+    <span>🐍 Python 示例</span>
+    <span>🎯 面试准备</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. 操作系统概述</a></li>
+    <li><a href="#sec2">2. 进程管理</a></li>
+    <li><a href="#sec3">3. 线程管理</a></li>
+    <li><a href="#sec4">4. 同步与互斥</a></li>
+    <li><a href="#sec5">5. 经典同步问题</a></li>
+    <li><a href="#sec6">6. 死锁</a></li>
+    <li><a href="#sec7">7. CPU 调度</a></li>
+    <li><a href="#sec8">8. 内存管理</a></li>
+    <li><a href="#sec9">9. 文件系统</a></li>
+    <li><a href="#sec10">10. 异步与 I/O</a></li>
+    <li><a href="#sec11">11. 综合实战</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. 操作系统概述</h2>
+<p><strong>操作系统（Operating System, OS）</strong> 是计算机系统中最基本的系统软件，它管理硬件资源、为应用程序提供运行环境。可以理解为一套"中间层"——向下控制 CPU、内存、磁盘、网卡；向上为程序提供统一的接口（系统调用）。</p>
+
+<h3>三个核心角色</h3>
+<div class="card-grid">
+  <div class="card"><h4>🕹 资源管理者</h4><p>调度 CPU 时间片、分配内存、管理 I/O 设备，确保多个程序公平高效地使用硬件。</p></div>
+  <div class="card"><h4>🛡 安全守护者</h4><p>隔离进程间的内存空间、控制文件权限、防止恶意程序破坏系统。</p></div>
+  <div class="card"><h4>🧩 抽象提供者</h4><p>把复杂的硬件细节抽象成简单的接口：文件（取代磁盘扇区）、进程（取代 CPU 寄存器）、套接字（取代网卡）。</p></div>
+</div>
+
+<h3>系统调用示例（Python）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">os</span>
+
+<span class="cm"># 创建进程 —— fork() 系统调用</span>
+pid = os.fork()
+<span class="kw">if</span> pid == 0:
+    <span class="builtin">print</span>(<span class="str">"子进程: PID ="</span>, os.getpid())
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"父进程: 子进程 PID ="</span>, pid)
+    os.wait()  <span class="cm"># 等待子进程结束</span></pre>
+
+<div class="highlight">
+  <strong>🗝 核心理解：</strong> 我们平时写的代码跑在"用户态"，调用操作系统功能（如读写文件、创建线程）时会切换到"内核态"。Python 的 <code>os</code>、<code>threading</code>、<code>asyncio</code> 等模块本质上都是对操作系统系统调用的封装。
+</div>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">⚙️</span> 2. 进程管理</h2>
+<p><strong>进程（Process）</strong> 是程序的一次执行实例，是操作系统进行资源分配的最小单位。每个进程拥有独立的内存空间（代码段、数据段、堆、栈）和系统资源（文件描述符等）。</p>
+
+<h3>进程状态转换</h3>
+<pre><span class="lang-label">状态机</span>
+    ┌─────────┐   调度选中    ┌──────────┐
+    │  就绪态  │───────────→ │  运行态  │
+    │ (Ready)  │             │ (Running)│
+    └────┬─────┘             └────┬─────┘
+         ↑                        │ 时间片耗尽
+         │  事件/资源就绪         ↓
+    ┌────┴─────┐             ┌──────────┐
+    │  阻塞态  │←─────────── │  运行态  │
+    │ (Blocked)│   等待 I/O  │          │
+    └──────────┘   或事件    └──────────┘</pre>
+
+<h3>进程控制块（PCB）</h3>
+<p>每个进程对应一个 PCB，记录进程的所有信息。Linux 中对应 <code>task_struct</code> 结构体。</p>
+<div class="card-grid">
+  <div class="card"><h4>🔖 标识信息</h4><p>PID（进程号）、PPID（父进程号）、UID（所属用户）</p></div>
+  <div class="card"><h4>📊 状态信息</h4><p>寄存器值、程序计数器（PC）、栈指针（SP）—— 用于上下文切换时恢复现场</p></div>
+  <div class="card"><h4>📁 资源信息</h4><p>打开的文件列表、内存映射、信号处理函数</p></div>
+  <div class="card"><h4>📈 调度信息</h4><p>优先级、进程状态、已用 CPU 时间</p></div>
+</div>
+
+<h3>Python 进程实战</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">multiprocessing</span> <span class="kw">import</span> Process
+<span class="kw">import</span> <span class="builtin">os</span>
+
+<span class="kw">def</span> <span class="fn">worker</span>(name):
+    <span class="builtin">print</span>(f<span class="str">"[进程 {os.getpid()}] 你好，我是 {name}"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    procs = []
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">4</span>):
+        p = Process(target=worker, args=(f<span class="str">"Worker-{i}"</span>,))
+        p.start()
+        procs.append(p)
+
+    <span class="kw">for</span> p <span class="kw">in</span> procs:
+        p.join()  <span class="cm"># 等待所有子进程结束</span>
+
+    <span class="builtin">print</span>(<span class="str">"所有进程结束，父进程退出"</span>)</pre>
+
+<div class="highlight">
+  <strong>⚠️ 注意：</strong> 进程间默认<strong>不共享数据</strong>（每个进程有独立的内存空间）。需要通过 <a href="#sec4">进程间通信（IPC）</a> 来交换数据，如队列 <code>multiprocessing.Queue</code>、管道 <code>Pipe</code>、共享内存 <code>Value/Array</code>。
+</div>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">🧵</span> 3. 线程管理</h2>
+<p><strong>线程（Thread）</strong> 是 CPU 调度的最小单位。一个进程内可以包含多个线程，它们<strong>共享进程的地址空间</strong>（代码、数据、堆），但每个线程有<strong>独立的栈和寄存器上下文</strong>。</p>
+
+<h3>进程 vs 线程</h3>
+<table>
+  <tr><th>对比维度</th><th>进程</th><th>线程</th></tr>
+  <tr><td>资源开销</td><td>大（独立地址空间、PCB、文件表）</td><td>小（共享地址空间，只需栈和寄存器）</td></tr>
+  <tr><td>创建速度</td><td>慢（需要分配独立资源）</td><td>快（复用父进程资源）</td></tr>
+  <tr><td>数据共享</td><td>需要 IPC（队列、管道、共享内存）</td><td>直接共享全局变量（需同步保护）</td></tr>
+  <tr><td>独立性</td><td>一个进程崩溃不影响其他进程</td><td>一个线程崩溃 → 整个进程崩溃</td></tr>
+  <tr><td>适用场景</td><td>CPU 密集型、需要高隔离性的任务</td><td>I/O 密集型、需要高并发且共享数据的任务</td></tr>
+</table>
+
+<h3>线程模型</h3>
+<div class="card-grid">
+  <div class="card"><h4>👤 用户级线程（N:1）</h4><p>线程管理在用户空间，无需内核干预。切换快，但一个线程阻塞 → 全部阻塞（如早期 Green Thread）</p></div>
+  <div class="card"><h4>👑 内核级线程（1:1）</h4><p>每个线程对应一个内核线程，由内核调度。可充分利用多核，但创建/切换开销稍大（如 POSIX pthread）</p></div>
+  <div class="card"><h4>🧬 混合模型（M:N）</h4><p>M 个用户线程映射到 N 个内核线程。兼顾灵活性与并行能力（如 Go 的 Goroutine 实现）</p></div>
+</div>
+
+<h3>Python 线程实战</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+counter = <span class="num">0</span>
+lock = threading.Lock()
+
+<span class="kw">def</span> <span class="fn">increment</span>(n):
+    <span class="kw">global</span> counter
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(n):
+        <span class="kw">with</span> lock:       <span class="cm"># 同步保护，避免数据竞争</span>
+            counter += <span class="num">1</span>
+
+<span class="cm"># 启动两个线程各加 100000 次</span>
+t1 = threading.Thread(target=increment, args=(<span class="num">100000</span>,))
+t2 = threading.Thread(target=increment, args=(<span class="num">100000</span>,))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+<span class="builtin">print</span>(f<span class="str">"最终结果: {counter}（期望: 200000）"</span>)</pre>
+
+<div class="highlight">
+  <strong>🔍 Python 的特殊性：</strong> CPython 有 <strong>GIL（全局解释器锁）</strong>，同一时刻只有一个线程能执行 Python 字节码。因此多线程<strong>不能利用多核加速 CPU 计算</strong>，但 I/O 密集型任务（网络请求、文件读写）仍能受益——因为 GIL 在 I/O 等待时会被释放。
+</div>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 查看当前线程信息</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+
+<span class="builtin">print</span>(<span class="str">"当前线程:"</span>, threading.current_thread().name)
+<span class="builtin">print</span>(<span class="str">"活跃线程数:"</span>, threading.active_count())
+<span class="kw">for</span> t <span class="kw">in</span> threading.enumerate():
+    <span class="builtin">print</span>(<span class="str">"  -"</span>, t.name, t.daemon)</pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">🔒</span> 4. 同步与互斥</h2>
+<p>当多个线程/进程访问共享数据时，如果不同步，会出现 <strong>数据竞争（Race Condition）</strong>——结果取决于线程的精确执行顺序。同步机制的核心是保证<strong>互斥访问</strong>（同一时刻只有一个执行流进入临界区）。</p>
+
+<h3>4.1 临界区</h3>
+<pre><span class="lang-label">结构</span>
+<span class="kw">while</span> True:
+    进入区  ← 检查并获取锁
+    临界区  ← 操作共享数据（一次只能有一个线程进来）
+    退出区  ← 释放锁
+    剩余区  ← 做其他事</pre>
+
+<h3>4.2 互斥锁（Mutex / Lock）</h3>
+<p>最简单的同步原语，保证互斥访问。</p>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Lock
+
+lock = Lock()
+lock.acquire()  <span class="cm"># 如果已被占用，阻塞等待</span>
+<span class="kw">try</span>:
+    <span class="cm"># 临界区代码</span>
+    ...
+<span class="kw">finally</span>:
+    lock.release()  <span class="cm"># 务必释放！</span>
+
+<span class="cm"># 更简洁的写法：</span>
+<span class="kw">with</span> lock:
+    <span class="cm"># 临界区代码</span>
+    ...</pre>
+
+<h3>4.3 信号量（Semaphore）</h3>
+<p>由 Dijkstra 提出，维护一个计数器：<code>acquire()</code> 减 1（为 0 则阻塞），<code>release()</code> 加 1（唤醒等待者）。</p>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Semaphore
+
+<span class="cm"># 限制最多 3 个线程同时访问</span>
+sem = Semaphore(<span class="num">3</span>)
+
+<span class="kw">def</span> <span class="fn">access_db</span>(tid):
+    <span class="kw">with</span> sem:
+        <span class="builtin">print</span>(f<span class="str">"线程 {tid} 正在访问数据库..."</span>)
+        <span class="builtin">import</span> <span class="builtin">time</span>; time.sleep(<span class="num">1</span>)
+    <span class="builtin">print</span>(f<span class="str">"线程 {tid} 释放资源"</span>)</pre>
+
+<h3>4.4 条件变量（Condition Variable）</h3>
+<p>用于线程间通信：一个线程等待某个条件成立，另一个线程满足条件后通知它。</p>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Condition, Thread
+
+cv = Condition()
+items = []
+
+<span class="kw">def</span> <span class="fn">consumer</span>():
+    <span class="kw">with</span> cv:
+        <span class="kw">while</span> <span class="builtin">len</span>(items) == <span class="num">0</span>:
+            cv.wait()          <span class="cm"># 等待生产者放入</span>
+        item = items.pop(<span class="num">0</span>)
+        <span class="builtin">print</span>(<span class="str">"消费:"</span>, item)
+
+<span class="kw">def</span> <span class="fn">producer</span>():
+    <span class="kw">with</span> cv:
+        items.append(<span class="str">"🍎"</span>)
+        cv.notify()           <span class="cm"># 通知等待的消费者</span></pre>
+
+<h3>4.5 读写锁（Read-Write Lock）</h3>
+<p>读读不互斥、读写互斥、写写互斥。读多写少的场景大幅提升并发性能。</p>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Lock
+
+<span class="kw">class</span> <span class="fn">ReadWriteLock</span>:
+    <span class="kw">def</span> __init__(self):
+        self.read_ready = Lock()
+        self.reader_count = <span class="num">0</span>
+        self.read_lock = Lock()
+
+    <span class="kw">def</span> <span class="fn">acquire_read</span>(self):
+        <span class="kw">with</span> self.read_lock:
+            <span class="kw">if</span> self.reader_count == <span class="num">0</span>:
+                self.read_ready.acquire()
+            self.reader_count += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">release_read</span>(self):
+        <span class="kw">with</span> self.read_lock:
+            self.reader_count -= <span class="num">1</span>
+            <span class="kw">if</span> self.reader_count == <span class="num">0</span>:
+                self.read_ready.release()
+
+    <span class="kw">def</span> <span class="fn">acquire_write</span>(self):
+        self.read_ready.acquire()
+
+    <span class="kw">def</span> <span class="fn">release_write</span>(self):
+        self.read_ready.release()</pre>
+
+<h3>4.6 进程间通信（IPC）</h3>
+<table>
+  <tr><th>方式</th><th>Python 模块</th><th>说明</th></tr>
+  <tr><td>管道（Pipe）</td><td><code>os.pipe()</code></td><td>单向字节流，父子进程间使用</td></tr>
+  <tr><td>命名管道（FIFO）</td><td><code>os.mkfifo()</code></td><td>不相关进程间通信</td></tr>
+  <tr><td>消息队列</td><td><code>multiprocessing.Queue</code></td><td>安全传递 Python 对象</td></tr>
+  <tr><td>共享内存</td><td><code>multiprocessing.shared_memory</code></td><td>最高性能，直接读写同一块内存</td></tr>
+  <tr><td>信号（Signal）</td><td><code>signal</code></td><td>异步事件通知（如 SIGINT、SIGKILL）</td></tr>
+  <tr><td>套接字（Socket）</td><td><code>socket</code></td><td>跨网络通信，也用于本机</td></tr>
+</table>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🧩</span> 5. 经典同步问题</h2>
+<p>这几道"必考题"覆盖了同步机制的各种使用场景，理解了它们就等于掌握了同步的精髓。</p>
+
+<h3>5.1 生产者-消费者（有界缓冲区）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Thread, Semaphore
+<span class="kw">import</span> <span class="builtin">time</span>, <span class="builtin">random</span>
+
+BUFFER_SIZE = <span class="num">5</span>
+buffer = []
+mutex = Semaphore(<span class="num">1</span>)     <span class="cm"># 互斥访问缓冲区</span>
+empty = Semaphore(BUFFER_SIZE)  <span class="cm"># 空槽位数</span>
+full = Semaphore(<span class="num">0</span>)          <span class="cm"># 已占用槽位数</span>
+
+<span class="kw">def</span> <span class="fn">producer</span>(pid):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>):
+        item = f<span class="str">"产品-{pid}-{i}"</span>
+        empty.acquire()   <span class="cm"># 等待空位</span>
+        mutex.acquire()   <span class="cm"># 互斥入队</span>
+        buffer.append(item)
+        <span class="builtin">print</span>(f<span class="str">"生产: {item} [缓冲区: {len(buffer)}]"</span>)
+        mutex.release()
+        full.release()    <span class="cm"># 增加已占用</span>
+        time.sleep(random.random())
+
+<span class="kw">def</span> <span class="fn">consumer</span>(cid):
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>):
+        full.acquire()    <span class="cm"># 等待有产品</span>
+        mutex.acquire()
+        item = buffer.pop(<span class="num">0</span>)
+        <span class="builtin">print</span>(f<span class="str">"消费: {item} [缓冲区: {len(buffer)}]"</span>)
+        mutex.release()
+        empty.release()   <span class="cm"># 释放空位</span>
+        time.sleep(random.random() * <span class="num">1.5</span>)
+
+Thread(target=producer, args=(<span class="num">1</span>,)).start()
+Thread(target=producer, args=(<span class="num">2</span>,)).start()
+Thread(target=consumer, args=(<span class="num">1</span>,)).start()</pre>
+
+<h3>5.2 读者-写者</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 多读者可同时读，写者必须独占</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Thread, Lock
+<span class="kw">import</span> <span class="builtin">time</span>
+
+data = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+rw_lock = Lock()
+read_count = <span class="num">0</span>
+rc_lock = Lock()
+
+<span class="kw">def</span> <span class="fn">reader</span>(rid):
+    <span class="kw">global</span> read_count
+    <span class="kw">with</span> rc_lock:       <span class="cm"># 安全地修改读者计数</span>
+        read_count += <span class="num">1</span>
+        <span class="kw">if</span> read_count == <span class="num">1</span>:
+            rw_lock.acquire()  <span class="cm"># 第一个读者锁住写者</span>
+    <span class="builtin">print</span>(f<span class="str">"读者 {rid} 读取: {data}"</span>)
+    time.sleep(<span class="num">0.5</span>)
+    <span class="kw">with</span> rc_lock:
+        read_count -= <span class="num">1</span>
+        <span class="kw">if</span> read_count == <span class="num">0</span>:
+            rw_lock.release()  <span class="cm"># 最后一个读者释放写者</span>
+
+<span class="kw">def</span> <span class="fn">writer</span>(wid, new_data):
+    rw_lock.acquire()       <span class="cm"># 写者必须等待所有读者完成</span>
+    data[:] = new_data
+    <span class="builtin">print</span>(f<span class="str">"写者 {wid} 写入: {data}"</span>)
+    time.sleep(<span class="num">1</span>)
+    rw_lock.release()</pre>
+
+<h3>5.3 哲学家就餐</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Thread, Lock
+<span class="kw">import</span> <span class="builtin">time</span>, <span class="builtin">random</span>
+
+N = <span class="num">5</span>                          <span class="cm"># 5 位哲学家</span>
+chopsticks = [Lock() <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(N)]
+
+<span class="kw">def</span> <span class="fn">philosopher</span>(i):
+    <span class="kw">while</span> True:
+        <span class="cm"># 思考</span>
+        time.sleep(random.random() * <span class="num">2</span>)
+
+        <span class="cm"># 拿左边的筷子（先拿编号小的，破坏循环等待）</span>
+        left = i
+        right = (i + <span class="num">1</span>) % N
+        <span class="kw">if</span> left < right:
+            chopsticks[left].acquire()
+            chopsticks[right].acquire()
+        <span class="kw">else</span>:
+            chopsticks[right].acquire()
+            chopsticks[left].acquire()
+
+        <span class="builtin">print</span>(f<span class="str">"🍝 哲学家 {i} 正在吃饭"</span>)
+        time.sleep(random.random())
+
+        <span class="cm"># 放下筷子</span>
+        chopsticks[left].release()
+        chopsticks[right].release()
+
+<span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(N):
+    Thread(target=philosopher, args=(i,), daemon=True).start()
+
+time.sleep(<span class="num">10</span>)
+<span class="builtin">print</span>(<span class="str">"（运行 10 秒演示结束）"</span>)</pre>
+
+<div class="highlight">
+  <strong>🎯 解题关键：</strong> 哲学家就餐的核心是<strong>破坏死锁的四个必要条件之一</strong>。上面代码通过<strong>资源有序分配</strong>（先拿编号小的筷子）来破坏"循环等待条件"。
+</div>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">💀</span> 6. 死锁</h2>
+<p><strong>死锁（Deadlock）</strong> 指两个或更多进程相互等待对方持有的资源，导致所有进程都无法继续执行。</p>
+
+<h3>死锁的四个必要条件</h3>
+<div class="card-grid">
+  <div class="card"><h4>🔄 互斥</h4><p>资源一次只能被一个进程占用</p></div>
+  <div class="card"><h4>⛓ 持有并等待</h4><p>进程已持有资源，又在等待其他资源</p></div>
+  <div class="card"><h4>🚫 不可剥夺</h4><p>资源不能被强制拿走，只能由持有者主动释放</p></div>
+  <div class="card"><h4>🔁 循环等待</h4><p>存在一个进程-资源等待环</p></div>
+</div>
+
+<h3>死锁的演示</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">threading</span> <span class="kw">import</span> Thread, Lock
+<span class="kw">import</span> <span class="builtin">time</span>
+
+lock_a = Lock()
+lock_b = Lock()
+
+<span class="kw">def</span> <span class="fn">thread_1</span>():
+    <span class="kw">with</span> lock_a:
+        time.sleep(<span class="num">0.1</span>)           <span class="cm"># 确保 t2 已拿到 lock_b</span>
+        <span class="builtin">print</span>(<span class="str">"t1 等待 lock_b..."</span>)
+        <span class="kw">with</span> lock_b:             <span class="cm"># 死锁！lock_b 在 t2 手里</span>
+            <span class="builtin">print</span>(<span class="str">"t1 拿到两个锁"</span>)
+
+<span class="kw">def</span> <span class="fn">thread_2</span>():
+    <span class="kw">with</span> lock_b:
+        time.sleep(<span class="num">0.1</span>)
+        <span class="builtin">print</span>(<span class="str">"t2 等待 lock_a..."</span>)
+        <span class="kw">with</span> lock_a:             <span class="cm"># 死锁！lock_a 在 t1 手里</span>
+            <span class="builtin">print</span>(<span class="str">"t2 拿到两个锁"</span>)
+
+t1 = Thread(target=thread_1)
+t2 = Thread(target=thread_2)
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+<span class="cm"># 程序会卡死在这里！</span></pre>
+
+<h3>死锁预防策略</h3>
+<div class="card-grid">
+  <div class="card"><h4>📏 破坏"互斥"</h4><p>让资源可共享（如只读文件）——但有些资源天生互斥</p></div>
+  <div class="card"><h4>📋 破坏"持有并等待"</h4><p>进程在执行前一次性申请所有资源（资源静态分配）</p></div>
+  <div class="card"><h4>🔓 破坏"不可剥夺"</h4><p>如果一个进程申请的资源被占用，主动释放已持有的资源</p></div>
+  <div class="card"><h4>🔢 破坏"循环等待"</h4><p>给资源编号，进程必须按编号升序申请（最常用）</p></div>
+</div>
+
+<h3>银行家算法</h3>
+<p>Dijkstra 提出的<strong>死锁避免</strong>算法。系统在分配资源前检查：分配后是否仍处于"安全状态"（存在安全序列让所有进程完成）。如果安全则分配，否则阻塞等待。</p>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">is_safe</span>(available, max_need, allocation):
+    n = len(max_need)
+    m = len(available)
+    need = [[max_need[i][j] - allocation[i][j] <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(m)] <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n)]
+    finish = [False] * n
+    work = available[:]
+    safe_seq = []
+
+    <span class="kw">while</span> <span class="builtin">len</span>(safe_seq) < n:
+        found = False
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n):
+            <span class="kw">if</span> <span class="kw">not</span> finish[i] <span class="kw">and</span> <span class="builtin">all</span>(need[i][j] <= work[j] <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(m)):
+                <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(m):
+                    work[j] += allocation[i][j]
+                finish[i] = True
+                safe_seq.append(i)
+                found = True
+        <span class="kw">if</span> <span class="kw">not</span> found:
+            <span class="kw">return</span> False, []
+
+    <span class="kw">return</span> True, safe_seq
+
+<span class="cm"># 示例：3 个进程，3 种资源</span>
+avail = [<span class="num">3</span>, <span class="num">3</span>, <span class="num">2</span>]
+max_n = [[<span class="num">7</span>, <span class="num">5</span>, <span class="num">3</span>], [<span class="num">3</span>, <span class="num">2</span>, <span class="num">2</span>], [<span class="num">9</span>, <span class="num">0</span>, <span class="num">2</span>]]
+alloc = [[<span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>], [<span class="num">2</span>, <span class="num">0</span>, <span class="num">0</span>], [<span class="num">3</span>, <span class="num">0</span>, <span class="num">2</span>]]
+safe, seq = is_safe(avail, max_n, alloc)
+<span class="builtin">print</span>(f<span class="str">"是否安全: {safe}, 安全序列: {seq}"</span>)
+<span class="cm"># 输出: 是否安全: True, 安全序列: [1, 0, 2]</span></pre>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">📊</span> 7. CPU 调度</h2>
+<p>当多个进程/线程同时就绪时，操作系统决定<strong>谁先上 CPU、运行多久</strong>。目标：吞吐量最大化、响应时间最小化、公平性。</p>
+
+<h3>常见调度算法</h3>
+<table>
+  <tr><th>算法</th><th>抢占?</th><th>特点</th><th>适用场景</th></tr>
+  <tr><td>FCFS<br>（先来先服务）</td><td>否</td><td>公平，但短任务被长任务阻塞（护航效应）</td><td>批处理系统</td></tr>
+  <tr><td>SJF<br>（最短作业优先）</td><td>均可</td><td>平均等待时间最优，但需要预估执行时间</td><td>批处理系统</td></tr>
+  <tr><td>RR<br>（时间片轮转）</td><td>是</td><td>每个进程分到固定时间片，响应快但上下文切换多</td><td>交互式系统</td></tr>
+  <tr><td>优先级调度</td><td>是</td><td>高优先级先执行，可能饿死低优先级（需老化机制）</td><td>实时系统</td></tr>
+  <tr><td>多级反馈队列</td><td>是</td><td>多个队列，优先级递降，时间片递增。现代 OS 主流</td><td>通用 OS</td></tr>
+</table>
+
+<h3>调度算法模拟</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">statistics</span>
+
+<span class="kw">def</span> <span class="fn">rr_schedule</span>(bursts, quantum=<span class="num">4</span>):
+    <span class="cm">"""时间片轮转调度模拟"""</span>
+    n = <span class="builtin">len</span>(bursts)
+    remaining = bursts[:]
+    current_time = <span class="num">0</span>
+    wait_time = [<span class="num">0</span>] * n
+    turnaround = [<span class="num">0</span>] * n
+    ready = <span class="builtin">list</span>(<span class="builtin">range</span>(n))
+    completed = <span class="num">0</span>
+
+    <span class="kw">while</span> completed < n:
+        pid = ready.pop(<span class="num">0</span>)
+        run = <span class="builtin">min</span>(quantum, remaining[pid])
+        current_time += run
+        remaining[pid] -= run
+
+        <span class="kw">if</span> remaining[pid] == <span class="num">0</span>:
+            completed += <span class="num">1</span>
+            turnaround[pid] = current_time
+            wait_time[pid] = current_time - bursts[pid]
+        <span class="kw">else</span>:
+            ready.append(pid)
+
+    <span class="builtin">print</span>(<span class="str">"进程  | 执行时间 | 等待时间 | 周转时间"</span>)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(n):
+        <span class="builtin">print</span>(f<span class="str">"P{i}    |  {bursts[i]:&gt;8} |  {wait_time[i]:&gt;8} |  {turnaround[i]:&gt;8}"</span>)
+    <span class="builtin">print</span>(f<span class="str">"平均等待时间: {statistics.mean(wait_time):.2f}"</span>)
+
+rr_schedule([<span class="num">6</span>, <span class="num">8</span>, <span class="num">7</span>, <span class="num">3</span>], quantum=<span class="num">4</span>)</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">🧠</span> 8. 内存管理</h2>
+<p>操作系统负责将物理内存分配给进程，并提供<strong>虚拟内存</strong>抽象——每个进程看到连续的地址空间，实际映射到离散的物理内存。</p>
+
+<h3>8.1 分页（Paging）</h3>
+<p>将进程地址空间切分成固定大小的<strong>页（Page）</strong>，物理内存切分成同样大小的<strong>页框（Frame）</strong>。通过<strong>页表（Page Table）</strong>将虚拟页号映射到物理页框号。</p>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 虚拟地址 → 物理地址 模拟</span>
+PAGE_SIZE = <span class="num">4096</span>  <span class="cm"># 4KB</span>
+
+page_table = {
+    <span class="num">0</span>: <span class="num">3</span>,   <span class="cm"># 虚拟页 0 → 物理页框 3</span>
+    <span class="num">1</span>: <span class="num">7</span>,   <span class="cm"># 虚拟页 1 → 物理页框 7</span>
+    <span class="num">2</span>: <span class="num">1</span>,   <span class="cm"># 虚拟页 2 → 物理页框 1</span>
+}
+
+<span class="kw">def</span> <span class="fn">translate</span>(virtual_addr):
+    page_num = virtual_addr // PAGE_SIZE
+    offset = virtual_addr % PAGE_SIZE
+    <span class="kw">if</span> page_num <span class="kw">not</span> <span class="kw">in</span> page_table:
+        <span class="kw">raise</span> <span class="builtin">ValueError</span>(<span class="str">"缺页中断（Page Fault）"</span>)
+    frame = page_table[page_num]
+    physical_addr = frame * PAGE_SIZE + offset
+    <span class="kw">return</span> physical_addr
+
+<span class="builtin">print</span>(f<span class="str">"虚拟地址 0x3000 → 物理地址 0x{translate(0x3000):x}"</span>)</pre>
+
+<h3>8.2 页面置换算法</h3>
+<table>
+  <tr><th>算法</th><th>策略</th><th>优缺点</th></tr>
+  <tr><td>FIFO</td><td>淘汰最早进入的页</td><td>简单，但可能有 Belady 异常（增加物理页框反而缺页更多）</td></tr>
+  <tr><td>LRU</td><td>淘汰最久没使用的页</td><td>性能好，但硬件开销大</td></tr>
+  <tr><td>Clock（近似 LRU）</td><td>每页一个使用位，指针扫描，使用位为 0 则淘汰</td><td>折中方案，多数 OS 的实现选择</td></tr>
+  <tr><td>OPT（理论最优）</td><td>淘汰未来最晚使用的页</td><td>无法实现，作为性能上限参考</td></tr>
+</table>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">lru_page_replacement</span>(pages, frames):
+    <span class="cm">"""LRU 页面置换模拟"""</span>
+    memory = []
+    page_faults = <span class="num">0</span>
+    lru_order = []
+
+    <span class="kw">for</span> page <span class="kw">in</span> pages:
+        <span class="kw">if</span> page <span class="kw">in</span> memory:
+            <span class="cm"># 命中：更新使用顺序</span>
+            lru_order.remove(page)
+            lru_order.append(page)
+            <span class="builtin">print</span>(f<span class="str">"页 {page} ✓ 命中 [{memory}]"</span>)
+        <span class="kw">else</span>:
+            page_faults += <span class="num">1</span>
+            <span class="kw">if</span> <span class="builtin">len</span>(memory) >= frames:
+                <span class="cm"># 淘汰最久未用的</span>
+                victim = lru_order.pop(<span class="num">0</span>)
+                memory.remove(victim)
+            memory.append(page)
+            lru_order.append(page)
+            <span class="builtin">print</span>(f<span class="str">"页 {page} ✗ 缺页 [{memory}]"</span>)
+
+    <span class="builtin">print</span>(f<span class="str">"\n总缺页次数: {page_faults}"</span>)
+
+lru_page_replacement([<span class="num">7</span>,<span class="num">0</span>,<span class="num">1</span>,<span class="num">2</span>,<span class="num">0</span>,<span class="num">3</span>,<span class="num">0</span>,<span class="num">4</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">0</span>,<span class="num">3</span>,<span class="num">2</span>], frames=<span class="num">4</span>)</pre>
+
+<h3>8.3 分段（Segmentation）</h3>
+<p>进程的地址空间按逻辑划分为<strong>段</strong>（代码段、数据段、堆、栈等）——每段有独立的基址和界限，便于共享和保护。</p>
+
+<div class="highlight">
+  <strong>🗝 现代 OS 大多使用<u>段页式</u>：</strong> 分段提供逻辑视角，分页提供物理映射。x86 架构的 Linux 实际<strong>几乎只用分页</strong>（分段被弱化），但保留了段的权限位用于保护。
+</div>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">📁</span> 9. 文件系统</h2>
+<p>文件系统负责组织、存储和管理磁盘上的数据，提供 <strong>目录树 → 文件 → 数据块</strong> 的三层抽象。</p>
+
+<h3>文件系统结构</h3>
+<pre><span class="lang-label">层次</span>
+用户程序:  open("data.txt", O_RDONLY)
+         ↓ 系统调用
+虚拟文件系统 (VFS):  统一的 inode 接口
+         ↓
+具体文件系统:  ext4 / NTFS / FAT32 / XFS
+         ↓
+块设备层:  读写磁盘扇区（通过 BIOS / NVMe 驱动）
+
+磁盘布局示例 (ext4):
+┌─────┬──────┬────────┬──────────┬──────────┐
+│MBR  │超级块│ 组描述 │ 块位图   │ inode    │
+│/GPT │      │ 符表   │          │ 表       │
+├─────┴──┬───┴───┬────┴────┬─────┴──────────┤
+│ 引导   │元数据 │ 空闲块  │ 文件属性/权限  │
+│ 扇区   │       │ 位图    │ (大小/时间戳  │
+└────────┴───────┴─────────┴────────────────┘</pre>
+
+<h3>inode 与数据块</h3>
+<div class="card-grid">
+  <div class="card"><h4>🗂 inode</h4><p>存储文件的元数据：权限、大小、时间戳、指向数据块的指针数组（直接指针+间接指针+双重间接+三重间接）</p></div>
+  <div class="card"><h4>🧱 数据块</h4><p>实际数据存储单元（ext4 默认 4KB）。大文件通过多级间接指针寻址</p></div>
+  <div class="card"><h4>📂 目录</h4><p>特殊的"文件"，内容为 <code>{文件名 → inode 号}</code> 的映射表</p></div>
+  <div class="card"><h4>🔗 硬链接 vs 软链接</h4><p>硬链接：多个文件名指向同一个 inode（不可跨文件系统）。软链接：独立的文件，内容指向目标路径</p></div>
+</div>
+
+<pre><span class="lang-label">Bash</span>
+<span class="cm"># 查看文件 inode 信息</span>
+$ ls -li test.txt
+123456 -rw-r--r-- 1 user user 1024 Apr 1 10:00 test.txt
+ # ↑ inode 编号
+
+<span class="cm"># stat 命令查看详细信息</span>
+$ stat test.txt
+  文件: test.txt
+  大小: 1024       块: 8          IO 块: 4096   普通文件
+设备: 10302h/66306d     Inode: 123456      硬链接: 1
+访问: (0644/-rw-r--r--)  Uid: ( 1000/   user)   Gid: ( 1000/   user)
+访问时间: 2026-04-01 10:00:00
+修改时间: 2026-04-01 10:00:00
+变更时间: 2026-04-01 10:00:00</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># Python 文件操作 = 系统调用封装</span>
+<span class="kw">import</span> <span class="builtin">os</span>
+<span class="kw">import</span> <span class="builtin">stat</span>
+
+path = <span class="str">"/tmp/demo.txt"</span>
+<span class="kw">with</span> <span class="builtin">open</span>(path, <span class="str">"w"</span>) <span class="kw">as</span> f:
+    f.write(<span class="str">"Hello, OS!\n"</span>)
+
+st = os.stat(path)
+<span class="builtin">print</span>(f<span class="str">"inode: {st.st_ino}"</span>)
+<span class="builtin">print</span>(f<span class="str">"大小: {st.st_size} 字节"</span>)
+<span class="builtin">print</span>(f<span class="str">"权限: {oct(st.st_mode)}"</span>)
+<span class="builtin">print</span>(f<span class="str">"设备: {st.st_dev}"</span>)
+<span class="builtin">print</span>(f<span class="str">"链接数: {st.st_nlink}"</span>)
+<span class="builtin">print</span>(f<span class="str">"块大小: {st.st_blksize}"</span>)
+
+<span class="cm"># 创建硬链接</span>
+os.link(path, <span class="str">"/tmp/hardlink_demo.txt"</span>)
+<span class="builtin">print</span>(<span class="str">"硬链接 inode 相同:"</span>, os.stat(<span class="str">"/tmp/hardlink_demo.txt"</span>).st_ino)</pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">⚡</span> 10. 异步与 I/O</h2>
+<p>这是你问到<strong>"同步 vs 异步"</strong>的归宿。应用程序有三种方式处理 I/O（磁盘读写、网络请求）：</p>
+
+<h3>三种 I/O 模型</h3>
+<table>
+  <tr><th>模型</th><th>描述</th><th>Python 实现</th></tr>
+  <tr><td><strong>同步阻塞</strong><br> (Blocking I/O)</td>
+      <td>发起 I/O 后线程挂起等待，直到数据就绪。简单直观，但浪费 CPU 资源</td>
+      <td><code>open().read()</code> — 默认行为</td></tr>
+  <tr><td><strong>同步非阻塞</strong><br> (Non-blocking I/O)</td>
+      <td>发起 I/O 后立即返回，反复轮询 (polling) 是否完成。忙等（busy waiting）浪费 CPU</td>
+      <td><code>socket.setblocking(False)</code></td></tr>
+  <tr><td><strong>异步 I/O</strong><br> (Asynchronous I/O)</td>
+      <td>发起 I/O 后立即返回，内核完成后<strong>主动通知/回调</strong>。高效、高并发，但编程复杂</td>
+      <td><code>asyncio</code>、<code>aiofiles</code></td></tr>
+</table>
+
+<h3>Python asyncio —— 用户态协程</h3>
+<p><code>asyncio</code> 是 Python 的异步 I/O 框架，基于 <strong>事件循环（Event Loop）</strong> 和 <strong>协程（Coroutine）</strong>。它<strong>运行在单线程内</strong>，通过<strong>协作式多任务</strong>实现并发。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+<span class="kw">async</span> <span class="kw">def</span> <span class="fn">fetch_url</span>(name, delay):
+    <span class="builtin">print</span>(f<span class="str">"[{name}] 开始请求..."</span>)
+    <span class="kw">await</span> asyncio.sleep(delay)  <span class="cm"># 模拟网络 I/O</span>
+    <span class="builtin">print</span>(f<span class="str">"[{name}] 完成! (耗时 {delay}s)"</span>)
+    <span class="kw">return</span> f<span class="str">"数据-{name}"</span>
+
+<span class="kw">async</span> <span class="kw">def</span> <span class="fn">main</span>():
+    start = time.time()
+    <span class="cm"># 并发执行三个请求</span>
+    results = <span class="kw">await</span> asyncio.gather(
+        fetch_url(<span class="str">"A"</span>, <span class="num">2</span>),
+        fetch_url(<span class="str">"B"</span>, <span class="num">3</span>),
+        fetch_url(<span class="str">"C"</span>, <span class="num">1</span>),
+    )
+    elapsed = time.time() - start
+    <span class="builtin">print</span>(f<span class="str">"结果: {results}"</span>)
+    <span class="builtin">print</span>(f<span class="str">"总耗时: {elapsed:.2f}s (同步需要 6s, 异步只用了 {max(2,3,1)}s)"</span>)
+
+asyncio.run(main())</pre>
+
+<div class="highlight">
+  <strong>⚡ 关键差异速记：</strong>
+  <br>• <strong>同步</strong> = 你站着等外卖做好
+  <br>• <strong>异步</strong> = 你点好外卖，手机响了再去拿，期间在看电视
+  <br>• <strong>并行（多线程/进程）</strong> = 好几个厨师同时做菜
+  <br>• <strong>并发</strong> = 看起来同时做多件事（但不一定是并行）
+</div>
+
+<h3>四象限对比一览</h3>
+<table>
+  <tr><th></th><th>同步（Synchronous）</th><th>异步（Asynchronous）</th></tr>
+  <tr><td><strong>单线程</strong></td>
+      <td>传统函数调用，做完一步才下一步<br><code>result = func(); ...</code></td>
+      <td>事件循环 + 协程<br><code>await func(); ...</code><br>如 JavaScript / asyncio</td></tr>
+  <tr><td><strong>多线程/进程</strong></td>
+      <td>多线程各自同步执行，互相同步<br>如 <code>with lock: ...</code></td>
+      <td>多线程异步回调<br>如 Future / Promise 模式</td></tr>
+</table>
+
+<h3>I/O 多路复用（I/O Multiplexing）</h3>
+<p>底层实现 asyncio 的核心机制：<strong>单线程监控多个文件描述符</strong>，有数据就绪时通知事件循环。</p>
+<pre><span class="lang-label">原理</span>
+  select / poll / epoll (Linux) / kqueue (macOS)
+  ┌─────────────────────────────┐
+  │        用户线程              │  1 个线程监控
+  │    事件循环 (Event Loop)     │  所有连接的
+  │         ↕ epoll              │  I/O 事件
+  ├──────┬──────┬──────┬──────┤
+  │sock1 │sock2 │sock3 │sock4 │  N 个套接字
+  └──────┴──────┴──────┴──────┘</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># socket 的非阻塞示例（底层）</span>
+<span class="kw">import</span> <span class="builtin">socket</span>
+<span class="kw">import</span> <span class="builtin">select</span>
+
+sock = socket.socket()
+sock.setblocking(False)
+sock.connect_ex((<span class="str">"example.com"</span>, <span class="num">80</span>))
+
+readable, _, _ = select.select([sock], [], [], <span class="num">5.0</span>)  <span class="cm"># 最多等 5 秒</span>
+<span class="kw">if</span> readable:
+    <span class="builtin">print</span>(<span class="str">"连接就绪!"</span>)
+<span class="kw">else</span>:
+    <span class="builtin">print</span>(<span class="str">"超时"</span>)</pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">🚀</span> 11. 综合实战</h2>
+<p>下面实现一个<strong>生产者-消费者 + 异步监控</strong>的综合案例，串起线程同步、锁、协程、I/O 多路复用这些概念。</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm">"""
+综合实战：多线程生产者-消费者 + asyncio 监控面板
+"""</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+<span class="kw">import</span> <span class="builtin">threading</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+<span class="kw">import</span> <span class="builtin">random</span>
+<span class="kw">from</span> <span class="builtin">collections</span> <span class="kw">import</span> deque
+
+<span class="kw">class</span> <span class="fn">BoundedBuffer</span>:
+    <span class="str">"""线程安全的有限缓冲区（生产-消费）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, capacity=<span class="num">10</span>):
+        self.queue = deque()
+        self.capacity = capacity
+        self._lock = threading.Lock()
+        self._not_empty = threading.Condition(self._lock)
+        self._not_full  = threading.Condition(self._lock)
+
+    <span class="kw">def</span> <span class="fn">put</span>(self, item):
+        <span class="kw">with</span> self._not_full:
+            <span class="kw">while</span> <span class="builtin">len</span>(self.queue) >= self.capacity:
+                self._not_full.wait()
+            self.queue.append(item)
+            self._not_empty.notify()
+
+    <span class="kw">def</span> <span class="fn">get</span>(self):
+        <span class="kw">with</span> self._not_empty:
+            <span class="kw">while</span> <span class="builtin">len</span>(self.queue) == <span class="num">0</span>:
+                self._not_empty.wait()
+            item = self.queue.popleft()
+            self._not_full.notify()
+            <span class="kw">return</span> item
+
+    <span class="kw">def</span> <span class="fn">size</span>(self):
+        <span class="kw">with</span> self._lock:
+            <span class="kw">return</span> <span class="builtin">len</span>(self.queue)
+
+<span class="cm"># 全局缓冲区</span>
+buffer = BoundedBuffer(capacity=<span class="num">8</span>)
+stats = {<span class="str">"produced"</span>: <span class="num">0</span>, <span class="str">"consumed"</span>: <span class="num">0</span>}
+stats_lock = threading.Lock()
+
+<span class="kw">def</span> <span class="fn">producer</span>(pid, count=<span class="num">20</span>):
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(count):
+        item = f<span class="str">"P{pid}-{i}"</span>
+        buffer.put(item)
+        <span class="kw">with</span> stats_lock:
+            stats[<span class="str">"produced"</span>] += <span class="num">1</span>
+        time.sleep(random.uniform(<span class="num">0.05</span>, <span class="num">0.2</span>))
+
+<span class="kw">def</span> <span class="fn">consumer</span>(cid, count=<span class="num">20</span>):
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(count):
+        item = buffer.get()
+        <span class="kw">with</span> stats_lock:
+            stats[<span class="str">"consumed"</span>] += <span class="num">1</span>
+        <span class="cm"># print(f"  [C{cid}] 消费: {item}")</span>
+        time.sleep(random.uniform(<span class="num">0.1</span>, <span class="num">0.3</span>))
+
+<span class="kw">async</span> <span class="kw">def</span> <span class="fn">monitor_panel</span>(duration=<span class="num">10</span>):
+    <span class="str">"""asyncio 监控面板（每 0.5 秒刷新一次）"""</span>
+    start = time.time()
+    <span class="kw">while</span> time.time() - start < duration:
+        elapsed = time.time() - start
+        qsize = buffer.size()
+        <span class="kw">with</span> stats_lock:
+            p = stats[<span class="str">"produced"</span>]
+            c = stats[<span class="str">"consumed"</span>]
+        bar = <span class="str">"█"</span> * min(qsize, buffer.capacity) + <span class="str">"░"</span> * (buffer.capacity - min(qsize, buffer.capacity))
+        <span class="builtin">print</span>(f<span class="str">"[{elapsed:>5.1f}s] 缓冲区 [{bar}] {qsize}/{buffer.capacity} | 生产 {p} 消费 {c}"</span>)
+        <span class="kw">await</span> asyncio.sleep(<span class="num">0.5</span>)
+
+<span class="kw">async</span> <span class="kw">def</span> <span class="fn">main</span>():
+    TOTAL_PROD = <span class="num">30</span>
+    TOTAL_CONS = <span class="num">30</span>
+
+    <span class="cm"># 启动 2 个生产者、3 个消费者（多线程）</span>
+    threads = []
+    threads.append(threading.Thread(target=producer, args=(<span class="num">1</span>, TOTAL_PROD // <span class="num">2</span>)))
+    threads.append(threading.Thread(target=producer, args=(<span class="num">2</span>, TOTAL_PROD // <span class="num">2</span>)))
+    threads.append(threading.Thread(target=consumer, args=(<span class="num">1</span>, TOTAL_CONS // <span class="num">3</span> + <span class="num">1</span>)))
+    threads.append(threading.Thread(target=consumer, args=(<span class="num">2</span>, TOTAL_CONS // <span class="num">3</span>)))
+    threads.append(threading.Thread(target=consumer, args=(<span class="num">3</span>, TOTAL_CONS // <span class="num">3</span>)))
+
+    <span class="kw">for</span> t <span class="kw">in</span> threads:
+        t.start()
+
+    <span class="cm"># asyncio 监控面板与线程并行运行</span>
+    <span class="kw">await</span> monitor_panel(duration=<span class="num">6</span>)
+
+    <span class="kw">for</span> t <span class="kw">in</span> threads:
+        t.join()
+
+    <span class="builtin">print</span>(<span class="str">"\n✅ 全部完成！"</span>)
+    <span class="builtin">print</span>(f<span class="str">"  生产总数: {stats['produced']}，消费总数: {stats['consumed']}"</span>)
+
+asyncio.run(main())</pre>
+
+<div class="highlight">
+  <strong>🔗 这个例子串起了哪些知识点？</strong><br>
+  ① 线程安全缓冲区 — <code>Condition</code> + <code>Lock</code>（同步互斥）<br>
+  ② 生产者-消费者经典问题 — 信号量语义用 <code>Condition</code> 实现<br>
+  ③ asyncio 监控面板 — 异步 I/O 事件循环（<code>asyncio.sleep</code> 模拟间隔刷新）<br>
+  ④ 多线程 + 异步混编 — 数据共享通过 <code>threading.Lock</code> 保护<br>
+  ⑤ 实时状态可视化 — 将抽象概念（缓冲区占用量）变成可视 UI
+</div>
+</section>
+
+<!-- ============= FOOTER ============= -->
+<div class="footer">
+  📘 操作系统核心知识 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

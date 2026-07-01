@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git 版本控制 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--orange), var(--red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; color: var(--teal); }
+section h4 { font-size: 1rem; font-weight: 600; margin: 16px 0 8px; color: var(--pink); }
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🔀 Git 版本控制 从入门到精通</h1>
+  <p>工作流 · 分支 · 合并 · 远程 · 高级技巧 — 理论 + 实战 + Python 自动化</p>
+  <div class="tags">
+    <span>🐙 Git</span>
+    <span>🐍 Python 自动化</span>
+    <span>📘 教学文档</span>
+    <span>🎯 团队协作</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. Git 核心概念</a></li>
+    <li><a href="#sec2">2. 安装与配置</a></li>
+    <li><a href="#sec3">3. 基础操作</a></li>
+    <li><a href="#sec4">4. 分支管理</a></li>
+    <li><a href="#sec5">5. 合并与冲突</a></li>
+    <li><a href="#sec6">6. 远程仓库</a></li>
+    <li><a href="#sec7">7. 撤销与回退</a></li>
+    <li><a href="#sec8">8. Stash 临时保存</a></li>
+    <li><a href="#sec9">9. Rebase 变基</a></li>
+    <li><a href="#sec10">10. Tag 标签</a></li>
+    <li><a href="#sec11">11. Git 钩子</a></li>
+    <li><a href="#sec12">12. 高级技巧</a></li>
+    <li><a href="#sec13">13. 团队工作流</a></li>
+    <li><a href="#sec14">14. Python Git 自动化</a></li>
+    <li><a href="#sec15">15. 面试高频题</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. Git 核心概念</h2>
+
+<p><strong>Git</strong> 是目前世界上最先进的<strong>分布式版本控制系统</strong>，由 Linus Torvalds 在 2005 年为 Linux 内核开发而创作。</p>
+
+<h3>三个核心概念</h3>
+<div class="card-grid">
+  <div class="card"><h4>📸 快照 (Snapshot)</h4><p>Git 每次 commit 保存的是整个项目的快照，而非差异（diff）。这让分支切换和回退极快</p></div>
+  <div class="card"><h4>🌳 分支 (Branch)</h4><p>轻量级的指针，指向某个 commit。创建/切换分支几乎瞬时——仅改指针</p></div>
+  <div class="card"><h4>🌐 分布式</h4><p>每个开发者本地都有完整的仓库历史。断网也能 commit，在线才推送</p></div>
+</div>
+
+<h3>三个区域</h3>
+<pre><span class="lang-label">Git 工作区域</span>
+  ┌──────────┐    git add    ┌──────────┐    git commit   ┌──────────┐
+  │  工作区   │─────────────→│  暂存区   │───────────────→│  仓库    │
+  │ (Working  │              │ (Index / │                │ (History)│
+  │  Directory)              │  Staging  │                │          │
+  └──────────┘              └──────────┘                └──────────┘
+        ↑                        ↑                          ↑
+  你看到的文件            下次 commit 的内容          所有历史记录
+
+<span class="cm"># 核心命令</span>
+git init            <span class="cm"># 创建仓库</span>
+git add .           <span class="cm"># 工作区 → 暂存区</span>
+git commit -m "msg" <span class="cm"># 暂存区 → 仓库</span>
+git checkout .      <span class="cm"># 仓库/暂存区 → 工作区（覆盖）</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 检查 Git 是否安装</span>
+<span class="kw">import</span> <span class="builtin">subprocess</span>, <span class="builtin">sys</span>
+
+<span class="kw">try</span>:
+    result = subprocess.run([<span class="str">"git"</span>, <span class="str">"--version"</span>],
+                          capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(<span class="str">"✅"</span>, result.stdout.strip())
+<span class="kw">except</span> FileNotFoundError:
+    <span class="builtin">print</span>(<span class="str">"❌ Git 未安装，请先安装 Git"</span>)
+    sys.exit(<span class="num">1</span>)</pre>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">🔧</span> 2. 安装与配置</h2>
+
+<h3>2.1 安装</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># Linux (Debian/Ubuntu)</span>
+$ sudo apt install git
+
+<span class="cm"># macOS</span>
+$ brew install git
+
+<span class="cm"># Windows — 下载安装包 https://git-scm.com/download/win</span>
+<span class="cm"># 或通过 winget</span>
+$ winget install Git.Git</pre>
+
+<h3>2.2 首次配置</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 全局配置（用户级别）</span>
+$ git config --global user.name "你的名字"
+$ git config --global user.email "your@email.com"
+
+<span class="cm"># 默认分支名 (Git 2.28+)</span>
+$ git config --global init.defaultBranch main
+
+<span class="cm"># 别名（懒人必备）</span>
+$ git config --global alias.st status
+$ git config --global alias.co checkout
+$ git config --global alias.br branch
+$ git config --global alias.ci commit
+$ git config --global alias.lg "log --oneline --graph --all --decorate"
+
+<span class="cm"># 颜色高亮</span>
+$ git config --global color.ui auto
+
+<span class="cm"># 查看配置</span>
+$ git config --list
+$ git config user.name</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 用 Python 设置 Git 配置</span>
+<span class="kw">def</span> <span class="fn">setup_git_config</span>(name, email):
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"config"</span>, <span class="str">"--global"</span>, <span class="str">"user.name"</span>, name])
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"config"</span>, <span class="str">"--global"</span>, <span class="str">"user.email"</span>, email])
+
+    <span class="cm"># 验证</span>
+    name = subprocess.run([<span class="str">"git"</span>, <span class="str">"config"</span>, <span class="str">"user.name"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    email = subprocess.run([<span class="str">"git"</span>, <span class="str">"config"</span>, <span class="str">"user.email"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(f<span class="str">"✅ Git 配置已设置: {name.stdout.strip()} <{email.stdout.strip()}>"</span>)
+
+<span class="cm"># 查看配置文件位置</span>
+result = subprocess.run([<span class="str">"git"</span>, <span class="str">"config"</span>, <span class="str">"--list"</span>, <span class="str">"--show-origin"</span>],
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+<span class="builtin">print</span>(result.stdout[:<span class="num">500</span>])</pre>
+
+<h3>2.3 配置文件层级</h3>
+<table>
+  <tr><th>层级</th><th>作用域</th><th>配置文件位置</th><th>命令</th></tr>
+  <tr><td>--system</td><td>所有用户</td><td>/etc/gitconfig</td><td>极少用</td></tr>
+  <tr><td>--global</td><td>当前用户</td><td>~/.gitconfig</td><td>最常用（用户名、邮箱、别名）</td></tr>
+  <tr><td>--local</td><td>当前仓库</td><td>.git/config</td><td>仓库级配置</td></tr>
+  <tr><td>--worktree</td><td>当前 worktree</td><td>.git/config.worktree</td><td>高级用法</td></tr>
+</table>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">📝</span> 3. 基础操作</h2>
+
+<h3>3.1 创建仓库</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 方式一：从零创建</span>
+$ mkdir myproject && cd myproject
+$ git init
+<span class="cm"># → Initialized empty Git repository in .../.git/</span>
+
+<span class="cm"># 方式二：克隆已有仓库</span>
+$ git clone https://github.com/user/repo.git
+$ git clone git@github.com:user/repo.git   <span class="cm"># SSH 方式（推荐）</span>
+$ git clone --depth=1 <url>                 <span class="cm"># 浅克隆（只取最新版本）</span></pre>
+
+<h3>3.2 添加与提交</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看状态</span>
+$ git status                 <span class="cm"># 最常用的命令！随时查看</span>
+$ git status -s              <span class="cm"># 精简模式</span>
+
+<span class="cm"># 添加文件到暂存区</span>
+$ git add README.md          <span class="cm"># 添加单个文件</span>
+$ git add .                  <span class="cm"># 添加所有变更</span>
+$ git add -p                 <span class="cm"># 交互式分段添加（每个 hunk 确认）</span>
+
+<span class="cm"># 提交</span>
+$ git commit -m "feat: 添加用户登录功能"
+$ git commit -am "feat: 跳过暂存区直接提交"  <span class="cm"># 仅对已跟踪文件有效</span>
+
+<span class="cm"># 查看历史</span>
+$ git log                    <span class="cm"># 完整日志</span>
+$ git log --oneline          <span class="cm"># 一行一个 commit</span>
+$ git log --oneline --graph --all  <span class="cm"># 分支图谱</span>
+$ git log -p                 <span class="cm"># 带 diff</span>
+$ git log --author="张三"     <span class="cm"># 按作者过滤</span>
+$ git log --grep="bug"       <span class="cm"># 按提交信息搜索</span></pre>
+
+<h3>3.3 完整示例</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">os</span>, <span class="builtin">tempfile</span>
+
+<span class="kw">def</span> <span class="fn">demo_basic_git</span>():
+    <span class="str">"""用 Python 模拟 Git 基本操作流程"""</span>
+    <span class="kw">with</span> tempfile.TemporaryDirectory() <span class="kw">as</span> tmpdir:
+        os.chdir(tmpdir)
+        <span class="builtin">print</span>(f<span class="str">"📁 工作目录: {tmpdir}\n"</span>)
+
+        <span class="cm"># 1. init</span>
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"init"</span>], capture_output=<span class="kw">True</span>)
+        <span class="builtin">print</span>(<span class="str">"✅ git init"</span>)
+
+        <span class="cm"># 2. 创建文件</span>
+        <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"hello.py"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+            f.write(<span class="str">'print("Hello, Git!")\n'</span>)
+        <span class="builtin">print</span>(<span class="str">"📝 创建 hello.py"</span>)
+
+        <span class="cm"># 3. status</span>
+        r = subprocess.run([<span class="str">"git"</span>, <span class="str">"status"</span>, <span class="str">"-s"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+        <span class="builtin">print</span>(<span class="str">"📊 git status:"</span>, r.stdout.strip())
+
+        <span class="cm"># 4. add</span>
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"add"</span>, <span class="str">"hello.py"</span>])
+        <span class="builtin">print</span>(<span class="str">"✅ git add hello.py"</span>)
+
+        <span class="cm"># 5. commit</span>
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, <span class="str">"feat: 初始化项目"</span>])
+        <span class="builtin">print</span>(<span class="str">"✅ git commit"</span>)
+
+        <span class="cm"># 6. log</span>
+        r = subprocess.run([<span class="str">"git"</span>, <span class="str">"log"</span>, <span class="str">"--oneline"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+        <span class="builtin">print</span>(<span class="str">"📜 git log:\n"</span>, r.stdout)
+
+demo_basic_git()</pre>
+
+<h3>3.4 .gitignore 忽略文件</h3>
+<pre><span class="lang-label">.gitignore</span>
+<span class="cm"># 忽略编译产物</span>
+__pycache__/
+*.pyc
+*.pyo
+*.so
+
+<span class="cm"># 忽略环境</span>
+.env
+.venv/
+venv/
+node_modules/
+
+<span class="cm"># 忽略 IDE</span>
+.vscode/
+.idea/
+*.swp
+
+<span class="cm"># 忽略系统文件</span>
+.DS_Store
+Thumbs.db
+
+<span class="cm"># 忽略大文件</span>
+*.zip
+*.tar.gz
+data/*.csv
+
+<span class="cm"># 但保留特定文件（反向模式）</span>
+!data/sample.csv</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看哪些文件被忽略</span>
+$ git check-ignore -v file.py
+
+<span class="cm"># 强制添加被忽略的文件</span>
+$ git add -f secret.env</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 自动生成 .gitignore</span>
+<span class="kw">def</span> <span class="fn">create_gitignore</span>(project_type=<span class="str">"python"</span>):
+    templates = {
+        <span class="str">"python"</span>: <span class="str">"""
+__pycache__/
+*.py[cod]
+*.so
+.env
+.venv/
+dist/
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/
+"""
+    }
+    <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">".gitignore"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+        f.write(templates.get(project_type, <span class="str">""</span>))
+    <span class="builtin">print</span>(f<span class="str">"✅ .gitignore 已创建 (类型: {project_type})"</span>)</pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">🌿</span> 4. 分支管理</h2>
+<p>分支是 Git 最强大的特性——轻量、快速、易合并。每个人都应该大胆创建分支。</p>
+
+<h3>4.1 分支操作</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看分支</span>
+$ git branch                  <span class="cm"># 本地分支列表（* 表示当前）</span>
+$ git branch -r               <span class="cm"># 远程分支</span>
+$ git branch -a               <span class="cm"># 所有分支</span>
+$ git branch -v               <span class="cm"># 显示每个分支的最新 commit</span>
+
+<span class="cm"># 创建分支</span>
+$ git branch feature-login    <span class="cm"># 基于当前 HEAD 创建</span>
+$ git branch hotfix main      <span class="cm"># 基于 main 创建</span>
+
+<span class="cm"># 切换分支</span>
+$ git checkout feature-login  <span class="cm"># 经典方式</span>
+$ git switch feature-login    <span class="cm"># Git 2.23+ 推荐方式</span>
+
+<span class="cm"># 创建并切换（一行完成）</span>
+$ git checkout -b feature-login   <span class="cm"># 经典</span>
+$ git switch -c feature-login     <span class="cm"># 推荐</span>
+
+<span class="cm"># 重命名分支</span>
+$ git branch -m old-name new-name
+
+<span class="cm"># 删除分支</span>
+$ git branch -d feature-login     <span class="cm"># 已合并的</span>
+$ git branch -D feature-login     <span class="cm"># 强制删除（未合并）</span>
+
+<span class="cm"># 查看各分支最新提交</span>
+$ git branch -v
+$ git log --oneline --graph --all --decorate</pre>
+
+<h3>4.2 分支模型图解</h3>
+<pre><span class="lang-label">分支可视化</span>
+  main:  A---B---C---D---E---F
+               \         /
+  feature:      X---Y---Z
+
+  <span class="cm"># 合并 feature → main 后：</span>
+  main:  A---B---C---X---Y---Z---G</pre>
+
+<h3>4.3 分支管理技巧</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看哪些分支已合并/未合并到当前分支</span>
+$ git branch --merged         <span class="cm"># 已合并（可以安全删除）</span>
+$ git branch --no-merged      <span class="cm"># 未合并</span>
+
+<span class="cm"># 查看分支的差异</span>
+$ git log main..feature       <span class="cm"># feature 有但 main 没有的 commit</span>
+$ git diff main..feature      <span class="cm"># 内容的差异</span>
+
+<span class="cm"># 查看某个 commit 属于哪些分支</span>
+$ git branch --contains &lt;hash&gt;
+
+<span class="cm"># 查看 commit 所属的所有分支（包括远程）</span>
+$ git name-rev &lt;hash&gt;</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">list_branches</span>(path=<span class="str">"."</span>):
+    <span class="str">"""列出所有本地分支及当前分支"""</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"branch"</span>], cwd=path,
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    branches = r.stdout.strip().split(<span class="str">"\n"</span>)
+    current = [b <span class="kw">for</span> b <span class="kw">in</span> branches <span class="kw">if</span> b.startswith(<span class="str">"*"</span>)][<span class="num">0</span>].replace(<span class="str">"*"</span>, <span class="str">""</span>).strip()
+    <span class="builtin">print</span>(f<span class="str">"🔀 当前分支: {current}"</span>)
+    <span class="builtin">print</span>(<span class="str">"所有分支:"</span>)
+    <span class="kw">for</span> b <span class="kw">in</span> branches:
+        marker = <span class="str">"→"</span> <span class="kw">if</span> b.startswith(<span class="str">"*"</span>) <span class="kw">else</span> <span class="str">"  "</span>
+        <span class="builtin">print</span>(f<span class="str">"  {marker} {b.replace('* ', '').strip()}"</span>)
+    <span class="kw">return</span> current, [b.replace(<span class="str">"* "</span>, <span class="str">""</span>).strip() <span class="kw">for</span> b <span class="kw">in</span> branches]</pre>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">🔀</span> 5. 合并与冲突</h2>
+
+<h3>5.1 Git Merge</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 把 feature 合并到当前分支（通常是 main）</span>
+$ git checkout main
+$ git merge feature
+<span class="cm"># → 无冲突：自动创建合并提交（Fast-forward 或 3-way）</span>
+<span class="cm"># → 有冲突：手动解决后继续</span>
+
+<span class="cm"># 禁止快进合并（保留分支历史）</span>
+$ git merge --no-ff feature -m "merge: 合并登录功能"
+
+<span class="cm"># 压缩合并（将 feature 的所有 commit 压缩成一个）</span>
+$ git merge --squash feature
+$ git commit -m "feat: 登录功能"
+
+<span class="cm"># 中止合并（解决冲突到一半想放弃）</span>
+$ git merge --abort</pre>
+
+<h3>5.2 冲突解决</h3>
+<pre><span class="lang-label">冲突标记</span>
+<span class="cm"># 当两个分支修改了同一个文件的同一区域时：</span>
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+这是 main 分支的版本
+=======
+这是 feature 分支的版本
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature
+
+<span class="cm"># 你需要手动编辑文件，删除标记，保留最终想要的版本</span></pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 冲突解决流程</span>
+$ git status                  <span class="cm"># 查看冲突文件（both modified）</span>
+<span class="cm"># 编辑文件 → 解决冲突 → 保存</span>
+$ git add .                   <span class="cm"># 标记为已解决</span>
+$ git commit -m "解决冲突"      <span class="cm"># 完成合并</span>
+
+<span class="cm"># 可视化解决冲突工具</span>
+$ git mergetool               <span class="cm"># 打开配置的合并工具（vscode, meld, ...）</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">simulate_conflict</span>():
+    <span class="str">"""模拟一个合并冲突并用 Python 自动解决"""</span>
+    <span class="kw">with</span> tempfile.TemporaryDirectory() <span class="kw">as</span> tmpdir:
+        os.chdir(tmpdir)
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"init"</span>], capture_output=<span class="kw">True</span>)
+
+        <span class="cm"># 创建初始文件</span>
+        <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"config.py"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f: f.write(<span class="str">"TIMEOUT = 30\n"</span>)
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"add"</span>, <span class="str">"."</span>])
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, <span class="str">"初始提交"</span>])
+
+        <span class="cm"># 创建 feature 分支并修改</span>
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"checkout"</span>, <span class="str">"-b"</span>, <span class="str">"feature"</span>])
+        <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"config.py"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f: f.write(<span class="str">"TIMEOUT = 60\n"</span>)
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-am"</span>, <span class="str">"feat: 增加超时"</span>])
+
+        <span class="cm"># 切回 main 分支也修改同一文件</span>
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"checkout"</span>, <span class="str">"main"</span>])
+        <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"config.py"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f: f.write(<span class="str">"TIMEOUT = 120\n"</span>)
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-am"</span>, <span class="str">"fix: 修改超时"</span>])
+
+        <span class="cm"># 合并（必然冲突）</span>
+        r = subprocess.run([<span class="str">"git"</span>, <span class="str">"merge"</span>, <span class="str">"feature"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+        <span class="builtin">print</span>(<span class="str">"合并结果:"</span>, r.stdout)
+
+        <span class="cm"># 自动解决冲突：取两个版本的平均值</span>
+        <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"config.py"</span>) <span class="kw">as</span> f:
+            content = f.read()
+
+        <span class="kw">import</span> <span class="builtin">re</span>
+        vals = [<span class="builtin">int</span>(x) <span class="kw">for</span> x <span class="kw">in</span> re.findall(<span class="str">r"TIMEOUT = (\d+)"</span>, content)]
+        <span class="kw">if</span> vals:
+            avg = <span class="builtin">sum</span>(vals) // <span class="builtin">len</span>(vals)
+            <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"config.py"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+                f.write(f<span class="str">"TIMEOUT = {avg}\n"</span>)
+            subprocess.run([<span class="str">"git"</span>, <span class="str">"add"</span>, <span class="str">"config.py"</span>])
+            subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, <span class="str">"解决冲突: TIMEOUT 取平均值"</span>])
+            <span class="builtin">print</span>(<span class="str">f"✅ 冲突已解决，TIMEOUT = {avg}"</span>)
+
+simulate_conflict()</pre>
+
+<h3>5.3 合并策略速查</h3>
+<table>
+  <tr><th>策略</th><th>命令</th><th>适用场景</th></tr>
+  <tr><td>快进合并</td><td><code>git merge</code>（默认）</td><td>线性历史，没有分叉</td></tr>
+  <tr><td>3-way 合并</td><td><code>git merge</code>（自动）</td><td>有分叉的常规合并</td></tr>
+  <tr><td>非快进</td><td><code>git merge --no-ff</code></td><td>保留分支痕迹，推荐</td></tr>
+  <tr><td>压缩合并</td><td><code>git merge --squash</code></td><td>将分支多个 commit 合并为 1 个</td></tr>
+  <tr><td>拣选提交</td><td><code>git cherry-pick &lt;hash&gt;</code></td><td>只取某个 commit 到当前分支</td></tr>
+</table>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">☁️</span> 6. 远程仓库</h2>
+
+<h3>6.1 远程管理</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看远程仓库</span>
+$ git remote -v               <span class="cm"># 显示 URL（fetch + push）</span>
+$ git remote show origin      <span class="cm"># 详细信息</span>
+
+<span class="cm"># 添加远程仓库</span>
+$ git remote add origin https://github.com/user/repo.git
+$ git remote add origin git@github.com:user/repo.git  <span class="cm"># SSH 推荐</span>
+
+<span class="cm"># 修改远程 URL</span>
+$ git remote set-url origin https://new-url.com/repo.git
+
+<span class="cm"># 删除远程</span>
+$ git remote remove origin</pre>
+
+<h3>6.2 推送与拉取</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 推送</span>
+$ git push origin main        <span class="cm"># 推送到远程 main</span>
+$ git push -u origin feature  <span class="cm"># 推送到远程并建立跟踪（第一次用 -u）</span>
+$ git push --all              <span class="cm"># 推送所有分支</span>
+$ git push --tags             <span class="cm"># 推送标签</span>
+$ git push origin :feature    <span class="cm"># 删除远程分支（推送空分支）</span>
+
+<span class="cm"># 拉取</span>
+$ git pull                    <span class="cm"># fetch + merge（相当于 git fetch && git merge）</span>
+$ git pull --rebase           <span class="cm"># fetch + rebase（保持线性历史）</span>
+$ git fetch                   <span class="cm"># 只下载，不合并</span>
+$ git fetch --prune           <span class="cm"># 清理已经不存在的远程分支引用</span></pre>
+
+<h3>6.3 SSH 配置（推荐）</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 生成 SSH 密钥</span>
+$ ssh-keygen -t ed25519 -C "your@email.com"
+<span class="cm"># 复制公钥到 GitHub/GitLab</span>
+$ cat ~/.ssh/id_ed25519.pub
+
+<span class="cm"># 测试连接</span>
+$ ssh -T git@github.com
+<span class="cm"># → Hi username! You've successfully authenticated...</span>
+
+<span class="cm"># 多账号配置 ~/.ssh/config</span>
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_work</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">clone_and_analyze</span>(repo_url, branch=<span class="str">"main"</span>):
+    <span class="str">"""克隆仓库并统计信息"""</span>
+    repo_name = repo_url.split(<span class="str">"/"</span>)[-<span class="num">1</span>].replace(<span class="str">".git"</span>, <span class="str">""</span>)
+    <span class="builtin">print</span>(f<span class="str">"📦 克隆 {repo_name}..."</span>)
+
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"clone"</span>, <span class="str">"--depth=1"</span>, repo_url])
+    os.chdir(repo_name)
+
+    <span class="cm"># 统计</span>
+    log = subprocess.run([<span class="str">"git"</span>, <span class="str">"log"</span>, <span class="str">"--oneline"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    commits = log.stdout.strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> log.stdout.strip() <span class="kw">else</span> []
+
+    <span class="builtin">print</span>(<span class="str">f"  分支: {branch}"</span>)
+    <span class="builtin">print</span>(<span class="str">f"  commit 数（浅克隆）: {len(commits)}"</span>)
+    <span class="builtin">print</span>(<span class="str">f"  目录大小: {os.popen('du -sh .git | cut -f1').read().strip()}"</span>)
+
+    os.chdir(<span class="str">".."</span>)
+
+<span class="cm"># clone_and_analyze("https://github.com/psf/requests.git")</span></pre>
+
+<h3>6.4 Pull Request 工作流</h3>
+<pre><span class="lang-label">流程</span>
+1. fork 主仓库到自己的 GitHub 账号
+2. git clone 自己的仓库
+3. git checkout -b feature
+4. 编写代码, commit
+5. git push origin feature
+6. 在 GitHub 创建 Pull Request
+7. 代码审查 → 合并到 main
+8. git checkout main && git pull upstream main</pre>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">⏪</span> 7. 撤销与回退</h2>
+
+<p>Git 最让人心安的一点：<strong>几乎所有操作都可以撤销</strong>。</p>
+
+<h3>7.1 工作区/暂存区撤销</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 撤销工作区的修改（还没 add）</span>
+$ git checkout -- file.py     <span class="cm"># 丢弃工作区修改</span>
+$ git restore file.py         <span class="cm"># Git 2.23+ 推荐</span>
+$ git checkout .              <span class="cm"># 丢弃所有未暂存的修改</span>
+
+<span class="cm"># 撤销暂存区的文件（已经 add，还没 commit）</span>
+$ git reset HEAD file.py      <span class="cm"># 从暂存区移除</span>
+$ git restore --staged file.py <span class="cm"># Git 2.23+ 推荐</span>
+
+<span class="cm"># 撤销所有暂存</span>
+$ git reset HEAD .</pre>
+
+<h3>7.2 提交撤销</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># --soft: 只移动 HEAD，文件留等待区</span>
+$ git reset --soft HEAD~1     <span class="cm"># 撤销上一次 commit，修改留在暂存区</span>
+
+<span class="cm"># --mixed (默认): 移动 HEAD，暂存区也被重置</span>
+$ git reset HEAD~1            <span class="cm"># 撤销 commit 和暂存区，文件不变</span>
+
+<span class="cm"># --hard: 彻底丢弃（⚠ 慎用，丢失工作区修改）</span>
+$ git reset --hard HEAD~1     <span class="cm"># 完全回到上一个 commit</span>
+
+<span class="cm"># 保留修改但撤销 commit（常用）</span>
+$ git reset --soft HEAD~1
+<span class="cm"># 然后可以重新提交</span>
+
+<span class="cm"># 用 revert 创建"反提交"（更安全，不影响历史）</span>
+$ git revert HEAD             <span class="cm"># 生成一个新的 commit 撤销当前修改</span>
+$ git revert &lt;hash&gt;           <span class="cm"># 撤销特定 commit</span></pre>
+
+<h3>7.3 reset vs revert 对比</h3>
+<table>
+  <tr><th></th><th>git reset</th><th>git revert</th></tr>
+  <tr><td>效果</td><td>删除历史</td><td>创建反提交</td></tr>
+  <tr><td>历史</td><td>被改写（push 后不要用）</td><td>保留完整历史</td></tr>
+  <tr><td>适用</td><td>本地未推送</td><td>已推送的公共分支</td></tr>
+  <tr><td>安全</td><td>⚠ 可能丢失修改</td><td>✅ 安全</td></tr>
+</table>
+
+<h3>7.4 删除最近的 commit 但保留文件</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 场景：刚 commit 了但发现有 bug，想改完重新提交</span>
+$ git reset --soft HEAD~1
+<span class="cm"># 修改文件</span>
+$ git add .
+$ git commit -m "fixed: 修正提交"</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">undo_last_commit</span>(soft=<span class="kw">True</span>):
+    <span class="str">"""撤销上一次 commit"""</span>
+    mode = <span class="str">"--soft"</span> <span class="kw">if</span> soft <span class="kw">else</span> <span class="str">"--hard"</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"log"</span>, <span class="str">"--oneline"</span>, <span class="str">"-1"</span>],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(<span class="str">"撤销前最新的 commit:"</span>, r.stdout.strip())
+
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"reset"</span>, mode, <span class="str">"HEAD~1"</span>])
+    <span class="builtin">print</span>(<span class="str">f"✅ 已撤销 (mode={mode})"</span>)</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">📦</span> 8. Stash 临时保存</h2>
+<p>你正在功能分支上开发，突然需要切到 main 修复紧急 bug——但又不想 commit 半成品。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 保存当前工作区（包括未暂存和暂存文件）</span>
+$ git stash -u                <span class="cm"># -u 包括未跟踪文件</span>
+$ git stash                   <span class="cm"># 只保存已跟踪文件</span>
+
+<span class="cm"># 查看 stash 列表</span>
+$ git stash list
+<span class="cm"># stash@{0}: On feature: 添加用户模型</span>
+<span class="cm"># stash@{1}: On main: 临时保存</span>
+
+<span class="cm"># 恢复最近一次 stash 并删除它</span>
+$ git stash pop
+
+<span class="cm"># 恢复 stash 但不删除</span>
+$ git stash apply stash@{1}
+
+<span class="cm"># 删除 stash</span>
+$ git stash drop stash@{1}    <span class="cm"># 删除指定</span>
+$ git stash clear             <span class="cm"># 清空所有</span>
+
+<span class="cm"># 创建一个新的分支并应用 stash</span>
+$ git stash branch new-feature stash@{0}</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">stash_manager</span>(action=<span class="str">"list"</span>, message=<span class="str">""</span>):
+    <span class="str">"""Stash 管理工具"""</span>
+    <span class="kw">if</span> action == <span class="str">"push"</span>:
+        cmd = [<span class="str">"git"</span>, <span class="str">"stash"</span>, <span class="str">"push"</span>, <span class="str">"-u"</span>, <span class="str">"-m"</span>, message]
+        subprocess.run(cmd)
+        <span class="builtin">print</span>(<span class="str">f"📦 已保存: {message}"</span>)
+
+    <span class="kw">elif</span> action == <span class="str">"list"</span>:
+        r = subprocess.run([<span class="str">"git"</span>, <span class="str">"stash"</span>, <span class="str">"list"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+        <span class="kw">if</span> r.stdout.strip():
+            <span class="builtin">print</span>(<span class="str">"📋 Stash 列表:"</span>)
+            <span class="kw">for</span> line <span class="kw">in</span> r.stdout.strip().split(<span class="str">"\n"</span>):
+                <span class="builtin">print</span>(<span class="str">"  "</span>, line)
+        <span class="kw">else</span>:
+            <span class="builtin">print</span>(<span class="str">"📭 没有 stash"</span>)
+
+    <span class="kw">elif</span> action == <span class="str">"pop"</span>:
+        subprocess.run([<span class="str">"git"</span>, <span class="str">"stash"</span>, <span class="str">"pop"</span>])
+        <span class="builtin">print</span>(<span class="str">"↩️ 已恢复并删除 stash"</span>)</pre>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">🔃</span> 9. Rebase 变基</h2>
+<p><strong>Rebase</strong> 是将分支的"基点"移动到另一个位置，获得<strong>干净、线性的历史</strong>。是 merge 的替代方案。</p>
+
+<h3>9.1 基本 Rebase</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 场景：把 feature 分支变基到 main 的最新 commit</span>
+$ git checkout feature
+$ git rebase main
+
+<span class="cm"># 效果：feature 的 commit 从 main 的末尾"重新播放"</span>
+<span class="cm"># 之前:  A---B---C (main)</span>
+<span class="cm">#             \</span>
+<span class="cm">#              D---E (feature)</span>
+<span class="cm"># 之后:  A---B---C (main)</span>
+<span class="cm">#                  \</span>
+<span class="cm">#                   D'---E' (feature)  ← 新的 hash</span></pre>
+
+<h3>9.2 交互式 Rebase（修改历史）</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 修改最近的 N 个 commit</span>
+$ git rebase -i HEAD~3
+
+<span class="cm"># 打开的编辑器中有如下选项：</span>
+pick abc123 提交1
+pick def456 提交2
+pick ghi789 提交3
+
+<span class="cm"># 可选指令：</span>
+<span class="cm"># pick   — 保留该 commit</span>
+<span class="cm"># reword — 修改提交信息</span>
+<span class="cm"># edit   — 修改提交内容</span>
+<span class="cm"># squash — 与上一个 commit 合并</span>
+<span class="cm"># fixup  — 类似 squash 但丢弃提交信息</span>
+<span class="cm"># drop   — 删除该 commit</span></pre>
+
+<h3>9.3 常用 Rebase 场景</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 1. 把最后 3 个 commit 压缩成 1 个</span>
+$ git rebase -i HEAD~3
+<span class="cm"># 把后两个改为 squash</span>
+
+<span class="cm"># 2. 修改历史提交信息</span>
+$ git rebase -i HEAD~5
+<span class="cm"># 把要修改的 commit 改为 reword</span>
+
+<span class="cm"># 3. 删除某个历史 commit</span>
+$ git rebase -i HEAD~10
+<span class="cm"># 把要删除的 commit 改为 drop</span>
+
+<span class="cm"># 4. pull 时用 rebase 保持线性历史</span>
+$ git pull --rebase
+<span class="cm"># 配置为默认行为：git config --global pull.rebase true</span></pre>
+
+<h3>9.4 Merge vs Rebase 对比</h3>
+<table>
+  <tr><th></th><th>Merge</th><th>Rebase</th></tr>
+  <tr><td>历史</td><td>保留合并点，可见分叉</td><td>线性历史，无分叉</td></tr>
+  <tr><td>安全</td><td>✅ 不修改已有 commit</td><td>⚠ 修改 commit hash</td></tr>
+  <tr><td>适用</td><td>公共分支合并</td><td>私有分支整理</td></tr>
+  <tr><td>冲突解决</td><td>一次完成</td><td>每个 commit 都要解决一次</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>⚠️ 黄金法则：</strong>绝不要在<strong>已推送</strong>的公共分支上 rebase。rebase 会修改历史，别人推送到同一分支会混乱。
+</div>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">squash_last_commits</span>(n=<span class="num">3</span>, message=<span class="str">"合并提交"</span>):
+    <span class="str">"""自动压缩最近 N 个 commit（需要 GIT_SEQUENCE_EDITOR 支持）"""</span>
+    <span class="kw">import</span> <span class="builtin">os</span>
+    <span class="cm"># 设置编辑器为自动合并的脚本</span>
+    editor_cmd = f<span class="str">"sed -i '2,{n}s/^pick/squash/'"</span>
+    env = os.environ.copy()
+    env[<span class="str">"GIT_SEQUENCE_EDITOR"</span>] = editor_cmd
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"rebase"</span>, <span class="str">"-i"</span>, f<span class="str">"HEAD~{n}"</span>], env=env)
+
+    <span class="cm"># 如果有冲突，需要手动处理</span>
+    <span class="builtin">print</span>(<span class="str">f"✅ 已压缩最近 {n} 个 commit"</span>)
+
+<span class="cm"># 或者手动一步步来：</span>
+<span class="cm"># git reset --soft HEAD~3</span>
+<span class="cm"># git commit -m "合并三个 commit 为一个"</span></pre>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">🏷</span> 10. Tag 标签</h2>
+<p>Tag 用来标记重要的版本节点（如 v1.0.0, v2.3.1）。<strong>标签创建后通常不移动</strong>。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 创建轻量标签（仅一个指针）</span>
+$ git tag v1.0.0
+
+<span class="cm"># 创建附注标签（推荐——包含作者、日期、信息）</span>
+$ git tag -a v1.0.0 -m "正式版 v1.0.0"
+
+<span class="cm"># 给历史 commit 打标签</span>
+$ git tag -a v0.9.0 <hash> -m "beta 版本"
+
+<span class="cm"># 查看标签</span>
+$ git tag                    <span class="cm"># 列表</span>
+$ git tag -l "v1.*"          <span class="cm"># 通配符过滤</span>
+$ git show v1.0.0            <span class="cm"># 查看标签详情</span>
+
+<span class="cm"># 删除标签</span>
+$ git tag -d v0.9.0          <span class="cm"># 本地删除</span>
+$ git push origin --delete v0.9.0  <span class="cm"># 远程删除</span>
+
+<span class="cm"># 推送标签到远程</span>
+$ git push origin v1.0.0     <span class="cm"># 推送单个标签</span>
+$ git push --tags            <span class="cm"># 推送所有未推送的标签</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">create_version_tag</span>(version, message=<span class="str">""</span>):
+    <span class="str">"""创建版本标签并验证"""</span>
+    <span class="cm"># 检查是否是有效的语义版本号</span>
+    <span class="kw">import</span> <span class="builtin">re</span>
+    <span class="kw">if</span> <span class="kw">not</span> re.match(<span class="str">r"^v?\d+\.\d+\.\d+"</span>, version):
+        <span class="kw">raise</span> ValueError(<span class="str">"版本号格式错误，应如 v1.0.0"</span>)
+
+    <span class="cm"># 创建带注释的标签</span>
+    msg = message <span class="kw">or</span> f<span class="str">"版本 {version}"</span>
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"tag"</span>, <span class="str">"-a"</span>, version, <span class="str">"-m"</span>, msg])
+
+    <span class="cm"># 验证</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"tag"</span>, <span class="str">"-l"</span>, version], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(f<span class="str">"🏷 标签 {r.stdout.strip()} 已创建"</span>)
+    <span class="kw">return</span> version
+
+<span class="kw">def</span> <span class="fn">list_recent_tags</span>(n=<span class="num">10</span>):
+    <span class="str">"""按时间排序最近的标签"""</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"tag"</span>, <span class="str">"--sort=-creatordate"</span>],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    tags = [t <span class="kw">for</span> t <span class="kw">in</span> r.stdout.strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> t]
+    <span class="builtin">print</span>(<span class="str">f"最近的 {min(n, len(tags))} 个标签:"</span>)
+    <span class="kw">for</span> t <span class="kw">in</span> tags[:n]:
+        r2 = subprocess.run([<span class="str">"git"</span>, <span class="str">"log"</span>, <span class="str">"-1"</span>, <span class="str">"--format=%ci"</span>, t],
+                           capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+        <span class="builtin">print</span>(f<span class="str">"  {t:15} {r2.stdout.strip()}"</span>)</pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">🎣</span> 11. Git 钩子</h2>
+<p><strong>钩子（Hook）</strong> 是在特定 Git 事件发生时自动触发的脚本。存放在 <code>.git/hooks/</code> 目录。</p>
+
+<h3>11.1 常用钩子</h3>
+<div class="card-grid">
+  <div class="card"><h4>pre-commit</h4><p>commit 前运行。可用于检查代码风格、运行测试、防止敏感信息提交</p></div>
+  <div class="card"><h4>commit-msg</h4><p>检查提交信息格式（如 Angular 约定：feat/fix/docs/...）</p></div>
+  <div class="card"><h4>pre-push</h4><p>推送前运行：运行测试、检查代码质量、防止直接推送到 main</p></div>
+  <div class="card"><h4>post-merge</h4><p>合并后运行：自动更新依赖、迁移数据库</p></div>
+</div>
+
+<h3>11.2 pre-commit 示例</h3>
+<pre><span class="lang-label">bash</span>
+$ touch .git/hooks/pre-commit
+$ chmod +x .git/hooks/pre-commit</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm">#!/usr/bin/env python3</span>
+<span class="cm">"""pre-commit 钩子：检查 Python 语法和 .env 泄露"""</span>
+<span class="kw">import</span> <span class="builtin">sys</span>, <span class="builtin">subprocess</span>, <span class="builtin">os</span>
+
+<span class="cm"># 1. Python 语法检查</span>
+result = subprocess.run([<span class="str">"python3"</span>, <span class="str">"-m"</span>, <span class="str">"py_compile"</span>, <span class="str">"main.py"</span>],
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+<span class="kw">if</span> result.returncode != <span class="num">0</span>:
+    <span class="builtin">print</span>(<span class="str">"❌ Python 语法错误:"</span>)
+    <span class="builtin">print</span>(result.stderr)
+    sys.exit(<span class="num">1</span>)
+
+<span class="cm"># 2. 检查是否误提交了 .env 文件</span>
+result = subprocess.run([<span class="str">"git"</span>, <span class="str">"diff"</span>, <span class="str">"--cached"</span>, <span class="str">"--name-only"</span>],
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+staged_files = result.stdout.strip().split(<span class="str">"\n"</span>)
+<span class="kw">for</span> f <span class="kw">in</span> staged_files:
+    <span class="kw">if</span> <span class="str">".env"</span> <span class="kw">in</span> f <span class="kw">and</span> f != <span class="str">".env.example"</span>:
+        <span class="builtin">print</span>(f<span class="str">"❌ 可能泄露敏感信息: {f}"</span>)
+        sys.exit(<span class="num">1</span>)
+
+<span class="builtin">print</span>(<span class="str">"✅ pre-commit 检查通过"</span>)</pre>
+
+<h3>11.3 使用 pre-commit 框架（推荐）</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 安装 pre-commit 框架</span>
+$ pip install pre-commit
+$ pre-commit install</pre>
+
+<pre><span class="lang-label">.pre-commit-config.yaml</span>
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace    <span class="cm"># 删除末尾空格</span>
+      - id: end-of-file-fixer      <span class="cm"># 文件末尾加换行</span>
+      - id: check-yaml             <span class="cm"># YAML 语法检查</span>
+      - id: check-added-large-files <span class="cm"># 检查大文件 (默认 >500KB)</span>
+
+  - repo: https://github.com/psf/black
+    rev: 24.1.0
+    hooks:
+      - id: black                 <span class="cm"># Python 代码格式化</span>
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8                <span class="cm"># Python 代码检查</span></pre>
+
+<h3>11.4 commit-msg 检查</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm">#!/usr/bin/env python3</span>
+<span class="cm">"""commit-msg: 检查提交信息是否符合 Conventional Commits 规范"""</span>
+<span class="kw">import</span> <span class="builtin">sys</span>, <span class="builtin">re</span>
+
+<span class="kw">with</span> <span class="builtin">open</span>(sys.argv[<span class="num">1</span>]) <span class="kw">as</span> f:
+    msg = f.read().strip()
+
+pattern = <span class="str">r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .{1,100}$"</span>
+<span class="kw">if</span> <span class="kw">not</span> re.match(pattern, msg):
+    <span class="builtin">print</span>(<span class="str">"❌ 提交信息格式错误！请使用:"</span>)
+    <span class="builtin">print</span>(<span class="str">"  feat(scope): 新功能"</span>)
+    <span class="builtin">print</span>(<span class="str">"  fix(scope): 修复 bug"</span>)
+    <span class="builtin">print</span>(<span class="str">"  docs: 文档更新"</span>)
+    <span class="builtin">print</span>(<span class="str">"  refactor: 重构"</span>)
+    sys.exit(<span class="num">1</span>)
+
+<span class="builtin">print</span>(<span class="str">"✅ 提交信息格式正确"</span>)</pre>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">🧠</span> 12. 高级技巧</h2>
+
+<h3>12.1 git bisect — 二分查找</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 二分法定位引入 bug 的 commit</span>
+$ git bisect start
+$ git bisect bad              <span class="cm"># 当前版本有 bug</span>
+$ git bisect good v1.0.0      <span class="cm"># 标记已知正常的版本</span>
+
+<span class="cm"># Git 会 checkout 中间的 commit，你判断好坏</span>
+$ git bisect good             <span class="cm"># 当前 commit 正常</span>
+$ git bisect bad              <span class="cm"># 当前 commit 有 bug</span>
+
+<span class="cm"># 重复几次后，Git 会定位到第一个引入 bug 的 commit</span>
+<span class="cm"># 结束</span>
+$ git bisect reset</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">auto_bisect</span>(good_commit, bad_commit=<span class="str">"HEAD"</span>, test_cmd=<span class="str">"python -m pytest"</span>):
+    <span class="str">"""自动二分查找（使用 git bisect run）"""</span>
+    <span class="cm"># 创建测试脚本</span>
+    <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"bisect_test.sh"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+        f.write(<span class="str">f"#!/bin/bash\n{test_cmd}\n"</span>)
+    os.chmod(<span class="str">"bisect_test.sh"</span>, <span class="num">0o755</span>)
+
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"bisect"</span>, <span class="str">"start"</span>])
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"bisect"</span>, <span class="str">"bad"</span>, bad_commit])
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"bisect"</span>, <span class="str">"good"</span>, good_commit])
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"bisect"</span>, <span class="str">"run"</span>, <span class="str">"bash"</span>, <span class="str">"bisect_test.sh"</span>],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"bisect"</span>, <span class="str">"reset"</span>])
+    <span class="builtin">print</span>(r.stdout[-<span class="num">500</span>:])
+    <span class="kw">return</span> r.stdout</pre>
+
+<h3>12.2 git reflog — 救命神器</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># reflog 记录 HEAD 的所有移动（包括 reset 丢失的 commit）</span>
+$ git reflog
+<span class="cm"># abc123 (HEAD -> main) HEAD@{0}: commit: 重要修改</span>
+<span class="cm"># def456 HEAD@{1}: reset: moving to HEAD~1</span>
+<span class="cm"># ghi789 HEAD@{2}: commit: 被 reset 丢弃的提交</span>
+
+<span class="cm"># 恢复被丢弃的 commit</span>
+$ git reset --hard HEAD@{2}
+<span class="cm"># 或基于 reflog 创建分支</span>
+$ git branch recover-branch HEAD@{2}
+
+<span class="cm"># reflog 只在本地，过期自动清理（默认 90 天）</span></pre>
+
+<h3>12.3 git submodule</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 添加子模块（引用另一个仓库）</span>
+$ git submodule add https://github.com/psf/requests.git lib/requests
+
+<span class="cm"># 克隆含子模块的项目</span>
+$ git clone --recurse-submodules <url>
+
+<span class="cm"># 更新子模块</span>
+$ git submodule update --remote
+
+<span class="cm"># 注意：子模块保持自己的版本，主仓库只记录指向哪个 commit</span></pre>
+
+<h3>12.4 git worktree</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 同时 checkout 多个分支到不同目录</span>
+$ git worktree add ../hotfix hotfix
+<span class="cm"># 在 ../hotfix 目录工作，不用切换当前分支</span>
+
+$ git worktree list
+<span class="cm"># /path/main     main</span>
+<span class="cm"># /path/hotfix   hotfix</span>
+
+$ git worktree remove hotfix</pre>
+
+<h3>12.5 常用速查命令</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 统计代码量</span>
+$ git shortlog -sn           <span class="cm"># 按作者统计 commit 数</span>
+$ git diff --stat            <span class="cm"># 统计改动文件</span>
+$ git diff --shortstat       <span class="cm"># 统计增删行</span>
+
+<span class="cm"># 搜索提交信息</span>
+$ git log --grep="bug" -i    <span class="cm"># 搜索包含 bug 的 commit</span>
+
+<span class="cm"># 搜索代码（可以指定 commit 范围）</span>
+$ git grep "def main" HEAD~5
+
+<span class="cm"># 查看某个文件的每一行是谁最后修改的</span>
+$ git blame file.py
+
+<span class="cm"># 清空 .git 中不被需要的对象（减少仓库体积）</span>
+$ git gc --aggressive --prune=now</pre>
+</section>
+
+<!-- ============= 13 ============= -->
+<section id="sec13">
+<h2><span class="emoji">👥</span> 13. 团队工作流</h2>
+
+<h3>13.1 GitHub Flow（最流行）</h3>
+<pre><span class="lang-label">流程</span>
+main 分支始终可部署
+
+1. 从 main 创建 feature 分支
+   git checkout -b feature-login
+
+2. 提交修改
+   git add . && git commit -m "feat: ..."
+
+3. 推送到远程
+   git push -u origin feature-login
+
+4. 创建 Pull Request (PR)
+
+5. 代码审查 + CI 检查
+
+6. 合并到 main (Squash merge 或 Merge commit)
+
+7. 部署</pre>
+
+<h3>13.2 约定式提交规范</h3>
+<pre><span class="lang-label">格式</span>
+&lt;type&gt;(&lt;scope&gt;): &lt;subject&gt;
+
+<span class="cm"># 类型</span>
+feat:     新功能
+fix:      Bug 修复
+docs:     文档
+style:    代码格式（不影响功能）
+refactor: 重构
+perf:     性能优化
+test:     测试
+build:    构建系统
+ci:       CI 配置
+chore:    杂项
+
+<span class="cm"># 示例</span>
+feat(auth): 添加 OAuth2 登录功能
+fix(db): 修复连接池泄漏问题
+docs: 更新 API 文档
+refactor: 重构用户模块
+perf: 优化查询性能，减少 50% 响应时间</pre>
+
+<h3>13.3 分支命名规范</h3>
+<pre><span class="lang-label">建议</span>
+feature/xxx       — 新功能
+fix/xxx           — Bug 修复
+hotfix/xxx        — 紧急修复（直接基于 main）
+release/xxx       — 发布准备
+chore/xxx         — 杂项
+
+<span class="cm"># 示例</span>
+feature/user-login
+fix/payment-timeout
+hotfix/security-patch
+release/v2.1.0</pre>
+
+<h3>13.4 Code Review 检查清单</h3>
+<div class="card-grid">
+  <div class="card"><h4>✅ 功能正确</h4><p>代码是否实现需求？有没有边界情况没处理？</p></div>
+  <div class="card"><h4>📐 代码设计</h4><p>模块拆分合理吗？有没有重复代码？</p></div>
+  <div class="card"><h4>🧪 测试覆盖</h4><p>新功能有测试吗？现有测试通过吗？</p></div>
+  <div class="card"><h4>📖 可读性</h4><p>命名清晰吗？有没有必要注释？</p></div>
+  <div class="card"><h4>🔒 安全</h4><p>SQL 注入、XSS、敏感信息有处理吗？</p></div>
+  <div class="card"><h4>⚡ 性能</h4><p>有没有不必要的数据库查询？N+1 问题？</p></div>
+</div>
+</section>
+
+<!-- ============= 14 ============= -->
+<section id="sec14">
+<h2><span class="emoji">🤖</span> 14. Python Git 自动化</h2>
+
+<h3>14.1 GitPython 库</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install GitPython</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">git</span>
+
+<span class="cm"># 打开已有仓库</span>
+repo = git.Repo(<span class="str">"."</span>)
+
+<span class="cm"># 基本操作</span>
+<span class="builtin">print</span>(<span class="str">"活跃分支:"</span>, repo.active_branch)
+<span class="builtin">print</span>(<span class="str">"远程:"</span>, [r.name <span class="kw">for</span> r <span class="kw">in</span> repo.remotes])
+<span class="builtin">print</span>(<span class="str">"是否有未提交的修改:"</span>, repo.is_dirty())
+
+<span class="cm"># 查看日志</span>
+<span class="kw">for</span> commit <span class="kw">in</span> repo.iter_commits(<span class="str">"main"</span>, max_count=<span class="num">5</span>):
+    <span class="builtin">print</span>(f<span class="str">"  {commit.hexsha[:8]} {commit.message.strip()}"</span>)
+
+<span class="cm"># 分支管理</span>
+<span class="kw">for</span> branch <span class="kw">in</span> repo.branches:
+    <span class="builtin">print</span>(<span class="str">"分支:"</span>, branch.name)
+
+<span class="cm"># 创建新分支</span>
+new_branch = repo.create_head(<span class="str">"auto-feature"</span>)
+new_branch.checkout()              <span class="cm"># 切换过去</span>
+
+<span class="cm"># 添加和提交</span>
+repo.index.add([<span class="str">"new_file.py"</span>])
+repo.index.commit(<span class="str">"feat: 自动提交"</span>)
+
+<span class="cm"># 回退到 main</span>
+repo.heads.main.checkout()</pre>
+
+<h3>14.2 自动发布工具</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">re</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+
+<span class="kw">def</span> <span class="fn">auto_changelog</span>(since_tag=<span class="kw">None</span>):
+    <span class="str">"""自动生成 CHANGELOG（基于 conventional commits）"""</span>
+    <span class="kw">if</span> since_tag:
+        range_arg = f<span class="str">"{since_tag}..HEAD"</span>
+    <span class="kw">else</span>:
+        range_arg = <span class="str">"--all"</span>
+
+    r = subprocess.run(
+        [<span class="str">"git"</span>, <span class="str">"log"</span>, <span class="str">"--oneline"</span>, range_arg],
+        capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>
+    )
+
+    commits = r.stdout.strip().split(<span class="str">"\n"</span>)
+    categories = {
+        <span class="str">"feat"</span>: [], <span class="str">"fix"</span>: [], <span class="str">"docs"</span>: [],
+        <span class="str">"refactor"</span>: [], <span class="str">"perf"</span>: [], <span class="str">"test"</span>: [], <span class="str">"other"</span>: []
+    }
+
+    <span class="kw">for</span> line <span class="kw">in</span> commits:
+        <span class="kw">match</span> = re.match(<span class="str">r"([a-f0-9]+) (\w+)(\(.+\))?!?: (.+)"</span>, line)
+        <span class="kw">if</span> match:
+            _, type_, _, msg = match.groups()
+            categories.get(type_, categories[<span class="str">"other"</span>]).append(msg)
+        <span class="kw">else</span>:
+            categories[<span class="str">"other"</span>].append(line)
+
+    <span class="cm"># 生成 Markdown</span>
+    labels = {
+        <span class="str">"feat"</span>: <span class="str">"🚀 新功能"</span>,
+        <span class="str">"fix"</span>: <span class="str">"🐛 Bug 修复"</span>,
+        <span class="str">"docs"</span>: <span class="str">"📖 文档"</span>,
+        <span class="str">"refactor"</span>: <span class="str">"♻️ 重构"</span>,
+        <span class="str">"perf"</span>: <span class="str">"⚡ 性能"</span>,
+        <span class="str">"test"</span>: <span class="str">"🧪 测试"</span>,
+        <span class="str">"other"</span>: <span class="str">"📝 其他"</span>,
+    }
+
+    changelog = [f<span class="str">"# Changelog\n\n## {datetime.now().strftime('%Y-%m-%d')}\n"</span>]
+    <span class="kw">for</span> key, label <span class="kw">in</span> labels.items():
+        <span class="kw">if</span> categories[key]:
+            changelog.append(f<span class="str">"### {label}\n"</span>)
+            <span class="kw">for</span> msg <span class="kw">in</span> categories[key]:
+                changelog.append(f<span class="str">"  - {msg}"</span>)
+            changelog.append(<span class="str">""</span>)
+
+    content = <span class="str">"\n"</span>.join(changelog)
+    <span class="kw">with</span> <span class="builtin">open</span>(<span class="str">"CHANGELOG.md"</span>, <span class="str">"w"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+        f.write(content)
+    <span class="builtin">print</span>(<span class="str">"✅ CHANGELOG.md 已生成"</span>)
+    <span class="kw">return</span> content
+
+<span class="cm"># auto_changelog(since_tag="v1.0.0")</span></pre>
+
+<h3>14.3 自动发布脚本</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">auto_release</span>(version, branch=<span class="str">"main"</span>):
+    <span class="str">"""自动完成版本发布流程"""</span>
+    <span class="builtin">print</span>(f<span class="str">"🚀 开始发布 {version}..."</span>)
+
+    <span class="cm"># 1. 确保在目标分支</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"rev-parse"</span>, <span class="str">"--abbrev-ref"</span>, <span class="str">"HEAD"</span>],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="kw">if</span> r.stdout.strip() != branch:
+        <span class="builtin">print</span>(<span class="str">f"❌ 不在 {branch} 分支上"</span>)
+        <span class="kw">return</span>
+
+    <span class="cm"># 2. 检查是否有未提交的修改</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"status"</span>, <span class="str">"--porcelain"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="kw">if</span> r.stdout.strip():
+        <span class="builtin">print</span>(<span class="str">"❌ 有未提交的修改，请先 commit"</span>)
+        <span class="kw">return</span>
+
+    <span class="cm"># 3. 更新版本号（假设有 version.py）</span>
+    <span class="builtin">print</span>(<span class="str">"  更新版本号..."</span>)
+
+    <span class="cm"># 4. 生成 changelog</span>
+    auto_changelog()
+
+    <span class="cm"># 5. 提交版本更新</span>
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"add"</span>, <span class="str">"."</span>])
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, f<span class="str">"chore: release {version}"</span>])
+
+    <span class="cm"># 6. 打标签</span>
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"tag"</span>, <span class="str">"-a"</span>, version, <span class="str">"-m"</span>, f<span class="str">"版本 {version}"</span>])
+
+    <span class="cm"># 7. 推送</span>
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"push"</span>, <span class="str">"origin"</span>, branch])
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"push"</span>, <span class="str">"origin"</span>, <span class="str">"--tags"</span>])
+
+    <span class="builtin">print</span>(f<span class="str">"✅ {version} 发布完成！"</span>)
+
+<span class="cm"># auto_release("v2.1.0")</span></pre>
+
+<h3>14.4 Git 统计监控</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">git_stats</span>(since=<span class="str">"2026-01-01"</span>):
+    <span class="str">"""统计代码库健康状况"""</span>
+    stats = {}
+
+    <span class="cm"># 提交数</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"rev-list"</span>, <span class="str">"--count"</span>, <span class="str">"HEAD"</span>, <span class="str">"--since"</span>, since],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    stats[<span class="str">"commits"</span>] = <span class="builtin">int</span>(r.stdout.strip())
+
+    <span class="cm"># 作者数</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"shortlog"</span>, <span class="str">"-sn"</span>, <span class="str">"--since"</span>, since],
+                      capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    lines = [l <span class="kw">for</span> l <span class="kw">in</span> r.stdout.strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> l.strip()]
+    stats[<span class="str">"authors"</span>] = <span class="builtin">len</span>(lines)
+
+    <span class="cm"># 分支数</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"branch"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    stats[<span class="str">"branches"</span>] = <span class="builtin">len</span>(r.stdout.strip().split(<span class="str">"\n"</span>))
+
+    <span class="cm"># 标签数</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"tag"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    stats[<span class="str">"tags"</span>] = <span class="builtin">len</span>([t <span class="kw">for</span> t <span class="kw">in</span> r.stdout.strip().split(<span class="str">"\n"</span>) <span class="kw">if</span> t])
+
+    <span class="cm"># 仓库大小</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"count-objects"</span>, <span class="str">"-vH"</span>], capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="kw">for</span> line <span class="kw">in</span> r.stdout.split(<span class="str">"\n"</span>):
+        <span class="kw">if</span> <span class="str">"size-pack"</span> <span class="kw">in</span> line:
+            stats[<span class="str">"size"</span>] = line.split(<span class="str">":"</span>)[-<span class="num">1</span>].strip()
+
+    <span class="builtin">print</span>(<span class="str">"📊 Git 仓库统计"</span>)
+    <span class="builtin">print</span>(<span class="str">"="</span>*<span class="num">40</span>)
+    <span class="kw">for</span> k, v <span class="kw">in</span> stats.items():
+        <span class="builtin">print</span>(f<span class="str">"  {k:10}: {v}"</span>)
+    <span class="kw">return</span> stats</pre>
+</section>
+
+<!-- ============= 15 ============= -->
+<section id="sec15">
+<h2><span class="emoji">🎯</span> 15. 面试高频题</h2>
+
+<div class="card-grid">
+  <div class="card"><h4>1. Git 和 SVN 的区别？</h4><p>Git 分布式，每个本地有完整仓库；SVN 集中式。Git 分支轻量，svn 分支是目录拷贝</p></div>
+  <div class="card"><h4>2. merge 和 rebase 区别？</h4><p>merge 保留分叉历史，rebase 线性化。rebase 修改 commit hash，不要在公共分支用</p></div>
+  <div class="card"><h4>3. 如何撤销已经推送的 commit？</h4><p>用 <code>git revert &lt;hash&gt;</code> 生成反提交（安全）。不用 reset（会改写历史）</p></div>
+  <div class="card"><h4>4. git reset --soft/mixed/hard 区别？</h4><p>soft 只改 HEAD / mixed 改 HEAD+暂存区 / hard 全改（含工作区，⚠ 危险）</p></div>
+  <div class="card"><h4>5. 如何解决冲突？</h4><p>编辑文件删除 &lt;&lt;&lt;===&gt;&gt;&gt; 标记 → git add → git commit。或 git mergetool</p></div>
+  <div class="card"><h4>6. 如何找回误删的 commit？</h4><p><code>git reflog</code> 找到 hash → <code>git reset --hard &lt;hash&gt;</code> 或 <code>git cherry-pick</code></p></div>
+</div>
+
+<h3>场景题速查</h3>
+<table>
+  <tr><th>场景</th><th>命令</th></tr>
+  <tr><td>想合并最近的 3 个 commit</td><td><code>git reset --soft HEAD~3 && git commit -m "合并"</code></td></tr>
+  <tr><td>想暂存当前工作去修 bug</td><td><code>git stash -u</code> → 修 bug → <code>git stash pop</code></td></tr>
+  <tr><td>想把某个 commit 复制到当前分支</td><td><code>git cherry-pick &lt;hash&gt;</code></td></tr>
+  <tr><td>想放弃所有本地修改</td><td><code>git reset --hard HEAD</code></td></tr>
+  <tr><td>想只放弃某个文件的修改</td><td><code>git checkout -- file.py</code> 或 <code>git restore file.py</code></td></tr>
+  <tr><td>想修改上一个 commit 的信息</td><td><code>git commit --amend -m "新信息"</code></td></tr>
+  <tr><td>想给上一个 commit 添加遗漏的文件</td><td><code>git add 遗漏文件 && git commit --amend --no-edit</code></td></tr>
+  <tr><td>想把 main 的最新修改同步到 feature</td><td><code>git checkout feature && git rebase main</code></td></tr>
+  <tr><td>想查看是谁改了这一行</td><td><code>git blame file.py -L 10,20</code></td></tr>
+</table>
+
+<h3>Git 命令速查扑克</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">def</span> <span class="fn">cheatsheet</span>():
+    <span class="str">"""打印 Git 命令速查表"""</span>
+    commands = {
+        <span class="str">"配置"</span>: [
+            (<span class="str">"git config --global user.name 'Name'"</span>, <span class="str">"设置用户名"</span>),
+            (<span class="str">"git config --global alias.st status"</span>, <span class="str">"设置别名"</span>),
+        ],
+        <span class="str">"基础"</span>: [
+            (<span class="str">"git init"</span>, <span class="str">"初始化仓库"</span>),
+            (<span class="str">"git clone <url>"</span>, <span class="str">"克隆仓库"</span>),
+            (<span class="str">"git add ."</span>, <span class="str">"暂存所有"</span>),
+            (<span class="str">"git commit -m 'msg'"</span>, <span class="str">"提交"</span>),
+            (<span class="str">"git status"</span>, <span class="str">"查看状态"</span>),
+            (<span class="str">"git log --oneline --graph"</span>, <span class="str">"查看历史"</span>),
+        ],
+        <span class="str">"分支"</span>: [
+            (<span class="str">"git branch <name>"</span>, <span class="str">"创建分支"</span>),
+            (<span class="str">"git checkout -b <name>"</span>, <span class="str">"创建并切换"</span>),
+            (<span class="str">"git merge <branch>"</span>, <span class="str">"合并分支"</span>),
+            (<span class="str">"git rebase <branch>"</span>, <span class="str">"变基"</span>),
+        ],
+        <span class="str">"远程"</span>: [
+            (<span class="str">"git push origin main"</span>, <span class="str">"推送"</span>),
+            (<span class="str">"git pull --rebase"</span>, <span class="str">"拉取并变基"</span>),
+            (<span class="str">"git fetch"</span>, <span class="str">"获取远程更新"</span>),
+        ],
+        <span class="str">"撤销"</span>: [
+            (<span class="str">"git reset --soft HEAD~1"</span>, <span class="str">"撤销提交保留修改"</span>),
+            (<span class="str">"git revert <hash>"</span>, <span class="str">"安全撤销已推送"</span>),
+            (<span class="str">"git stash -u"</span>, <span class="str">"临时保存"</span>),
+        ],
+    }
+
+    <span class="kw">for</span> cat, cmds <span class="kw">in</span> commands.items():
+        <span class="builtin">print</span>(f<span class="str">"\n{'='*40}\n📌 {cat}\n{'='*40}"</span>)
+        <span class="kw">for</span> cmd, desc <span class="kw">in</span> cmds:
+            <span class="builtin">print</span>(f<span class="str">"  {cmd:35} # {desc}"</span>)
+
+cheatsheet()</pre>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+  🔀 Git 版本控制 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>

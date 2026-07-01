@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FastAPI 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, #009485, var(--teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 260px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 {
+  font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px;
+  color: var(--teal);
+}
+section h4 {
+  font-size: 1rem; font-weight: 600; margin: 16px 0 8px;
+  color: var(--pink);
+}
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px;
+}
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>⚡ FastAPI 从入门到精通</h1>
+  <p>Pydantic 模型驱动 · 异步原生 · 自动文档 — 现代 Python API 框架终极指南</p>
+  <div class="tags">
+    <span>🐍 Python 3.10+</span>
+    <span>🧩 Pydantic v2</span>
+    <span>📘 教学文档</span>
+    <span>🚀 生产可用</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. FastAPI 是什么</a></li>
+    <li><a href="#sec2">2. 环境搭建与第一个 API</a></li>
+    <li><a href="#sec3">3. Pydantic 模型详解</a></li>
+    <li><a href="#sec4">4. 请求参数处理</a></li>
+    <li><a href="#sec5">5. 响应模型与序列化</a></li>
+    <li><a href="#sec6">6. 依赖注入系统</a></li>
+    <li><a href="#sec7">7. 错误处理与校验异常</a></li>
+    <li><a href="#sec8">8. 中间件与 CORS</a></li>
+    <li><a href="#sec9">9. 数据库集成 (SQLAlchemy + Pydantic)</a></li>
+    <li><a href="#sec10">10. 认证与授权</a></li>
+    <li><a href="#sec11">11. 文件上传与下载</a></li>
+    <li><a href="#sec12">12. 后台任务与定时器</a></li>
+    <li><a href="#sec13">13. WebSocket</a></li>
+    <li><a href="#sec14">14. 测试</a></li>
+    <li><a href="#sec15">15. 部署与生产配置</a></li>
+    <li><a href="#sec16">16. 综合实战：完整 RESTful API</a></li>
+  </ul>
+</div>
+
+<!-- ============= 1 ============= -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. FastAPI 是什么</h2>
+<p><strong>FastAPI</strong> 是一个现代、高性能的 Python Web 框架，专为构建 API 而生。它在 Python 3.6+ 基础上利用类型注解（type hints），自动完成数据校验、序列化、文档生成。</p>
+
+<h3>核心特性</h3>
+<div class="card-grid">
+  <div class="card"><h4>⚡ 极高性能</h4><p>基于 Starlette + Pydantic，性能与 Node.js / Go 相当。异步原生，天然支持高并发</p></div>
+  <div class="card"><h4>🧩 Pydantic 深度集成</h4><p>用 Python 类型注解定义数据模型 → 自动校验、转换、序列化。零额外代码</p></div>
+  <div class="card"><h4>📖 自动生成文档</h4><p>开箱即用 Swagger UI (<code>/docs</code>) + ReDoc (<code>/redoc</code>)，交互式测试你的 API</p></div>
+  <div class="card"><h4>🔌 依赖注入</h4><p>内置优雅的依赖注入系统，DB session、认证、权限可复用、可单元测试</p></div>
+</div>
+
+<h3>与其他框架对比</h3>
+<table>
+  <tr><th>特性</th><th>FastAPI</th><th>Flask</th><th>Django REST</th></tr>
+  <tr><td>性能</td><td>⭐ 极快（异步）</td><td>一般（同步）</td><td>中等（同步）</td></tr>
+  <tr><td>类型校验</td><td>✅ 内置(Pydantic)</td><td>❌ 需手动/Marshmallow</td><td>⚠️ Serializer</td></tr>
+  <tr><td>自动文档</td><td>✅ Swagger+ReDoc</td><td>❌ Flask-RESTx 等</td><td>✅ DRF-YASG</td></tr>
+  <tr><td>异步</td><td>✅ 原生异步</td><td>⚠️ 额外插件</td><td>⚠️ 3.1+ 异步</td></tr>
+  <tr><td>依赖注入</td><td>✅ 内置</td><td>❌ 无</td><td>❌ 无</td></tr>
+  <tr><td>学习曲线</td><td>低（Pythonic）</td><td>低</td><td>中高</td></tr>
+</table>
+</section>
+
+<!-- ============= 2 ============= -->
+<section id="sec2">
+<h2><span class="emoji">🛠</span> 2. 环境搭建与第一个 API</h2>
+
+<h3>安装</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 推荐用 uv 或 pip</span>
+$ pip install fastapi uvicorn
+
+<span class="cm"># 安装完整生态</span>
+$ pip install fastapi[all]
+<span class="cm"># 等价于: fastapi + uvicorn + pydantic + python-multipart + ...</span>
+
+<span class="cm"># 验证安装</span>
+$ python -c "import fastapi; print(fastapi.__version__)"</pre>
+
+<h3>第一个 API：Hello World</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># main.py — 最小 FastAPI 应用</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> FastAPI
+
+<span class="cm"># 创建应用实例</span>
+app = FastAPI(
+    title=<span class="str">"我的第一个 API"</span>,
+    description=<span class="str">"FastAPI 入门示例"</span>,
+    version=<span class="str">"0.1.0"</span>,
+)
+
+<span class="dec">@app.get</span>(<span class="str">"/"</span>)
+<span class="kw">async def</span> <span class="fn">root</span>():
+    <span class="kw">return</span> {<span class="str">"message"</span>: <span class="str">"Hello, FastAPI!"</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/ping"</span>)
+<span class="kw">def</span> <span class="fn">ping</span>():
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"ok"</span>, <span class="str">"timestamp"</span>: <span class="str">"2026-07-01T00:00:00Z"</span>}</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 启动服务器</span>
+$ uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+<span class="cm"># 浏览器打开: http://127.0.0.1:8000</span>
+<span class="cm"># 自动文档:     http://127.0.0.1:8000/docs</span>
+<span class="cm"># ReDoc:        http://127.0.0.1:8000/redoc</span>
+<span class="cm"># OpenAPI JSON: http://127.0.0.1:8000/openapi.json</span></pre>
+
+<div class="highlight">
+  <strong>🔑 关键概念：</strong>
+  <br>• <code>async def</code> 定义异步路由（非阻塞 I/O 场景首选）
+  <br>• <code>def</code> 定义同步路由（CPU 密集任务用线程池运行）
+  <br>• 路径操作装饰器：<code>@app.get / @app.post / @app.put / @app.delete / @app.patch</code>
+  <br>• <code>--reload</code> 开发模式，修改代码后自动重启
+</div>
+</section>
+
+<!-- ============= 3 ============= -->
+<section id="sec3">
+<h2><span class="emoji">🧩</span> 3. Pydantic 模型详解</h2>
+<p><strong>Pydantic</strong> 是 FastAPI 的数据层灵魂——<strong>请求体校验、响应序列化、配置管理</strong>全都基于它。FastAPI 内部集成了 Pydantic v2（Rust 核心，性能比 v1 快数倍）。</p>
+
+<h3>3.1 基础模型</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pydantic</span> <span class="kw">import</span> BaseModel
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> Optional
+
+<span class="kw">class</span> <span class="cls">User</span>(BaseModel):
+    id: <span class="builtin">int</span>
+    name: <span class="builtin">str</span>
+    email: <span class="builtin">str</span>
+    age: <span class="builtin">int</span> = <span class="num">18</span>              <span class="cm"># 默认值</span>
+    is_active: <span class="builtin">bool</span> = True
+    created_at: Optional[datetime] = <span class="kw">None</span>  <span class="cm"># 可选字段</span>
+    tags: <span class="builtin">list</span>[<span class="builtin">str</span>] = []         <span class="cm"># 列表类型</span>
+
+<span class="cm"># 使用示例</span>
+user = User(
+    id=<span class="num">1</span>,
+    name=<span class="str">"张三"</span>,
+    email=<span class="str">"zhang@example.com"</span>,
+    age=<span class="num">25</span>,
+    tags=[<span class="str">"admin"</span>, <span class="str">"developer"</span>],
+)
+<span class="builtin">print</span>(user.model_dump())       <span class="cm"># → dict，v2 方法</span>
+<span class="builtin">print</span>(user.model_dump_json())  <span class="cm"># → JSON 字符串</span>
+<span class="builtin">print</span>(user.name)              <span class="cm"># → 直接访问属性</span></pre>
+
+<h3>3.2 字段校验与约束</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pydantic</span> <span class="kw">import</span> BaseModel, Field, EmailStr, field_validator
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> Optional
+
+<span class="kw">class</span> <span class="cls">CreateUserRequest</span>(BaseModel):
+    <span class="cm"># Field 约束</span>
+    name: <span class="builtin">str</span> = Field(..., min_length=<span class="num">2</span>, max_length=<span class="num">50</span>, description=<span class="str">"用户名"</span>)
+    email: EmailStr                   <span class="cm"># pip install pydantic[email]</span>
+    age: <span class="builtin">int</span> = Field(..., ge=<span class="num">0</span>, le=<span class="num">150</span>, description=<span class="str">"年龄 0-150"</span>)
+    password: <span class="builtin">str</span> = Field(..., min_length=<span class="num">8</span>)
+    phone: Optional[<span class="builtin">str</span>] = Field(<span class="kw">None</span>, pattern=<span class="str">r"^1[3-9]\d{9}$"</span>)
+
+    <span class="cm"># 自定义校验器（v2 语法）</span>
+    <span class="dec">@field_validator</span>(<span class="str">"name"</span>)
+    <span class="dec">@classmethod</span>
+    <span class="kw">def</span> <span class="fn">validate_name</span>(cls, v):
+        <span class="kw">if</span> <span class="str">"admin"</span> <span class="kw">in</span> v.lower():
+            <span class="kw">raise</span> ValueError(<span class="str">"用户名不能包含 admin"</span>)
+        <span class="kw">return</span> v.strip()
+
+    <span class="dec">@field_validator</span>(<span class="str">"password"</span>)
+    <span class="dec">@classmethod</span>
+    <span class="kw">def</span> <span class="fn">validate_password</span>(cls, v):
+        <span class="kw">if</span> <span class="kw">not</span> <span class="builtin">any</span>(c.isupper() <span class="kw">for</span> c <span class="kw">in</span> v):
+            <span class="kw">raise</span> ValueError(<span class="str">"密码必须包含大写字母"</span>)
+        <span class="kw">if</span> <span class="kw">not</span> <span class="builtin">any</span>(c.isdigit() <span class="kw">for</span> c <span class="kw">in</span> v):
+            <span class="kw">raise</span> ValueError(<span class="str">"密码必须包含数字"</span>)
+        <span class="kw">return</span> v
+
+<span class="cm"># 测试校验</span>
+<span class="kw">try</span>:
+    u = CreateUserRequest(
+        name=<span class="str">" 李四 "</span>,
+        email=<span class="str">"lisi@test.com"</span>,
+        age=<span class="num">25</span>,
+        password=<span class="str">"Abc12345"</span>,
+        phone=<span class="str">"13800138000"</span>,
+    )
+    <span class="builtin">print</span>(<span class="str">"✅ 校验通过:"</span>, u.name)  <span class="cm"># 自动 strip → "李四"</span>
+<span class="kw">except</span> Exception <span class="kw">as</span> e:
+    <span class="builtin">print</span>(<span class="str">"❌"</span>, e)</pre>
+
+<h3>3.3 嵌套模型与配置</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pydantic</span> <span class="kw">import</span> BaseModel, ConfigDict
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> List, Optional
+
+<span class="kw">class</span> <span class="cls">Address</span>(BaseModel):
+    city: <span class="builtin">str</span>
+    street: <span class="builtin">str</span>
+    zip_code: <span class="builtin">str</span> = Field(<span class="str">""</span>, pattern=<span class="str">r"^\d{6}$"</span>)
+
+<span class="kw">class</span> <span class="cls">Role</span>(BaseModel):
+    name: <span class="builtin">str</span>
+    permissions: List[<span class="builtin">str</span>] = []
+
+<span class="kw">class</span> <span class="cls">Employee</span>(BaseModel):
+    <span class="cm"># 配置：允许从 ORM 对象创建（后面 SQLAlchemy 用）</span>
+    model_config = ConfigDict(from_attributes=True)
+
+    id: <span class="builtin">int</span>
+    name: <span class="builtin">str</span>
+    address: Address              <span class="cm"># 嵌套模型</span>
+    roles: List[Role] = []        <span class="cm"># 模型列表</span>
+    created_at: datetime
+
+<span class="cm"># 构造嵌套数据</span>
+emp = Employee(
+    id=<span class="num">1</span>,
+    name=<span class="str">"王五"</span>,
+    address={                    <span class="cm"># 自动从 dict 转换</span>
+        <span class="str">"city"</span>: <span class="str">"北京"</span>,
+        <span class="str">"street"</span>: <span class="str">"中关村大街"</span>,
+        <span class="str">"zip_code"</span>: <span class="str">"100080"</span>,
+    },
+    roles=[
+        {<span class="str">"name"</span>: <span class="str">"管理员"</span>, <span class="str">"permissions"</span>: [<span class="str">"read"</span>, <span class="str">"write"</span>]},
+    ],
+    created_at=<span class="str">"2026-07-01T10:00:00"</span>,  <span class="cm"># 字符串自动转 datetime</span>
+)
+<span class="builtin">print</span>(emp.model_dump_json(indent=<span class="num">2</span>))</pre>
+
+<h3>3.4 Pydantic 在 FastAPI 中的位置</h3>
+<pre><span class="lang-label">数据流</span>
+  HTTP 请求 (JSON)
+        ↓
+  FastAPI 路由   ← 自动校验请求数据
+        ↓
+  Pydantic 模型  ← 类型转换、校验、字段约束
+        ↓
+  你的业务逻辑    ← 操作模型对象
+        ↓
+  Pydantic 模型  ← model_dump() 序列化
+        ↓
+  JSON 响应 (自动)
+        ↓
+  HTTP 响应</pre>
+</section>
+
+<!-- ============= 4 ============= -->
+<section id="sec4">
+<h2><span class="emoji">📥</span> 4. 请求参数处理</h2>
+<p>FastAPI 支持<strong>5 种参数来源</strong>，全通过类型注解自动解析。</p>
+
+<h3>4.1 路径参数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="dec">@app.get</span>(<span class="str">"/users/{user_id}"</span>)
+<span class="kw">async def</span> <span class="fn">get_user</span>(user_id: <span class="builtin">int</span>):    <span class="cm"># 自动转换 int + 校验</span>
+    <span class="kw">return</span> {<span class="str">"user_id"</span>: user_id, <span class="str">"message"</span>: <span class="str">"用户信息"</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/items/{item_id}/versions/{version}"</span>)
+<span class="kw">async def</span> <span class="fn">get_item_version</span>(
+    item_id: <span class="builtin">int</span>,
+    version: <span class="builtin">int</span> = Path(..., ge=<span class="num">1</span>),  <span class="cm"># 额外校验</span>
+):
+    <span class="kw">return</span> {<span class="str">"item_id"</span>: item_id, <span class="str">"version"</span>: version}</pre>
+
+<h3>4.2 查询参数</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Query
+
+<span class="dec">@app.get</span>(<span class="str">"/users"</span>)
+<span class="kw">async def</span> <span class="fn">list_users</span>(
+    page: <span class="builtin">int</span> = Query(<span class="num">1</span>, ge=<span class="num">1</span>, description=<span class="str">"页码"</span>),
+    size: <span class="builtin">int</span> = Query(<span class="num">10</span>, ge=<span class="num">1</span>, le=<span class="num">100</span>, description=<span class="str">"每页条数"</span>),
+    keyword: <span class="builtin">str</span> | <span class="kw">None</span> = Query(<span class="kw">None</span>, min_length=<span class="num">2</span>, description=<span class="str">"搜索关键字"</span>),
+    sort_by: <span class="builtin">str</span> = Query(<span class="str">"id"</span>, pattern=<span class="str">r"^(id|name|age|created_at)$"</span>),
+    order: <span class="builtin">str</span> = Query(<span class="str">"asc"</span>, pattern=<span class="str">r"^(asc|desc)$"</span>),
+):
+    <span class="kw">return</span> {
+        <span class="str">"page"</span>: page,
+        <span class="str">"size"</span>: size,
+        <span class="str">"keyword"</span>: keyword,
+        <span class="str">"sort_by"</span>: sort_by,
+        <span class="str">"order"</span>: order,
+        <span class="str">"items"</span>: [],  <span class="cm"># 省略查询</span>
+    }
+
+<span class="cm"># 请求示例:</span>
+<span class="cm"># GET /users?page=1&size=20&keyword=张三&sort_by=age&order=desc</span></pre>
+
+<h3>4.3 请求体（Body）—— 核心玩法</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Body
+
+<span class="kw">class</span> <span class="cls">CreateUserReq</span>(BaseModel):
+    name: <span class="builtin">str</span>
+    email: <span class="builtin">str</span>
+    age: <span class="builtin">int</span> = Field(<span class="num">18</span>, ge=<span class="num">0</span>)
+
+<span class="dec">@app.post</span>(<span class="str">"/users"</span>, status_code=<span class="num">201</span>)
+<span class="kw">async def</span> <span class="fn">create_user</span>(
+    body: CreateUserReq,                          <span class="cm"># JSON 请求体 → Pydantic</span>
+    trace_id: <span class="builtin">str</span> = Body(<span class="str">""</span>, embed=<span class="kw">True</span>),     <span class="cm"># 单独的 body 字段</span>
+    x_real_ip: <span class="builtin">str</span> | <span class="kw">None</span> = Header(<span class="kw">None</span>),       <span class="cm"># 请求头</span>
+):
+    <span class="kw">return</span> {<span class="str">"created"</span>: body, <span class="str">"trace_id"</span>: trace_id, <span class="str">"real_ip"</span>: x_real_ip}
+
+<span class="cm"># POST /users</span>
+<span class="cm"># Content-Type: application/json</span>
+<span class="cm"># X-Real-IP: 192.168.1.1</span>
+<span class="cm"># {"name": "赵六", "email": "zhao@test.com", "age": 30}</span></pre>
+
+<h3>4.4 表单与文件</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Form, File, UploadFile
+
+<span class="cm"># 表单数据（非 JSON）</span>
+<span class="dec">@app.post</span>(<span class="str">"/login"</span>)
+<span class="kw">async def</span> <span class="fn">login</span>(
+    username: <span class="builtin">str</span> = Form(...),
+    password: <span class="builtin">str</span> = Form(..., min_length=<span class="num">8</span>),
+):
+    <span class="kw">return</span> {<span class="str">"username"</span>: username}
+
+<span class="cm"># 文件上传</span>
+<span class="dec">@app.post</span>(<span class="str">"/upload"</span>)
+<span class="kw">async def</span> <span class="fn">upload_file</span>(
+    file: UploadFile = File(...),
+    description: <span class="builtin">str</span> = Form(<span class="str">""</span>),
+):
+    contents = <span class="kw">await</span> file.read()
+    <span class="kw">return</span> {
+        <span class="str">"filename"</span>: file.filename,
+        <span class="str">"content_type"</span>: file.content_type,
+        <span class="str">"size"</span>: <span class="builtin">len</span>(contents),
+        <span class="str">"description"</span>: description,
+    }
+
+<span class="cm"># 多文件上传</span>
+<span class="dec">@app.post</span>(<span class="str">"/upload-multiple"</span>)
+<span class="kw">async def</span> <span class="fn">upload_multiple</span>(
+    files: List[UploadFile] = File(...),
+):
+    <span class="kw">return</span> [{<span class="str">"name"</span>: f.filename, <span class="str">"size"</span>: <span class="builtin">len</span>(<span class="kw">await</span> f.read())} <span class="kw">for</span> f <span class="kw">in</span> files]</pre>
+
+<h3>4.5 Cookie 与 Header</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Cookie, Header
+
+<span class="dec">@app.get</span>(<span class="str">"/items"</span>)
+<span class="kw">async def</span> <span class="fn">read_items</span>(
+    session_id: <span class="builtin">str</span> | <span class="kw">None</span> = Cookie(<span class="kw">None</span>),    <span class="cm"># 从 Cookie 读取</span>
+    user_agent: <span class="builtin">str</span> | <span class="kw">None</span> = Header(<span class="kw">None</span>),     <span class="cm"># 从请求头读取</span>
+    x_token: <span class="builtin">str</span> = Header(..., alias=<span class="str">"X-Token"</span>), <span class="cm"># 自定义头部</span>
+):
+    <span class="kw">return</span> {<span class="str">"session"</span>: session_id, <span class="str">"ua"</span>: user_agent, <span class="str">"token"</span>: x_token}</pre>
+</section>
+
+<!-- ============= 5 ============= -->
+<section id="sec5">
+<h2><span class="emoji">📤</span> 5. 响应模型与序列化</h2>
+<p>FastAPI 用 <code>response_model</code> 控制<strong>返回什么</strong>——自动过滤、序列化、生成文档。</p>
+
+<h3>5.1 基础用法</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> List
+
+<span class="kw">class</span> <span class="cls">UserOut</span>(BaseModel):    <span class="cm"># 输出模型（不包含密码等敏感字段）</span>
+    model_config = ConfigDict(from_attributes=True)
+    id: <span class="builtin">int</span>
+    name: <span class="builtin">str</span>
+    email: <span class="builtin">str</span>
+    created_at: datetime
+
+<span class="kw">class</span> <span class="cls">UserInDB</span>(BaseModel):   <span class="cm"># 数据库模型（含密码哈希）</span>
+    model_config = ConfigDict(from_attributes=True)
+    id: <span class="builtin">int</span>
+    name: <span class="builtin">str</span>
+    email: <span class="builtin">str</span>
+    hashed_password: <span class="builtin">str</span>
+    created_at: datetime
+
+<span class="dec">@app.get</span>(<span class="str">"/users/{user_id}"</span>, response_model=UserOut)
+<span class="kw">async def</span> <span class="fn">get_user</span>(user_id: <span class="builtin">int</span>):
+    <span class="cm"># 假设从 DB 取出 UserInDB 对象</span>
+    db_user = UserInDB(
+        id=user_id,
+        name=<span class="str">"测试"</span>,
+        email=<span class="str">"test@test.com"</span>,
+        hashed_password=<span class="str">"$2b$12$..."</span>,
+        created_at=datetime.now(),
+    )
+    <span class="cm"># response_model=UserOut 会自动过滤掉 hashed_password</span>
+    <span class="kw">return</span> db_user
+
+<span class="cm"># 列表响应</span>
+<span class="dec">@app.get</span>(<span class="str">"/users"</span>, response_model=List[UserOut])
+<span class="kw">async def</span> <span class="fn">list_users</span>():
+    <span class="cm"># 返回列表自动处理</span>
+    <span class="kw">return</span> [db_user_1, db_user_2]</pre>
+
+<h3>5.2 响应状态码与头</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> status, Response
+
+<span class="dec">@app.post</span>(<span class="str">"/items"</span>, status_code=status.HTTP_201_CREATED)
+<span class="kw">async def</span> <span class="fn">create_item</span>(item: ItemReq):
+    <span class="kw">return</span> item
+
+<span class="cm"># 手动设置响应头</span>
+<span class="dec">@app.get</span>(<span class="str">"/custom-header"</span>)
+<span class="kw">async def</span> <span class="fn">custom</span>(response: Response):
+    response.headers[<span class="str">"X-Custom-Header"</span>] = <span class="str">"custom-value"</span>
+    response.set_cookie(key=<span class="str">"session"</span>, value=<span class="str">"abc123"</span>, httponly=True)
+    <span class="kw">return</span> {<span class="str">"message"</span>: <span class="str">"ok"</span>}</pre>
+
+<h3>5.3 Union 响应与 discriminated 类型</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> Union
+
+<span class="kw">class</span> <span class="cls">SuccessResp</span>(BaseModel):
+    status: <span class="builtin">str</span> = <span class="str">"ok"</span>
+    data: <span class="builtin">dict</span>
+
+<span class="kw">class</span> <span class="cls">ErrorResp</span>(BaseModel):
+    status: <span class="builtin">str</span> = <span class="str">"error"</span>
+    message: <span class="builtin">str</span>
+
+<span class="dec">@app.get</span>(<span class="str">"/result/{flag}"</span>, response_model=Union[SuccessResp, ErrorResp])
+<span class="kw">async def</span> <span class="fn">get_result</span>(flag: <span class="builtin">bool</span>):
+    <span class="kw">if</span> flag:
+        <span class="kw">return</span> SuccessResp(data={<span class="str">"key"</span>: <span class="str">"value"</span>})
+    <span class="kw">return</span> ErrorResp(message=<span class="str">"发生了错误"</span>)</pre>
+</section>
+
+<!-- ============= 6 ============= -->
+<section id="sec6">
+<h2><span class="emoji">💉</span> 6. 依赖注入系统</h2>
+<p>FastAPI 的<strong>依赖注入（Dependency Injection, DI）</strong>是框架最优雅的设计之一——你声明"我需要什么"，框架自动提供。</p>
+
+<h3>6.1 基础依赖</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Depends, FastAPI
+
+<span class="cm"># 定义依赖（就是一个函数）</span>
+<span class="kw">async def</span> <span class="fn">get_db_session</span>():
+    <span class="cm">"""模拟数据库连接">  
+    db = <span class="str">"数据库连接对象"</span>
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> db              <span class="cm"># yield 之前的代码在请求开始时执行</span>
+    <span class="kw">finally</span>:
+        <span class="builtin">print</span>(<span class="str">"关闭数据库连接"</span>)  <span class="cm"># yield 之后的代码在响应返回后执行</span>
+
+<span class="kw">def</span> <span class="fn">get_current_user</span>(token: <span class="builtin">str</span> = Header(...)):
+    <span class="kw">if</span> token != <span class="str">"secret"</span>:
+        <span class="kw">raise</span> HTTPException(status_code=<span class="num">401</span>)
+    <span class="kw">return</span> {<span class="str">"username"</span>: <span class="str">"admin"</span>, <span class="str">"role"</span>: <span class="str">"admin"</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/protected"</span>)
+<span class="kw">async def</span> <span class="fn">protected_route</span>(
+    user: <span class="builtin">dict</span> = Depends(get_current_user),
+    db: <span class="builtin">str</span> = Depends(get_db_session),
+):
+    <span class="kw">return</span> {<span class="str">"user"</span>: user, <span class="str">"db"</span>: db}
+
+<span class="cm"># Depends(get_current_user) 自动提取 Header token → 校验 → 注入</span></pre>
+
+<h3>6.2 可复用依赖与类依赖</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">dataclasses</span> <span class="kw">import</span> dataclass
+
+<span class="cm"># 类形式依赖（可接受参数）</span>
+<span class="kw">class</span> <span class="cls">Pagination</span>:
+    <span class="kw">def</span> __init__(self, page: <span class="builtin">int</span> = Query(<span class="num">1</span>, ge=<span class="num">1</span>),
+                       size: <span class="builtin">int</span> = Query(<span class="num">10</span>, ge=<span class="num">1</span>, le=<span class="num">100</span>)):
+        self.page = page
+        self.size = size
+        self.offset = (page - <span class="num">1</span>) * size
+
+<span class="dec">@app.get</span>(<span class="str">"/items"</span>)
+<span class="kw">async def</span> <span class="fn">list_items</span>(pagination: Pagination = Depends()):  <span class="cm"># Depends() 自动注入</span>
+    <span class="kw">return</span> {<span class="str">"page"</span>: pagination.page,
+            <span class="str">"offset"</span>: pagination.offset,
+            <span class="str">"size"</span>: pagination.size,
+            <span class="str">"items"</span>: []}
+
+<span class="cm"># 多个路由共用分页依赖</span>
+<span class="dec">@app.get</span>(<span class="str">"/users"</span>)
+<span class="kw">async def</span> <span class="fn">list_users</span>(pg: Pagination = Depends()):
+    <span class="kw">return</span> {<span class="str">"page"</span>: pg.page, <span class="str">"users"</span>: []}</pre>
+
+<h3>6.3 全局依赖</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Depends
+
+<span class="cm"># 应用到整个应用</span>
+app = FastAPI(dependencies=[Depends(verify_api_key)])
+
+<span class="cm"># 或应用到路由组（APIRouter）</span>
+router = APIRouter(
+    prefix=<span class="str">"/admin"</span>,
+    dependencies=[Depends(require_admin)],
+)
+
+<span class="cm"># 或应用到单个路由</span>
+<span class="dec">@router.get</span>(<span class="str">"/dashboard"</span>)
+<span class="kw">async def</span> <span class="fn">dashboard</span>(user: User = Depends(require_admin)):
+    <span class="kw">return</span> {<span class="str">"dashboard"</span>: <span class="str">"data"</span>}</pre>
+
+<div class="highlight">
+  <strong>🎯 Depends 的核心优势：</strong>
+  <br>1. <strong>复用性</strong> — 分页、认证、DB 会话一次定义，到处注入
+  <br>2. <strong>可测试性</strong> — 测试时可覆盖任何依赖
+  <br>3. <strong>类型安全</strong> — 注入的类型即文档
+  <br>4. <strong>生命周期管理</strong> — yield generator 自动处理资源释放
+</div>
+</section>
+
+<!-- ============= 7 ============= -->
+<section id="sec7">
+<h2><span class="emoji">⚠️</span> 7. 错误处理与校验异常</h2>
+
+<h3>7.1 异常处理器</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> HTTPException, Request
+<span class="kw">from</span> <span class="builtin">fastapi.responses</span> <span class="kw">import</span> JSONResponse
+<span class="kw">from</span> <span class="builtin">fastapi.exception_handlers</span> <span class="kw">import</span> http_exception_handler
+
+<span class="cm"># 自定义 404 错误</span>
+<span class="dec">@app.exception_handler</span>(HTTPException)
+<span class="kw">async def</span> <span class="fn">custom_http_handler</span>(request: Request, exc: HTTPException):
+    <span class="kw">return</span> JSONResponse(
+        status_code=exc.status_code,
+        content={
+            <span class="str">"code"</span>: exc.status_code,
+            <span class="str">"message"</span>: exc.detail,
+            <span class="str">"path"</span>: request.url.path,
+        },
+        headers=exc.headers,
+    )
+
+<span class="cm"># 处理未捕获异常</span>
+<span class="dec">@app.exception_handler</span>(Exception)
+<span class="kw">async def</span> <span class="fn">global_exception_handler</span>(request: Request, exc: Exception):
+    <span class="kw">return</span> JSONResponse(
+        status_code=<span class="num">500</span>,
+        content={<span class="str">"detail"</span>: <span class="str">"服务器内部错误"</span>},
+    )
+
+<span class="cm"># 路由中抛出 HTTP 异常</span>
+<span class="dec">@app.get</span>(<span class="str">"/items/{item_id}"</span>)
+<span class="kw">async def</span> <span class="fn">read_item</span>(item_id: <span class="builtin">int</span>):
+    <span class="kw">if</span> item_id == <span class="num">0</span>:
+        <span class="kw">raise</span> HTTPException(
+            status_code=<span class="num">404</span>,
+            detail=<span class="str">"商品不存在"</span>,
+            headers={<span class="str">"X-Error-Code"</span>: <span class="str">"NOT_FOUND"</span>},
+        )
+    <span class="kw">return</span> {<span class="str">"item_id"</span>: item_id}</pre>
+
+<h3>7.2 自定义校验错误</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">pydantic</span> <span class="kw">import</span> ValidationError
+<span class="kw">from</span> <span class="builtin">fastapi.exceptions</span> <span class="kw">import</span> RequestValidationError
+
+<span class="dec">@app.exception_handler</span>(RequestValidationError)
+<span class="kw">async def</span> <span class="fn">validation_handler</span>(request: Request, exc: RequestValidationError):
+    errors = []
+    <span class="kw">for</span> err <span class="kw">in</span> exc.errors():
+        errors.append({
+            <span class="str">"field"</span>: <span class="str">"."</span>.join(<span class="builtin">str</span>(loc) <span class="kw">for</span> loc <span class="kw">in</span> err[<span class="str">"loc"</span>]),
+            <span class="str">"message"</span>: err[<span class="str">"msg"</span>],
+            <span class="str">"type"</span>: err[<span class="str">"type"</span>],
+        })
+    <span class="kw">return</span> JSONResponse(
+        status_code=<span class="num">422</span>,
+        content={<span class="str">"code"</span>: <span class="num">422</span>, <span class="str">"message"</span>: <span class="str">"参数校验失败"</span>, <span class="str">"errors"</span>: errors},
+    )</pre>
+
+<h3>7.3 业务异常体系</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 定义业务异常类</span>
+<span class="kw">class</span> <span class="cls">AppException</span>(Exception):
+    <span class="kw">def</span> __init__(self, code: <span class="builtin">int</span>, message: <span class="builtin">str</span>, status_code: <span class="builtin">int</span> = <span class="num">400</span>):
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+
+<span class="kw">class</span> <span class="cls">NotFoundError</span>(AppException):
+    <span class="kw">def</span> __init__(self, resource: <span class="builtin">str</span>, resource_id):
+        <span class="builtin">super</span>().__init__(code=<span class="num">1001</span>, message=f<span class="str">"{resource} {resource_id} 不存在"</span>, status_code=<span class="num">404</span>)
+
+<span class="kw">class</span> <span class="cls">PermissionDenied</span>(AppException):
+    <span class="kw">def</span> __init__(self):
+        <span class="builtin">super</span>().__init__(code=<span class="num">1003</span>, message=<span class="str">"权限不足"</span>, status_code=<span class="num">403</span>)
+
+<span class="dec">@app.exception_handler</span>(AppException)
+<span class="kw">async def</span> <span class="fn">app_exception_handler</span>(request: Request, exc: AppException):
+    <span class="kw">return</span> JSONResponse(
+        status_code=exc.status_code,
+        content={<span class="str">"code"</span>: exc.code, <span class="str">"message"</span>: exc.message},
+    )
+
+<span class="cm"># 路由中使用</span>
+<span class="dec">@app.get</span>(<span class="str">"/users/{uid}"</span>)
+<span class="kw">async def</span> <span class="fn">get_user</span>(uid: <span class="builtin">int</span>):
+    user = find_user(uid)
+    <span class="kw">if</span> <span class="kw">not</span> user:
+        <span class="kw">raise</span> NotFoundError(<span class="str">"用户"</span>, uid)
+    <span class="kw">return</span> user</pre>
+</section>
+
+<!-- ============= 8 ============= -->
+<section id="sec8">
+<h2><span class="emoji">🔗</span> 8. 中间件与 CORS</h2>
+
+<h3>8.1 CORS 跨域</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi.middleware.cors</span> <span class="kw">import</span> CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[                       <span class="cm"># 允许的来源</span>
+        <span class="str">"http://localhost:5173"</span>,        <span class="cm"># 前端 dev server</span>
+        <span class="str">"https://your-frontend.com"</span>,
+    ],
+    allow_credentials=True,               <span class="cm"># 允许 Cookie 携带</span>
+    allow_methods=[<span class="str">"*"</span>],                <span class="cm"># 允许所有 HTTP 方法</span>
+    allow_headers=[<span class="str">"*"</span>],                <span class="cm"># 允许所有请求头</span>
+    expose_headers=[<span class="str">"X-Total-Count"</span>],    <span class="cm"># 暴露给前端的自定义头</span>
+    max_age=<span class="num">600</span>,                        <span class="cm"># 预检请求缓存时间（秒）</span>
+)
+
+<span class="cm"># 生产环境不要用 allow_origins=["*"] + allow_credentials=True</span>
+<span class="cm"># 这两个不能同时为通配符——spec 禁止</span></pre>
+
+<h3>8.2 自定义中间件</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> Request
+<span class="kw">from</span> <span class="builtin">starlette.middleware.base</span> <span class="kw">import</span> BaseHTTPMiddleware
+
+<span class="kw">class</span> <span class="cls">RequestTimingMiddleware</span>(BaseHTTPMiddleware):
+    <span class="kw">async def</span> <span class="fn">dispatch</span>(self, request: Request, call_next):
+        start = time.time()
+        response = <span class="kw">await</span> call_next(request)
+        elapsed = time.time() - start
+        response.headers[<span class="str">"X-Process-Time"</span>] = f<span class="str">"{elapsed:.4f}s"</span>
+        <span class="kw">return</span> response
+
+<span class="cm"># 请求日志中间件</span>
+<span class="kw">class</span> <span class="cls">AccessLogMiddleware</span>(BaseHTTPMiddleware):
+    <span class="kw">async def</span> <span class="fn">dispatch</span>(self, request: Request, call_next):
+        <span class="builtin">print</span>(f<span class="str">"→ {request.method} {request.url.path}"</span>)
+        response = <span class="kw">await</span> call_next(request)
+        <span class="builtin">print</span>(f<span class="str">"← {response.status_code}"</span>)
+        <span class="kw">return</span> response
+
+app.add_middleware(RequestTimingMiddleware)
+app.add_middleware(AccessLogMiddleware)</pre>
+
+<h3>8.3 路由级中间件（APIRouter）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> APIRouter
+
+router = APIRouter(prefix=<span class="str">"/api/v1"</span>)
+
+<span class="dec">@router.middleware</span>(<span class="str">"http"</span>)
+<span class="kw">async def</span> <span class="fn">router_middleware</span>(request: Request, call_next):
+    <span class="builtin">print</span>(f<span class="str">"V1 路由: {request.url.path}"</span>)
+    <span class="kw">return</span> <span class="kw">await</span> call_next(request)</pre>
+</section>
+
+<!-- ============= 9 ============= -->
+<section id="sec9">
+<h2><span class="emoji">🗄</span> 9. 数据库集成 (SQLAlchemy + Pydantic)</h2>
+<p>生产中最常用的组合：<strong>SQLAlchemy 2.0</strong> 做 ORM，<strong>Pydantic</strong> 做请求/响应模型。两者通过 <code>from_attributes=True</code> 无缝桥接。</p>
+
+<h3>9.1 安装与配置</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install sqlalchemy asyncmy   <span class="cm"># 异步 MySQL 驱动</span>
+$ pip install sqlalchemy aiosqlite  <span class="cm"># 异步 SQLite（开发用）</span>
+$ pip install alembic               <span class="cm"># 数据库迁移</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># database.py — 数据库配置</span>
+<span class="kw">from</span> <span class="builtin">sqlalchemy.ext.asyncio</span> <span class="kw">import</span> AsyncSession, create_async_engine, async_sessionmaker
+<span class="kw">from</span> <span class="builtin">sqlalchemy.orm</span> <span class="kw">import</span> DeclarativeBase
+
+<span class="cm"># 异步引擎 (MySQL 用 asyncmy, SQLite 用 aiosqlite)</span>
+DATABASE_URL = <span class="str">"sqlite+aiosqlite:///./app.db"</span>
+engine = create_async_engine(DATABASE_URL, echo=<span class="kw">True</span>)
+
+<span class="cm"># 异步会话工厂</span>
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=<span class="kw">False</span>)
+
+<span class="kw">class</span> <span class="cls">Base</span>(DeclarativeBase):
+    <span class="kw">pass</span>
+
+<span class="cm"># 依赖注入 DB 会话</span>
+<span class="kw">async def</span> <span class="fn">get_db</span>() -> AsyncSession:
+    <span class="kw">async with</span> AsyncSessionLocal() <span class="kw">as</span> session:
+        <span class="kw">try</span>:
+            <span class="kw">yield</span> session
+            <span class="kw">await</span> session.commit()
+        <span class="kw">except</span> Exception:
+            <span class="kw">await</span> session.rollback()
+            <span class="kw">raise</span></pre>
+
+<h3>9.2 定义模型（SQLAlchemy + Pydantic）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># models.py — SQLAlchemy ORM 模型</span>
+<span class="kw">from</span> <span class="builtin">sqlalchemy</span> <span class="kw">import</span> Column, Integer, String, DateTime, Boolean, Text, func
+
+<span class="kw">class</span> <span class="cls">UserModel</span>(Base):
+    __tablename__ = <span class="str">"users"</span>
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(<span class="num">50</span>), nullable=False)
+    email = Column(String(<span class="num">120</span>), unique=True, nullable=False, index=True)
+    age = Column(Integer, default=<span class="num">18</span>)
+    hashed_password = Column(String(<span class="num">255</span>), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># schemas.py — Pydantic 模型</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> Optional
+
+<span class="cm"># 请求模型</span>
+<span class="kw">class</span> <span class="cls">UserCreate</span>(BaseModel):
+    name: <span class="builtin">str</span> = Field(..., min_length=<span class="num">2</span>, max_length=<span class="num">50</span>)
+    email: EmailStr
+    age: <span class="builtin">int</span> = Field(<span class="num">18</span>, ge=<span class="num">0</span>)
+    password: <span class="builtin">str</span> = Field(..., min_length=<span class="num">8</span>)
+
+<span class="kw">class</span> <span class="cls">UserUpdate</span>(BaseModel):
+    name: Optional[<span class="builtin">str</span>] = Field(<span class="kw">None</span>, min_length=<span class="num">2</span>, max_length=<span class="num">50</span>)
+    age: Optional[<span class="builtin">int</span>] = Field(<span class="kw">None</span>, ge=<span class="num">0</span>)
+
+<span class="cm"># 响应模型 — from_attributes 允许从 ORM 对象创建</span>
+<span class="kw">class</span> <span class="cls">UserResponse</span>(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: <span class="builtin">int</span>
+    name: <span class="builtin">str</span>
+    email: <span class="builtin">str</span>
+    age: <span class="builtin">int</span>
+    is_active: <span class="builtin">bool</span>
+    created_at: Optional[datetime]
+
+<span class="cm"># 翻页响应</span>
+<span class="kw">class</span> <span class="cls">PaginatedUsers</span>(BaseModel):
+    items: List[UserResponse]
+    total: <span class="builtin">int</span>
+    page: <span class="builtin">int</span>
+    size: <span class="builtin">int</span>
+    total_pages: <span class="builtin">int</span></pre>
+
+<h3>9.3 CRUD 实战</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># crud.py — 数据库操作</span>
+<span class="kw">from</span> <span class="builtin">sqlalchemy</span> <span class="kw">import</span> select, func
+<span class="kw">from</span> <span class="builtin">sqlalchemy.ext.asyncio</span> <span class="kw">import</span> AsyncSession
+
+<span class="kw">async def</span> <span class="fn">create_user</span>(db: AsyncSession, data: UserCreate) -> UserModel:
+    user = UserModel(
+        name=data.name,
+        email=data.email,
+        age=data.age,
+        hashed_password=<span class="str">"hashed_"</span> + data.password,  <span class="cm"># 实际用 passlib</span>
+    )
+    db.add(user)
+    <span class="kw">await</span> db.flush()          <span class="cm"># 提交获取 id</span>
+    <span class="kw">await</span> db.refresh(user)    <span class="cm"># 刷新关联字段</span>
+    <span class="kw">return</span> user
+
+<span class="kw">async def</span> <span class="fn">get_user</span>(db: AsyncSession, user_id: <span class="builtin">int</span>) -> UserModel | <span class="kw">None</span>:
+    result = <span class="kw">await</span> db.execute(select(UserModel).where(UserModel.id == user_id))
+    <span class="kw">return</span> result.scalar_one_or_none()
+
+<span class="kw">async def</span> <span class="fn">list_users</span>(
+    db: AsyncSession, page: <span class="builtin">int</span> = <span class="num">1</span>, size: <span class="builtin">int</span> = <span class="num">10</span>, keyword: <span class="builtin">str</span> | <span class="kw">None</span> = <span class="kw">None</span>
+) -> tuple[list[UserModel], <span class="builtin">int</span>]:
+    query = select(UserModel)
+    <span class="kw">if</span> keyword:
+        query = query.where(UserModel.name.contains(keyword))
+
+    <span class="cm"># 总数</span>
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (<span class="kw">await</span> db.execute(count_q)).scalar()
+
+    <span class="cm"># 分页</span>
+    query = query.offset((page - <span class="num">1</span>) * size).limit(size)
+    result = <span class="kw">await</span> db.execute(query)
+    users = result.scalars().all()
+    <span class="kw">return</span> list(users), total</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># router.py — 路由层</span>
+router = APIRouter(prefix=<span class="str">"/users"</span>, tags=[<span class="str">"用户管理"</span>])
+
+<span class="dec">@router.post</span>(<span class="str">""</span>, response_model=UserResponse, status_code=<span class="num">201</span>)
+<span class="kw">async def</span> <span class="fn">create_user</span>(
+    data: UserCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    <span class="kw">return</span> <span class="kw">await</span> create_user(db, data)
+
+<span class="dec">@router.get</span>(<span class="str">"/{user_id}"</span>, response_model=UserResponse)
+<span class="kw">async def</span> <span class="fn">get_user</span>(
+    user_id: <span class="builtin">int</span>,
+    db: AsyncSession = Depends(get_db),
+):
+    user = <span class="kw">await</span> get_user(db, user_id)
+    <span class="kw">if</span> <span class="kw">not</span> user:
+        <span class="kw">raise</span> NotFoundError(<span class="str">"用户"</span>, user_id)
+    <span class="kw">return</span> user
+
+<span class="dec">@router.get</span>(<span class="str">""</span>, response_model=PaginatedUsers)
+<span class="kw">async def</span> <span class="fn">list_users</span>(
+    page: <span class="builtin">int</span> = Query(<span class="num">1</span>, ge=<span class="num">1</span>),
+    size: <span class="builtin">int</span> = Query(<span class="num">10</span>, ge=<span class="num">1</span>, le=<span class="num">100</span>),
+    keyword: <span class="builtin">str</span> | <span class="kw">None</span> = <span class="kw">None</span>,
+    db: AsyncSession = Depends(get_db),
+):
+    users, total = <span class="kw">await</span> list_users(db, page, size, keyword)
+    <span class="kw">return</span> PaginatedUsers(
+        items=users, total=total, page=page, size=size,
+        total_pages=(total + size - <span class="num">1</span>) // size,
+    )
+
+<span class="dec">@router.patch</span>(<span class="str">"/{user_id}"</span>, response_model=UserResponse)
+<span class="kw">async def</span> <span class="fn">update_user</span>(
+    user_id: <span class="builtin">int</span>,
+    data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    user = <span class="kw">await</span> get_user(db, user_id)
+    <span class="kw">if</span> <span class="kw">not</span> user:
+        <span class="kw">raise</span> NotFoundError(<span class="str">"用户"</span>, user_id)
+    <span class="kw">if</span> data.name <span class="kw">is not</span> <span class="kw">None</span>:
+        user.name = data.name
+    <span class="kw">if</span> data.age <span class="kw">is not</span> <span class="kw">None</span>:
+        user.age = data.age
+    <span class="kw">await</span> db.flush()
+    <span class="kw">await</span> db.refresh(user)
+    <span class="kw">return</span> user</pre>
+
+<div class="highlight">
+  <strong>🗝 关键模式：</strong>
+  <br>• <strong>三层分离</strong>：<code>schemas.py</code>（Pydantic 模型）→ <code>crud.py</code>（数据库操作）→ <code>router.py</code>（路由）
+  <br>• <strong>异步 ORM</strong>：SQLAlchemy 2.0 的 <code>AsyncSession</code> 全程 async/await
+  <br>• <strong>自动序列化</strong>：<code>response_model=UserResponse</code> + <code>from_attributes=True</code> 自动把 ORM 对象转 JSON
+  <br>• <strong>依赖注入</strong>：DB 会话通过 <code>Depends(get_db)</code> 自动管理与清理
+</div>
+</section>
+
+<!-- ============= 10 ============= -->
+<section id="sec10">
+<h2><span class="emoji">🔐</span> 10. 认证与授权</h2>
+
+<h3>10.1 JWT 认证（最常用）</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install python-jose[cryptography] passlib[bcrypt]</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># auth.py — 认证模块</span>
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime, timedelta, timezone
+<span class="kw">from</span> <span class="builtin">jose</span> <span class="kw">import</span> JWTError, jwt
+<span class="kw">from</span> <span class="builtin">passlib.context</span> <span class="kw">import</span> CryptContext
+
+SECRET_KEY = <span class="str">"your-secret-key-change-in-production"</span>
+ALGORITHM = <span class="str">"HS256"</span>
+ACCESS_TOKEN_EXPIRE_MINUTES = <span class="num">60</span>
+
+pwd_context = CryptContext(schemes=[<span class="str">"bcrypt"</span>])
+
+<span class="kw">def</span> <span class="fn">verify_password</span>(plain: <span class="builtin">str</span>, hashed: <span class="builtin">str</span>) -> <span class="builtin">bool</span>:
+    <span class="kw">return</span> pwd_context.verify(plain, hashed)
+
+<span class="kw">def</span> <span class="fn">hash_password</span>(plain: <span class="builtin">str</span>) -> <span class="builtin">str</span>:
+    <span class="kw">return</span> pwd_context.hash(plain)
+
+<span class="kw">def</span> <span class="fn">create_access_token</span>(data: <span class="builtin">dict</span>) -> <span class="builtin">str</span>:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({<span class="str">"exp"</span>: expire})
+    <span class="kw">return</span> jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+<span class="kw">def</span> <span class="fn">decode_access_token</span>(token: <span class="builtin">str</span>) -> <span class="builtin">dict</span>:
+    <span class="kw">try</span>:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        <span class="kw">return</span> payload
+    <span class="kw">except</span> JWTError:
+        <span class="kw">raise</span> HTTPException(status_code=<span class="num">401</span>, detail=<span class="str">"无效的 token"</span>)</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># auth_deps.py — 认证依赖</span>
+<span class="kw">from</span> <span class="builtin">fastapi.security</span> <span class="kw">import</span> OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=<span class="str">"/auth/login"</span>)
+
+<span class="kw">async def</span> <span class="fn">get_current_user</span>(
+    token: <span class="builtin">str</span> = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> UserModel:
+    payload = decode_access_token(token)
+    user_id = payload.get(<span class="str">"sub"</span>)
+    <span class="kw">if</span> <span class="kw">not</span> user_id:
+        <span class="kw">raise</span> HTTPException(status_code=<span class="num">401</span>)
+    user = <span class="kw">await</span> get_user(db, int(user_id))
+    <span class="kw">if</span> <span class="kw">not</span> user:
+        <span class="kw">raise</span> HTTPException(status_code=<span class="num">401</span>)
+    <span class="kw">return</span> user
+
+<span class="cm"># 角色检查</span>
+<span class="kw">def</span> <span class="fn">require_role</span>(role: <span class="builtin">str</span>):
+    <span class="kw">async def</span> <span class="fn">role_checker</span>(current_user: UserModel = Depends(get_current_user)):
+        <span class="kw">if</span> current_user.role != role:
+            <span class="kw">raise</span> HTTPException(status_code=<span class="num">403</span>)
+        <span class="kw">return</span> current_user
+    <span class="kw">return</span> role_checker</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># router_auth.py</span>
+router = APIRouter(prefix=<span class="str">"/auth"</span>, tags=[<span class="str">"认证"</span>])
+
+<span class="dec">@router.post</span>(<span class="str">"/register"</span>, response_model=UserResponse)
+<span class="kw">async def</span> <span class="fn">register</span>(data: UserCreate, db: AsyncSession = Depends(get_db)):
+    user = UserModel(
+        name=data.name, email=data.email, age=data.age,
+        hashed_password=hash_password(data.password),
+    )
+    db.add(user); <span class="kw">await</span> db.flush(); <span class="kw">await</span> db.refresh(user)
+    <span class="kw">return</span> user
+
+<span class="dec">@router.post</span>(<span class="str">"/login"</span>)
+<span class="kw">async def</span> <span class="fn">login</span>(
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    result = <span class="kw">await</span> db.execute(select(UserModel).where(UserModel.email == form.username))
+    user = result.scalar_one_or_none()
+    <span class="kw">if</span> <span class="kw">not</span> user <span class="kw">or</span> <span class="kw">not</span> verify_password(form.password, user.hashed_password):
+        <span class="kw">raise</span> HTTPException(status_code=<span class="num">401</span>, detail=<span class="str">"邮箱或密码错误"</span>)
+    token = create_access_token({<span class="str">"sub"</span>: <span class="builtin">str</span>(user.id), <span class="str">"role"</span>: user.role})
+    <span class="kw">return</span> {<span class="str">"access_token"</span>: token, <span class="str">"token_type"</span>: <span class="str">"bearer"</span>}
+
+<span class="cm"># 需要认证的路由</span>
+<span class="dec">@router.get</span>(<span class="str">"/me"</span>, response_model=UserResponse)
+<span class="kw">async def</span> <span class="fn">get_me</span>(current_user: UserModel = Depends(get_current_user)):
+    <span class="kw">return</span> current_user
+
+<span class="cm"># 需要管理员权限</span>
+<span class="dec">@router.get</span>(<span class="str">"/admin-only"</span>)
+<span class="kw">async def</span> <span class="fn">admin_only</span>(admin: UserModel = Depends(require_role(<span class="str">"admin"</span>))):
+    <span class="kw">return</span> {<span class="str">"message"</span>: <span class="str">"欢迎管理员"</span>}</pre>
+</section>
+
+<!-- ============= 11 ============= -->
+<section id="sec11">
+<h2><span class="emoji">📎</span> 11. 文件上传与下载</h2>
+
+<h3>11.1 文件上传保存</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">os</span>, <span class="builtin">uuid</span>
+<span class="kw">from</span> <span class="builtin">pathlib</span> <span class="kw">import</span> Path
+
+UPLOAD_DIR = Path(<span class="str">"uploads"</span>)
+UPLOAD_DIR.mkdir(exist_ok=<span class="kw">True</span>)
+
+<span class="dec">@app.post</span>(<span class="str">"/files/upload"</span>)
+<span class="kw">async def</span> <span class="fn">upload_file</span>(file: UploadFile = File(...)):
+    <span class="cm"># 生成唯一文件名</span>
+    ext = Path(file.filename).suffix if file.filename <span class="kw">else</span> <span class="str">".bin"</span>
+    unique_name = f<span class="str">"{uuid.uuid4()}{ext}"</span>
+    save_path = UPLOAD_DIR / unique_name
+
+    <span class="cm"># 分块写入（大文件友好）</span>
+    <span class="kw">with</span> <span class="builtin">open</span>(save_path, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+        <span class="kw">while</span> chunk := <span class="kw">await</span> file.read(<span class="num">1024</span> * <span class="num">1024</span>):  <span class="cm"># 1MB 块</span>
+            f.write(chunk)
+
+    <span class="kw">return</span> {
+        <span class="str">"filename"</span>: file.filename,
+        <span class="str">"saved_as"</span>: unique_name,
+        <span class="str">"size"</span>: save_path.stat().st_size,
+        <span class="str">"url"</span>: f<span class="str">"/files/{unique_name}"</span>,
+    }</pre>
+
+<h3>11.2 文件下载</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi.responses</span> <span class="kw">import</span> FileResponse, StreamingResponse
+
+<span class="cm"># 方式一：FileResponse（直接下载）</span>
+<span class="dec">@app.get</span>(<span class="str">"/files/{file_id}"</span>)
+<span class="kw">async def</span> <span class="fn">download_file</span>(file_id: <span class="builtin">str</span>):
+    file_path = UPLOAD_DIR / file_id
+    <span class="kw">if</span> <span class="kw">not</span> file_path.exists():
+        <span class="kw">raise</span> HTTPException(<span class="num">404</span>)
+    <span class="kw">return</span> FileResponse(
+        path=file_path,
+        filename=file_id,                     <span class="cm"># 下载时的文件名</span>
+        media_type=<span class="str">"application/octet-stream"</span>,  <span class="cm"># 强制下载</span>
+    )
+
+<span class="cm"># 方式二：StreamingResponse（大文件/流式）</span>
+<span class="kw">async def</span> <span class="fn">iter_file</span>(path: Path, chunk_size=<span class="num">64</span> * <span class="num">1024</span>):  <span class="cm"># 64KB</span>
+    <span class="kw">with</span> <span class="builtin">open</span>(path, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+        <span class="kw">while</span> chunk := f.read(chunk_size):
+            <span class="kw">yield</span> chunk
+
+<span class="dec">@app.get</span>(<span class="str">"/stream/{file_id}"</span>)
+<span class="kw">async def</span> <span class="fn">stream_file</span>(file_id: <span class="builtin">str</span>):
+    file_path = UPLOAD_DIR / file_id
+    <span class="kw">return</span> StreamingResponse(
+        iter_file(file_path),
+        media_type=<span class="str">"application/octet-stream"</span>,
+        headers={<span class="str">"Content-Disposition"</span>: f<span class="str">'attachment; filename="{file_id}"'</span>},
+    )</pre>
+</section>
+
+<!-- ============= 12 ============= -->
+<section id="sec12">
+<h2><span class="emoji">⏰</span> 12. 后台任务与定时器</h2>
+
+<h3>12.1 FastAPI 内置后台任务</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> BackgroundTasks
+
+<span class="kw">def</span> <span class="fn">send_welcome_email</span>(email: <span class="builtin">str</span>):
+    <span class="builtin">print</span>(f<span class="str">"发送欢迎邮件到 {email}"</span>)
+
+<span class="kw">def</span> <span class="fn">log_registration</span>(user_id: <span class="builtin">int</span>):
+    <span class="builtin">print</span>(f<span class="str">"记录注册日志: user_id={user_id}"</span>)
+
+<span class="dec">@app.post</span>(<span class="str">"/users/register"</span>)
+<span class="kw">async def</span> <span class="fn">register</span>(
+    data: UserCreate,
+    tasks: BackgroundTasks,
+):
+    user = <span class="kw">await</span> create_user(data)
+    <span class="cm"># 后台执行（不阻塞响应返回）</span>
+    tasks.add_task(send_welcome_email, user.email)
+    tasks.add_task(log_registration, user.id)
+    <span class="kw">return</span> user</pre>
+
+<h3>12.2 定期任务（APScheduler）</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install apscheduler</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">contextlib</span> <span class="kw">import</span> asynccontextmanager
+<span class="kw">from</span> <span class="builtin">apscheduler.schedulers.asyncio</span> <span class="kw">import</span> AsyncIOScheduler
+
+scheduler = AsyncIOScheduler()
+
+<span class="kw">async def</span> <span class="fn">cleanup_old_files</span>():
+    <span class="str">"""每天清理过期文件"""</span>
+    <span class="builtin">print</span>(<span class="str">"清理过期文件..."</span>)
+
+<span class="kw">async def</span> <span class="fn">sync_external_data</span>():
+    <span class="str">"""每小时同步数据"""</span>
+    <span class="builtin">print</span>(<span class="str">"同步外部数据..."</span>)
+
+<span class="cm"># 启动/关闭钩子（FastAPI 生命周期）</span>
+<span class="nd">@asynccontextmanager</span>
+<span class="kw">async def</span> <span class="fn">lifespan</span>(app: FastAPI):
+    <span class="cm"># 启动时</span>
+    scheduler.add_job(cleanup_old_files, <span class="str">"cron"</span>, hour=<span class="num">3</span>)       <span class="cm"># 每天 3:00</span>
+    scheduler.add_job(sync_external_data, <span class="str">"interval"</span>, hours=<span class="num">1</span>)  <span class="cm"># 每小时</span>
+    scheduler.start()
+    <span class="kw">yield</span>
+    <span class="cm"># 关闭时</span>
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)</pre>
+</section>
+
+<!-- ============= 13 ============= -->
+<section id="sec13">
+<h2><span class="emoji">🔌</span> 13. WebSocket</h2>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> WebSocket, WebSocketDisconnect
+
+<span class="kw">class</span> <span class="cls">ConnectionManager</span>:
+    <span class="kw">def</span> __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    <span class="kw">async def</span> <span class="fn">connect</span>(self, ws: WebSocket):
+        <span class="kw">await</span> ws.accept()
+        self.active_connections.append(ws)
+
+    <span class="kw">def</span> <span class="fn">disconnect</span>(self, ws: WebSocket):
+        self.active_connections.remove(ws)
+
+    <span class="kw">async def</span> <span class="fn">broadcast</span>(self, message: <span class="builtin">str</span>):
+        <span class="kw">for</span> connection <span class="kw">in</span> self.active_connections:
+            <span class="kw">await</span> connection.send_text(message)
+
+manager = ConnectionManager()
+
+<span class="dec">@app.websocket</span>(<span class="str">"/ws/{client_id}"</span>)
+<span class="kw">async def</span> <span class="fn">websocket_endpoint</span>(ws: WebSocket, client_id: <span class="builtin">str</span>):
+    <span class="kw">await</span> manager.connect(ws)
+    <span class="kw">try</span>:
+        <span class="kw">while</span> True:
+            data = <span class="kw">await</span> ws.receive_text()
+            <span class="builtin">print</span>(f<span class="str">"收到 {client_id}: {data}"</span>)
+            <span class="kw">await</span> ws.send_text(f<span class="str">"服务器已收到: {data}"</span>)
+            <span class="kw">await</span> manager.broadcast(f<span class="str">"[{client_id}] {data}"</span>)
+    <span class="kw">except</span> WebSocketDisconnect:
+        manager.disconnect(ws)
+        <span class="kw">await</span> manager.broadcast(f<span class="str">"[{client_id}] 已断开连接"</span>)</pre>
+
+<div class="highlight">
+  <strong>💡 WebSocket vs HTTP：</strong>
+  <br>• <strong>HTTP</strong> = 请求-响应模式，每次新建连接（或复用 keep-alive），适合 CRUD
+  <br>• <strong>WebSocket</strong> = 全双工长连接，适合实时消息、聊天、通知、协同编辑
+  <br>• FastAPI 同一个应用可以同时提供 HTTP REST + WebSocket
+</div>
+</section>
+
+<!-- ============= 14 ============= -->
+<section id="sec14">
+<h2><span class="emoji">🧪</span> 14. 测试</h2>
+<p>FastAPI 基于 Starlette 的 <code>TestClient</code>，基于 <strong>httpx</strong>（同步/异步），模拟 HTTP 请求无需启动服务器。</p>
+
+<pre><span class="lang-label">bash</span>
+$ pip install pytest httpx</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># test_main.py</span>
+<span class="kw">import</span> <span class="builtin">pytest</span>
+<span class="kw">from</span> <span class="builtin">httpx</span> <span class="kw">import</span> ASGITransport
+<span class="kw">from</span> <span class="builtin">fastapi.testclient</span> <span class="kw">import</span> TestClient
+
+<span class="kw">from</span> <span class="builtin">main</span> <span class="kw">import</span> app
+
+client = TestClient(app)
+
+<span class="kw">def</span> <span class="fn">test_health_check</span>():
+    response = client.get(<span class="str">"/ping"</span>)
+    <span class="kw">assert</span> response.status_code == <span class="num">200</span>
+    <span class="kw">assert</span> response.json() == {<span class="str">"status"</span>: <span class="str">"ok"</span>}
+
+<span class="kw">def</span> <span class="fn">test_create_user</span>():
+    payload = {
+        <span class="str">"name"</span>: <span class="str">"测试用户"</span>,
+        <span class="str">"email"</span>: <span class="str">"test@example.com"</span>,
+        <span class="str">"age"</span>: <span class="num">25</span>,
+        <span class="str">"password"</span>: <span class="str">"Test1234"</span>,
+    }
+    response = client.post(<span class="str">"/users"</span>, json=payload)
+    <span class="kw">assert</span> response.status_code == <span class="num">201</span>
+    data = response.json()
+    <span class="kw">assert</span> data[<span class="str">"name"</span>] == <span class="str">"测试用户"</span>
+    <span class="kw">assert</span> <span class="str">"id"</span> <span class="kw">in</span> data
+    <span class="kw">assert</span> <span class="str">"password"</span> <span class="kw">not in</span> data  <span class="cm"># 响应模型过滤了敏感字段</span>
+
+<span class="kw">def</span> <span class="fn">test_validation_error</span>():
+    <span class="cm"># 测试校验失败</span>
+    response = client.post(<span class="str">"/users"</span>, json={<span class="str">"name"</span>: <span class="str">"x"</span>})  <span class="cm"># 太短 + 缺少必填字段</span>
+    <span class="kw">assert</span> response.status_code == <span class="num">422</span>
+    errors = response.json()
+    <span class="kw">assert</span> <span class="str">"detail"</span> <span class="kw">in</span> errors
+
+<span class="kw">def</span> <span class="fn">test_auth_fail</span>():
+    response = client.get(<span class="str">"/auth/me"</span>)  <span class="cm"># 未传 token</span>
+    <span class="kw">assert</span> response.status_code == <span class="num">401</span></pre>
+
+<h3>异步测试</h3>
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">pytest</span>
+<span class="kw">from</span> <span class="builtin">httpx</span> <span class="kw">import</span> AsyncClient, ASGITransport
+
+<span class="nd">@pytest.mark.asyncio</span>
+<span class="kw">async def</span> <span class="fn">test_async_endpoint</span>():
+    transport = ASGITransport(app=app)
+    <span class="kw">async with</span> AsyncClient(transport=transport, base_url=<span class="str">"http://test"</span>) <span class="kw">as</span> ac:
+        response = <span class="kw">await</span> ac.get(<span class="str">"/ping"</span>)
+        <span class="kw">assert</span> response.status_code == <span class="num">200</span></pre>
+
+<h3>覆盖依赖（测试关键技巧）</h3>
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 测试时替换数据库</span>
+<span class="kw">from</span> <span class="builtin">main</span> <span class="kw">import</span> app, get_db
+
+<span class="kw">async def</span> <span class="fn">override_get_db</span>():
+    <span class="kw">async with</span> TestSessionLocal() <span class="kw">as</span> session:
+        <span class="kw">yield</span> session
+
+app.dependency_overrides[get_db] = override_get_db
+
+<span class="cm"># 之后的 TestClient 请求就会使用测试数据库</span>
+client = TestClient(app)</pre>
+</section>
+
+<!-- ============= 15 ============= -->
+<section id="sec15">
+<h2><span class="emoji">🚢</span> 15. 部署与生产配置</h2>
+
+<h3>15.1 使用 Gunicorn + Uvicorn Worker</h3>
+<pre><span class="lang-label">bash</span>
+$ pip install gunicorn
+
+<span class="cm"># 多进程部署（推荐）</span>
+$ gunicorn main:app \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 4 \
+    --bind 0.0.0.0:8000 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -</pre>
+
+<h3>15.2 Docker 部署</h3>
+<pre><span class="lang-label">Dockerfile</span>
+<span class="kw">FROM</span> python:3.12-slim
+
+WORKDIR /app
+
+<span class="cm"># 依赖安装</span>
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+<span class="cm"># 应用代码</span>
+COPY . .
+
+<span class="cm"># 健康检查（K8s 需要）</span>
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD python -c "import http.client; http.client.HTTPConnection('localhost', 8000).request('GET', '/ping')"
+
+CMD ["gunicorn", "main:app", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--workers", "4", \
+     "--bind", "0.0.0.0:8000"]</pre>
+
+<pre><span class="lang-label">.env</span>
+<span class="cm"># 环境变量配置</span>
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/db
+SECRET_KEY=your-256-bit-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+LOG_LEVEL=info
+CORS_ORIGINS=https://frontend.example.com</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># config.py — 配置管理（Pydantic Settings）</span>
+<span class="kw">from</span> <span class="builtin">pydantic_settings</span> <span class="kw">import</span> BaseSettings
+
+<span class="kw">class</span> <span class="cls">Settings</span>(BaseSettings):
+    app_name: <span class="builtin">str</span> = <span class="str">"My API"</span>
+    debug: <span class="builtin">bool</span> = <span class="kw">False</span>
+    database_url: <span class="builtin">str</span>
+    secret_key: <span class="builtin">str</span>
+    access_token_expire_minutes: <span class="builtin">int</span> = <span class="num">60</span>
+    cors_origins: <span class="builtin">str</span> = <span class="str">"*"</span>
+    log_level: <span class="builtin">str</span> = <span class="str">"info"</span>
+
+    model_config = ConfigDict(env_file=<span class="str">".env"</span>, extra=<span class="str">"ignore"</span>)
+
+settings = Settings()  <span class="cm"># 自动从 .env / 环境变量读取</span>
+
+<span class="cm"># 在 app 中使用</span>
+app = FastAPI(title=settings.app_name, debug=settings.debug)</pre>
+
+<h3>15.3 生产 Checklist</h3>
+<div class="card-grid">
+  <div class="card"><h4>📝 日志</h4><p>使用 <code>loguru</code> 或 <code>structlog</code>，结构化 JSON 日志</p></div>
+  <div class="card"><h4>🛡 安全</h4><p>HTTPS、CORS 白名单、速率限制（slowapi）、SQL 注入防护（ORM 已防）</p></div>
+  <div class="card"><h4>📊 监控</h4><p>Prometheus 指标 + Grafana 仪表盘</p></div>
+  <div class="card"><h4>🐳 容器化</h4><p>多阶段构建、健康检查、资源限制</p></div>
+  <div class="card"><h4>🔄 迁移</h4><p>Alembic 管理数据库版本</p></div>
+  <div class="card"><h4>📐 限流</h4><p><code>slowapi</code> 或 Redis 计数器限流</p></div>
+</div>
+</section>
+
+<!-- ============= 16 ============= -->
+<section id="sec16">
+<h2><span class="emoji">🚀</span> 16. 综合实战：完整 RESTful API</h2>
+<p>一个完整的<strong>博客系统 API</strong>，串起所有知识点。目录结构如下：</p>
+
+<pre><span class="lang-label">结构</span>
+myblog/
+├── main.py               # 应用入口
+├── config.py             # 配置管理
+├── database.py           # 数据库引擎 + session
+├── models/               # SQLAlchemy ORM 模型
+│   ├── __init__.py
+│   ├── user.py
+│   └── post.py
+├── schemas/              # Pydantic 模型
+│   ├── __init__.py
+│   ├── user.py
+│   └── post.py
+├── crud/                 # 数据库操作
+│   ├── __init__.py
+│   ├── user.py
+│   └── post.py
+├── routers/              # API 路由
+│   ├── __init__.py
+│   ├── auth.py
+│   ├── users.py
+│   └── posts.py
+├── deps.py               # 公共依赖
+├── exceptions.py         # 业务异常
+└── tests/                # 测试</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># main.py — 完整应用入口</span>
+<span class="kw">import</span> <span class="builtin">asyncio</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+<span class="kw">from</span> <span class="builtin">contextlib</span> <span class="kw">import</span> asynccontextmanager
+<span class="kw">from</span> <span class="builtin">fastapi</span> <span class="kw">import</span> FastAPI, Request
+<span class="kw">from</span> <span class="builtin">fastapi.middleware.cors</span> <span class="kw">import</span> CORSMiddleware
+<span class="kw">from</span> <span class="builtin">fastapi.responses</span> <span class="kw">import</span> JSONResponse
+
+<span class="cm"># 业务异常处理器</span>
+<span class="kw">from</span> <span class="builtin">exceptions</span> <span class="kw">import</span> AppException
+
+<span class="cm"># 路由</span>
+<span class="kw">from</span> <span class="builtin">routers.auth</span> <span class="kw">import</span> router <span class="kw">as</span> auth_router
+<span class="kw">from</span> <span class="builtin">routers.users</span> <span class="kw">import</span> router <span class="kw">as</span> user_router
+<span class="kw">from</span> <span class="builtin">routers.posts</span> <span class="kw">import</span> router <span class="kw">as</span> post_router
+
+<span class="cm"># 数据库初始化</span>
+<span class="kw">from</span> <span class="builtin">database</span> <span class="kw">import</span> engine, Base
+
+<span class="nd">@asynccontextmanager</span>
+<span class="kw">async def</span> <span class="fn">lifespan</span>(app: FastAPI):
+    <span class="cm"># 启动时创建表</span>
+    <span class="kw">async with</span> engine.begin() <span class="kw">as</span> conn:
+        <span class="kw">await</span> conn.run_sync(Base.metadata.create_all)
+    <span class="kw">yield</span>
+    <span class="cm"># 关闭引擎</span>
+    <span class="kw">await</span> engine.dispose()
+
+app = FastAPI(
+    title=<span class="str">"Blog API"</span>,
+    description=<span class="str">"FastAPI + SQLAlchemy + Pydantic 综合实战"</span>,
+    version=<span class="str">"1.0.0"</span>,
+    lifespan=lifespan,
+)
+
+<span class="cm"># 中间件</span>
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[<span class="str">"http://localhost:3000"</span>],
+    allow_credentials=<span class="kw">True</span>,
+    allow_methods=[<span class="str">"*"</span>],
+    allow_headers=[<span class="str">"*"</span>],
+)
+
+<span class="cm"># 请求耗时中间件</span>
+<span class="dec">@app.middleware</span>(<span class="str">"http"</span>)
+<span class="kw">async def</span> <span class="fn">add_process_time_header</span>(request: Request, call_next):
+    start = time.time()
+    response = <span class="kw">await</span> call_next(request)
+    response.headers[<span class="str">"X-Process-Time"</span>] = f<span class="str">"{time.time() - start:.4f}"</span>
+    <span class="kw">return</span> response
+
+<span class="cm"># 异常处理器</span>
+<span class="dec">@app.exception_handler</span>(AppException)
+<span class="kw">async def</span> <span class="fn">app_exception_handler</span>(request: Request, exc: AppException):
+    <span class="kw">return</span> JSONResponse(
+        status_code=exc.status_code,
+        content={<span class="str">"code"</span>: exc.code, <span class="str">"message"</span>: exc.message},
+    )
+
+<span class="cm"># 注册路由</span>
+app.include_router(auth_router, prefix=<span class="str">"/api/v1"</span>)
+app.include_router(user_router, prefix=<span class="str">"/api/v1"</span>)
+app.include_router(post_router, prefix=<span class="str">"/api/v1"</span>)
+
+<span class="dec">@app.get</span>(<span class="str">"/"</span>)
+<span class="kw">async def</span> <span class="fn">root</span>():
+    <span class="kw">return</span> {<span class="str">"name"</span>: <span class="str">"Blog API"</span>, <span class="str">"version"</span>: <span class="str">"1.0.0"</span>, <span class="str">"docs"</span>: <span class="str">"/docs"</span>}
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="kw">import</span> <span class="builtin">uvicorn</span>
+    uvicorn.run(<span class="str">"main:app"</span>, host=<span class="str">"0.0.0.0"</span>, port=<span class="num">8000</span>, reload=<span class="kw">True</span>)</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># schemas/post.py — 文章 Pydantic 模型</span>
+<span class="kw">from</span> <span class="builtin">pydantic</span> <span class="kw">import</span> BaseModel, ConfigDict, Field
+<span class="kw">from</span> <span class="builtin">datetime</span> <span class="kw">import</span> datetime
+<span class="kw">from</span> <span class="builtin">typing</span> <span class="kw">import</span> List, Optional
+
+<span class="kw">class</span> <span class="cls">PostCreate</span>(BaseModel):
+    title: <span class="builtin">str</span> = Field(..., min_length=<span class="num">2</span>, max_length=<span class="num">200</span>)
+    content: <span class="builtin">str</span> = Field(..., min_length=<span class="num">10</span>)
+    published: <span class="builtin">bool</span> = True
+    tags: List[<span class="builtin">str</span>] = []
+
+<span class="kw">class</span> <span class="cls">PostUpdate</span>(BaseModel):
+    title: Optional[<span class="builtin">str</span>] = Field(<span class="kw">None</span>, min_length=<span class="num">2</span>, max_length=<span class="num">200</span>)
+    content: Optional[<span class="builtin">str</span>] = Field(<span class="kw">None</span>, min_length=<span class="num">10</span>)
+    published: Optional[<span class="builtin">bool</span>] = <span class="kw">None</span>
+    tags: Optional[List[<span class="builtin">str</span>]] = <span class="kw">None</span>
+
+<span class="kw">class</span> <span class="cls">PostOut</span>(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: <span class="builtin">int</span>
+    title: <span class="builtin">str</span>
+    content: <span class="builtin">str</span>
+    published: <span class="builtin">bool</span>
+    tags: <span class="builtin">str</span>                 <span class="cm"># SQLite 用逗号分隔存储</span>
+    author_id: <span class="builtin">int</span>
+    author_name: <span class="builtin">str</span>            <span class="cm"># 关联用户</span>
+    created_at: datetime
+    updated_at: Optional[datetime]</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># routers/posts.py — 文章 CRUD 路由</span>
+router = APIRouter(prefix=<span class="str">"/posts"</span>, tags=[<span class="str">"文章管理"</span>])
+
+<span class="dec">@router.post</span>(<span class="str">""</span>, response_model=PostOut, status_code=<span class="num">201</span>)
+<span class="kw">async def</span> <span class="fn">create_post</span>(
+    data: PostCreate,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    post = PostModel(
+        title=data.title,
+        content=data.content,
+        published=data.published,
+        tags=<span class="str">","</span>.join(data.tags),
+        author_id=current_user.id,
+    )
+    db.add(post)
+    <span class="kw">await</span> db.flush()
+    <span class="kw">await</span> db.refresh(post)
+    <span class="kw">return</span> <span class="kw">await</span> _format_post(db, post)
+
+<span class="dec">@router.get</span>(<span class="str">""</span>, response_model=List[PostOut])
+<span class="kw">async def</span> <span class="fn">list_posts</span>(
+    page: <span class="builtin">int</span> = Query(<span class="num">1</span>, ge=<span class="num">1</span>),
+    size: <span class="builtin">int</span> = Query(<span class="num">10</span>, ge=<span class="num">1</span>, le=<span class="num">50</span>),
+    tag: <span class="builtin">str</span> | <span class="kw">None</span> = <span class="kw">None</span>,
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(PostModel).where(PostModel.published == <span class="kw">True</span>)
+    <span class="kw">if</span> tag:
+        query = query.where(PostModel.tags.contains(tag))
+    query = query.offset((page - <span class="num">1</span>) * size).limit(size).order_by(PostModel.created_at.desc())
+    result = <span class="kw">await</span> db.execute(query)
+    posts = result.scalars().all()
+    <span class="kw">return</span> [<span class="kw">await</span> _format_post(db, p) <span class="kw">for</span> p <span class="kw">in</span> posts]
+
+<span class="dec">@router.get</span>(<span class="str">"/{post_id}"</span>, response_model=PostOut)
+<span class="kw">async def</span> <span class="fn">get_post</span>(post_id: <span class="builtin">int</span>, db: AsyncSession = Depends(get_db)):
+    result = <span class="kw">await</span> db.execute(select(PostModel).where(PostModel.id == post_id))
+    post = result.scalar_one_or_none()
+    <span class="kw">if</span> <span class="kw">not</span> post:
+        <span class="kw">raise</span> NotFoundError(<span class="str">"文章"</span>, post_id)
+    <span class="kw">return</span> <span class="kw">await</span> _format_post(db, post)
+
+<span class="dec">@router.delete</span>(<span class="str">"/{post_id}"</span>, status_code=<span class="num">204</span>)
+<span class="kw">async def</span> <span class="fn">delete_post</span>(
+    post_id: <span class="builtin">int</span>,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = <span class="kw">await</span> db.execute(select(PostModel).where(PostModel.id == post_id))
+    post = result.scalar_one_or_none()
+    <span class="kw">if</span> <span class="kw">not</span> post:
+        <span class="kw">raise</span> NotFoundError(<span class="str">"文章"</span>, post_id)
+    <span class="kw">if</span> post.author_id != current_user.id <span class="kw">and</span> current_user.role != <span class="str">"admin"</span>:
+        <span class="kw">raise</span> PermissionDenied()
+    <span class="kw">await</span> db.delete(post)
+
+<span class="kw">async def</span> <span class="fn">_format_post</span>(db, post):
+    <span class="cm">"""格式化文章输出（获取作者名字）"""</span>
+    user = <span class="kw">await</span> db.get(UserModel, post.author_id)
+    <span class="kw">return</span> {
+        <span class="str">"id"</span>: post.id,
+        <span class="str">"title"</span>: post.title,
+        <span class="str">"content"</span>: post.content,
+        <span class="str">"published"</span>: post.published,
+        <span class="str">"tags"</span>: post.tags,
+        <span class="str">"author_id"</span>: post.author_id,
+        <span class="str">"author_name"</span>: user.name <span class="kw">if</span> user <span class="kw">else</span> <span class="str">"未知"</span>,
+        <span class="str">"created_at"</span>: post.created_at,
+        <span class="str">"updated_at"</span>: post.updated_at,
+    }</pre>
+
+<div class="highlight">
+  <strong>🎯 综合实战学到的模式：</strong>
+  <br>• <strong>三层架构</strong>：路由（关注 HTTP）+ CRUD（关注 DB）+ Schema（关注数据形状）
+  <br>• <strong>依赖注入贯穿始终</strong>：<code>get_db</code>（会话管理）+ <code>get_current_user</code>（认证）+ 业务参数
+  <br>• <strong>Pydantic 双向绑定</strong>：请求校验（<code>PostCreate</code>）→ 业务处理 → 响应序列化（<code>PostOut</code>）
+  <br>• <strong>错误处理体系</strong>：业务异常（NotFoundError / PermissionDenied）→ 统一全局 Handler
+  <br>• <strong>异步全链路</strong>：async DB → async route → async middleware，不阻塞事件循环
+</div>
+</section>
+
+<!-- ============= FOOTER ============= -->
+<div class="footer">
+  ⚡ FastAPI 从入门到精通 · 教学文档 ·
+  由 <a href="https://github.com/2143616" style="color: var(--accent); text-decoration: none;">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span>
+</div>
+
+</div>
+</body>
+</html>
