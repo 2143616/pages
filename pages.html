@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git 提交 + Vercel 部署 完整指南</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+  padding: 24px 20px;
+}
+.container { max-width: 880px; margin: 0 auto; }
+
+h1 { font-size: 2rem; text-align: center; margin: 32px 0 8px; background: linear-gradient(135deg, var(--orange), var(--red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.subtitle { text-align: center; color: var(--fg2); margin-bottom: 40px; font-size: .95rem; }
+
+h2 {
+  font-size: 1.35rem; font-weight: 600; margin: 32px 0 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  color: var(--teal);
+}
+h3 {
+  font-size: 1.05rem; font-weight: 600; margin: 20px 0 10px;
+  color: var(--pink);
+}
+p { margin-bottom: 12px; color: var(--fg2); }
+ul, ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+li { margin-bottom: 6px; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+}
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.step { margin: 12px 0; padding: 14px 18px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); }
+.step .step-num { display: inline-block; background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: .8rem; font-weight: 700; margin-right: 8px; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: .75rem; font-weight: 600; }
+.tag-cmd { background: rgba(88,166,255,.15); color: var(--accent); }
+.tag-dir { background: rgba(61,185,80,.15); color: var(--green); }
+.tag-bad { background: rgba(248,81,73,.15); color: var(--red); }
+
+.footer { text-align: center; margin: 48px 0 24px; color: var(--fg2); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 24px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📤 Git 提交 + Vercel 部署 完整指南</h1>
+<p class="subtitle">从本地 HTML 文档到线上可访问网站的全流程实战</p>
+
+<div class="highlight">
+  <strong>🎯 核心链路：</strong>
+  本地文件 → <code>git add/commit</code> → <code>git push</code> → GitHub → Vercel 自动部署 → 网站更新
+</div>
+
+<!-- ============================================================ -->
+<h2>📋 前置准备</h2>
+
+<table>
+  <tr><th>工具</th><th>安装命令 / 链接</th><th>验证</th></tr>
+  <tr><td>Git</td><td><code>sudo apt install git</code></td><td><code>git --version</code></td></tr>
+  <tr><td>GitHub 账号</td><td>https://github.com</td><td>创建仓库 pages</td></tr>
+  <tr><td>Vercel 账号</td><td>https://vercel.com</td><td>导入 GitHub 仓库</td></tr>
+  <tr><td>Vercel CLI（可选）</td><td><code>npm i -g vercel</code></td><td><code>vercel --version</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>🧩 第 1 步：本地创建 HTML 文件</h2>
+
+<div class="step"><span class="step-num">1</span> 在项目目录下创建 <code>.html</code> 文件</div>
+
+<pre><span class="lang-label">Bash</span>
+<span class="cm"># 进入项目目录</span>
+$ cd /home/hyl/Desktop/资料/html
+
+<span class="cm"># 创建 HTML 文件（以 Python.html 为例）</span>
+$ touch Python.html
+
+<span class="cm"># 确认文件存在</span>
+$ ls *.html | head -10
+<small>操作系统.html  计算机网络.html  数据结构.html  数据库.html  FastAPI.html  Python.html  Git 版本控制.html  ...</small></pre>
+
+<div class="step"><span class="step-num">2</span> 用编辑器写入内容（或使用 <code>write_file</code> 工具自动生成）</div>
+
+<!-- ============================================================ -->
+<h2>📝 第 2 步：Git 提交</h2>
+
+<div class="step"><span class="step-num">3</span> 查看当前仓库状态</div>
+
+<pre><span class="lang-label">Bash</span>
+$ git status
+<small>位于分支 pages</small>
+<small>未跟踪的文件:</small>
+<small>  Python.html  Git 版本控制.html  ...</small></pre>
+
+<div class="highlight">
+  <strong>💡 常用分支说明：</strong> 本地分支名无所谓（如 <code>pages</code>），关键是指定推送到远程的哪个分支。
+</div>
+
+<div class="step"><span class="step-num">4</span> 添加文件到暂存区</div>
+
+<pre><span class="lang-label">Bash</span>
+<span class="cm"># 添加单个文件</span>
+$ git add Python.html
+
+<span class="cm"># 或添加所有改动</span>
+$ git add .
+
+<span class="cm"># 或交互式分段添加</span>
+$ git add -p</pre>
+
+<div class="step"><span class="step-num">5</span> 提交到本地仓库</div>
+
+<pre><span class="lang-label">Bash</span>
+$ git commit -m "docs: 添加 Python 教学文档"
+
+<span class="cm"># 合并提交并写信息（一步到位）</span>
+$ git add . && git commit -m "feat: 添加7份新教学文档"</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># 一行完成所有：先添加已修改的 index.html，再提交</span>
+$ cd /home/hyl/Desktop/资料/html && git add index.html && git commit -m "docs: 添加新文档到首页导航"</pre>
+
+<div class="step"><span class="step-num">6</span> 推送到 GitHub 远程仓库</div>
+
+<pre><span class="lang-label">Bash</span>
+<span class="cm"># 本地分支名 <strong>不等于</strong> 远程分支名时：</span>
+$ git push origin HEAD:main
+<small>To https://github.com/2143616/pages.git</small>
+<small>   226285d..debc8ab  HEAD -> main</small>
+
+<span class="cm"># 同名分支时：</span>
+$ git push origin main</pre>
+
+<div class="highlight">
+  <strong>⚠️ 注意：</strong> 如果远程有本地没有的提交，会 reject。需要先 <code>git pull origin main --rebase</code> 再 push。
+</div>
+
+<!-- 错误处理 -->
+<h3>❌ 常见错误及解决</h3>
+
+<table>
+  <tr><th>错误信息</th><th>原因</th><th>解决</th></tr>
+  <tr>
+    <td><code>fatal: The upstream branch does not match the name of your current branch</code></td>
+    <td>本地分支名和远程分支名不一致</td>
+    <td><code>git push origin HEAD:main</code></td>
+  </tr>
+  <tr>
+    <td><code>! [rejected] (fetch first)</code></td>
+    <td>远程有新 commit，本地没有</td>
+    <td><code>git pull origin main --rebase</code><br>→ 再 <code>git push origin HEAD:main</code></td>
+  </tr>
+  <tr>
+    <td><code>! [rejected] (non-fast-forward)</code></td>
+    <td>本地和远程分叉了</td>
+    <td><code>git pull --rebase</code> 或 <code>git merge</code> 后再推</td>
+  </tr>
+  <tr>
+    <td><code>error: RPC failed; curl 56 GnuTLS recv error</code></td>
+    <td>网络不稳定（常见国内）</td>
+    <td>使用代理：<code>git config --global http.proxy socks5://127.0.0.1:7897</code></td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>☁️ 第 3 步：Vercel 自动部署</h2>
+
+<div class="step"><span class="step-num">7</span> 确认 Vercel 已连接 GitHub 仓库</div>
+
+<p>登录 <a href="https://vercel.com" style="color:var(--accent);">vercel.com</a> → Dashboard → 找到项目 <strong>html</strong> → Settings → Git</p>
+<ul>
+  <li>✅ 确认已关联 <code>2143616/pages</code> 仓库</li>
+  <li>✅ 确认 Production Branch 设置为 <code>main</code></li>
+  <li>✅ 确认 Auto-deploy 已开启（默认开启）</li>
+</ul>
+
+<div class="step"><span class="step-num">8</span> 等待几秒钟，Vercel 检测到 push 后自动部署</div>
+
+<pre><span class="lang-label">Vercel CLI</span>
+<span class="cm"># 查看部署状态（需先安装 vercel CLI）</span>
+$ vercel ls
+<small>  Age     Project       Deployment                                 Status</small>
+<small>  8s      hyl1/html     https://html-ays0kttq7-hyl1.vercel.app     ● Ready</small>
+<small>  4m      hyl1/html     https://html-nz1pgqbqx-hyl1.vercel.app     ● Ready</small>
+<small>  ↑ 最新部署          ↑ 临时 URL                        ↑ 状态 Ready 即完成</small></pre>
+
+<div class="step"><span class="step-num">9</span> 确认自定义域名已指向最新部署</div>
+
+<pre><span class="lang-label">Vercel CLI</span>
+$ vercel alias ls | grep mu-olive
+<small>html-ays0kttq7-hyl1.vercel.app    html-mu-olive.vercel.app    1d</small>
+<small>↑ 最新部署 URL                   ↑ 自定义域名                 ↑ 自动指向</small></pre>
+
+<div class="step"><span class="step-num">10</span> 访问域名确认更新</div>
+
+<pre><span class="lang-label">验证</span>
+<span class="cm"># 通过 curl 检查首页是否有新内容</span>
+$ curl https://html-mu-olive.vercel.app/ | grep "操作系统核心知识"
+<small><a href="操作系统.html">操作系统核心知识</a></small>
+
+<span class="cm"># 或直接在浏览器打开</span>
+$ xdg-open https://html-mu-olive.vercel.app/  <span class="cm"># Linux</span></pre>
+
+<!-- ============================================================ -->
+<h2>🎯 第 4 步：更新首页导航（重要）</h2>
+
+<div class="highlight">
+  <strong>🔑 关键点：</strong> 文件本身部署到 Vercel 后可以通过 URL 直接访问（如 <code>/Python.html</code>），<br>
+  但如果 <strong>首页 index.html 没有链接</strong>，访客无法从主页找到新文档。
+</div>
+
+<p>所以每次添加新文档后，需要同步更新 <code>index.html</code>：</p>
+
+<pre><span class="lang-label">流程</span>
+1. 编辑 index.html，添加新文档的 &lt;a&gt; 链接卡片
+2. git add index.html
+3. git commit -m "docs: 添加新文档到首页导航"
+4. git push origin HEAD:main       ← 再次触发 Vercel 部署
+5. 等待几秒，刷新网站 → 新链接出现在首页</pre>
+
+<!-- ============================================================ -->
+<h2>🧵 完整操作流（一条命令）</h2>
+
+<pre><span class="lang-label">Bash</span>
+<span class="cm"># 生成/编辑 HTML 文档后，执行以下三步即可上线</span>
+
+$ cd /home/hyl/Desktop/资料/html
+
+<span class="cm"># 1. 添加所有改动</span>
+$ git add .
+
+<span class="cm"># 2. 提交</span>
+$ git commit -m "docs: 添加新教学文档"
+
+<span class="cm"># 3. 推送到远程 main 分支</span>
+$ git push origin HEAD:main
+
+<span class="cm"># ✅ 完成！Vercel 自动部署，约 5-10 秒后生效</span></pre>
+
+<!-- ============================================================ -->
+<h2>📊 项目文件结构</h2>
+
+<pre><span class="lang-label">目录</span>
+/home/hyl/Desktop/资料/html/
+├── index.html               ← 首页导航（必须维护）
+├── 操作系统.html             ← 教学文档
+├── 数据结构.html
+├── 数据库.html
+├── 计算机网络.html
+├── FastAPI.html
+├── Python.html
+├── Git 版本控制.html
+├── 模型训练.html             ← 原有文档
+├── LORA.html
+├── PEFT.html
+├── ...
+├── .vercel/                 ← Vercel 项目配置（自动生成）
+│   └── project.json
+└── .git/                    ← Git 仓库（自动生成）</pre>
+
+<!-- ============================================================ -->
+<h2>🐍 Python 自动化脚本</h2>
+
+<p>也可以用 Python 一键提交并推送：</p>
+
+<pre><span class="lang-label">Python</span>
+<span class="kw">import</span> <span class="builtin">subprocess</span>
+<span class="kw">import</span> <span class="builtin">os</span>
+
+<span class="kw">def</span> <span class="fn">git_deploy</span>(commit_msg: <span class="builtin">str</span>):
+    <span class="str">"""一键 add → commit → push"""</span>
+    os.chdir(<span class="str">"/home/hyl/Desktop/资料/html"</span>)
+
+    <span class="cm"># 1. git add</span>
+    subprocess.run([<span class="str">"git"</span>, <span class="str">"add"</span>, <span class="str">"."</span>])
+
+    <span class="cm"># 2. git commit</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, commit_msg],
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(r.stdout)
+
+    <span class="cm"># 3. git push</span>
+    r = subprocess.run([<span class="str">"git"</span>, <span class="str">"push"</span>, <span class="str">"origin"</span>, <span class="str">"HEAD:main"</span>],
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>)
+    <span class="builtin">print</span>(r.stdout)
+
+    <span class="builtin">print</span>(<span class="str">"✅ 已推送，Vercel 自动部署中..."</span>)
+
+<span class="cm"># 使用</span>
+<span class="cm"># git_deploy("docs: 更新教学文档")</span></pre>
+
+<!-- ============================================================ -->
+<h2>📌 要点总结</h2>
+
+<table>
+  <tr><th>步骤</th><th>命令</th><th>说明</th></tr>
+  <tr><td>查看状态</td><td><code>git status</code></td><td>随时确认哪些文件有改动</td></tr>
+  <tr><td>添加到暂存区</td><td><code>git add .</code></td><td><code>.</code> 表示所有文件，也可指定文件名</td></tr>
+  <tr><td>提交</td><td><code>git commit -m "信息"</code></td><td>提交信息用约定式：feat/fix/docs/...</td></tr>
+  <tr><td>推送</td><td><code>git push origin HEAD:main</code></td><td>本地 → 远程 main 分支</td></tr>
+  <tr><td>更新首页</td><td>编辑 index.html</td><td>添加新文档的 &lt;a&gt; 链接</td></tr>
+  <tr><td>查看部署</td><td><code>vercel ls</code></td><td>确认 Status 为 ● Ready</td></tr>
+  <tr><td>确认域名</td><td><code>vercel alias ls</code></td><td>确认域名指向最新部署</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>🔁 标准工作流记住 3 步：</strong><br>
+  <code>git add .</code> → <code>git commit -m "说明"</code> → <code>git push origin HEAD:main</code><br>
+  Vercel 自动监听 GitHub push，检测到变化自动部署。
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  🚀 由 2143616/pages 驱动 · 持续更新中
+</div>
+
+</div>
+</body>
+</html>
