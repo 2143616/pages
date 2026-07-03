@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vLLM 本地大模型部署从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.75;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
+
+.header {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, #009485, var(--teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; font-size: 1rem; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 40px;
+}
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 3px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+section h2 .emoji { font-size: 1.3rem; }
+section h3 {
+  font-size: 1.1rem; font-weight: 600; margin: 24px 0 10px;
+  color: var(--teal);
+}
+section h4 {
+  font-size: 1rem; font-weight: 600; margin: 16px 0 8px;
+  color: var(--pink);
+}
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px;
+}
+.card h4 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+.card p { font-size: .88rem; margin: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+  margin: 12px 0; font-size: .84rem; line-height: 1.55;
+  position: relative;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+pre .lang-label {
+  position: absolute; top: 6px; right: 12px;
+  font-size: .7rem; color: var(--fg2); text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cm { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.op { color: #ffa657; }
+.builtin { color: #58a6ff; }
+.dec { color: #f778ba; }
+.cls { color: #ffa657; }
+
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem;
+}
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+
+.highlight {
+  background: var(--bg2); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight strong { color: var(--accent); }
+.highlight-warn {
+  background: var(--bg2); border-left: 4px solid var(--orange);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight-warn strong { color: var(--orange); }
+.highlight-danger {
+  background: var(--bg2); border-left: 4px solid var(--red);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0;
+}
+.highlight-danger strong { color: var(--red); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>⚡ vLLM 本地大模型部署从入门到精通</h1>
+  <p>PagedAttention · 连续批处理 · 量化推理 — 生产级 LLM 推理引擎完全指南</p>
+  <div class="tags">
+    <span>🤖 LLM</span>
+    <span>⚡ vLLM</span>
+    <span>📦 Docker</span>
+    <span>🎯 生产可用</span>
+    <span>📘 教学文档</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#sec1">1. vLLM 是什么</a></li>
+    <li><a href="#sec2">2. 安装与环境准备</a></li>
+    <li><a href="#sec3">3. 核心概念：你必须知道的</a></li>
+    <li><a href="#sec4">4. 快速启动你的第一个模型</a></li>
+    <li><a href="#sec5">5. 部署参数全解析</a></li>
+    <li><a href="#sec6">6. 量化方法详解</a></li>
+    <li><a href="#sec7">7. 模型加速技术</a></li>
+    <li><a href="#sec8">8. 内存占用精确计算</a></li>
+    <li><a href="#sec9">9. 多 GPU 与分布式部署</a></li>
+    <li><a href="#sec10">10. OpenAI 兼容 API 调用</a></li>
+    <li><a href="#sec11">11. 性能调优</a></li>
+    <li><a href="#sec12">12. Docker 部署</a></li>
+    <li><a href="#sec13">13. 生产环境配置</a></li>
+    <li><a href="#sec14">14. 常见问题与排错</a></li>
+    <li><a href="#sec15">15. 综合实战：完整部署脚本</a></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════ 1 ═══════════════════ -->
+<section id="sec1">
+<h2><span class="emoji">💡</span> 1. vLLM 是什么</h2>
+
+<p><strong>vLLM</strong> 是一个高性能、内存高效的 LLM（大语言模型）推理引擎，由 UC Berkeley 开发。它解决了大模型部署中最核心的问题：<strong>显存不够、推理太慢</strong>。</p>
+
+<h3>核心成就</h3>
+<div class="card-grid">
+  <div class="card"><h4>🎯 PagedAttention</h4><p>vLLM 的核心创新。像操作系统管理内存一样管理 KV Cache，消除显存碎片，利用率从 20%~40% 提升到 95%+</p></div>
+  <div class="card"><h4>⚡ 连续批处理</h4><p>无需等待整个批次完成，随时插入新请求、随时踢出完成的请求，GPU 利用率拉满</p></div>
+  <div class="card"><h4>🧩 量化开箱即用</h4><p>原生支持 AWQ、GPTQ、FP8、INT4、INT8 等多种量化格式，一行参数切换</p></div>
+  <div class="card"><h4>🔌 OpenAI 兼容 API</h4><p>一键启动 OpenAI 格式的 API 服务，现有代码零修改接入</p></div>
+</div>
+
+<h3>与其他推理引擎对比</h3>
+<table>
+  <tr><th>特性</th><th>vLLM</th><th>Transformers</th><th>llama.cpp</th><th>TGI</th></tr>
+  <tr><td>显存效率</td><td>⭐ 极高（PagedAttention）</td><td>❌ 低（静态 KV Cache）</td><td>✅ 高（GGUF）</td><td>✅ 高</td></tr>
+  <tr><td>吞吐量</td><td>⭐ 极高（连续批处理）</td><td>❌ 低</td><td>⚠️ 中等</td><td>✅ 高</td></tr>
+  <tr><td>GPU 加速</td><td>✅ 原生 CUDA</td><td>✅</td><td>⚠️ 通过 llama.cpp</td><td>✅</td></tr>
+  <tr><td>量化支持</td><td>AWQ/GPTQ/FP8/INT4</td><td>bitsandbytes</td><td>GGUF 量化</td><td>AWQ/GPTQ</td></tr>
+  <tr><td>OpenAI API</td><td>✅ 内置</td><td>❌</td><td>⚠️ server 模式</td><td>✅</td></tr>
+  <tr><td>多 GPU</td><td>✅ Tensor Parallel</td><td>⚠️ device_map</td><td>❌</td><td>✅</td></tr>
+  <tr><td>MoE 支持</td><td>✅ 原生</td><td>⚠️</td><td>✅</td><td>✅</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>🎯 什么时候选 vLLM？</strong>
+  <br>• 需要高吞吐的生产环境（API 服务）✅
+  <br>• 多 GPU 部署大模型（70B+）✅
+  <br>• 需要 OpenAI 兼容接口 ✅
+  <br>• 单卡部署量化模型 ✅
+  <br>• 实验性研究/单次推理 → 选 Transformers
+  <br>• 个人电脑/无 GPU → 选 llama.cpp
+</div>
+</section>
+
+<!-- ═══════════════════ 2 ═══════════════════ -->
+<section id="sec2">
+<h2><span class="emoji">🛠</span> 2. 安装与环境准备</h2>
+
+<h3>2.1 硬件要求</h3>
+<table>
+  <tr><th>模型规模</th><th>最小显存</th><th>推荐显存</th><th>建议 GPU</th></tr>
+  <tr><td>7B (FP16)</td><td>16 GB</td><td>24 GB</td><td>RTX 3090 / 4090</td></tr>
+  <tr><td>7B (INT4)</td><td>6 GB</td><td>8 GB</td><td>RTX 3060+</td></tr>
+  <tr><td>13B (FP16)</td><td>28 GB</td><td>40 GB</td><td>A100 40G / 2×3090</td></tr>
+  <tr><td>13B (INT4)</td><td>10 GB</td><td>16 GB</td><td>RTX 3080+</td></tr>
+  <tr><td>70B (FP16)</td><td>140 GB</td><td>320 GB</td><td>4~8×A100 / 8×3090</td></tr>
+  <tr><td>70B (INT4)</td><td>40 GB</td><td>80 GB</td><td>2×A100 / 4×3090</td></tr>
+</table>
+
+<div class="highlight-warn">
+  <strong>⚠️ 关键提醒：</strong>
+  <br>• 显存包括：模型权重 + KV Cache + 激活值 + CUDA 开销
+  <br>• 不要只看模型文件大小，KV Cache 随上下文长度线性增长
+  <br>• 详细计算方法见第 8 章
+</div>
+
+<h3>2.2 安装 vLLM</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式一：pip 安装（推荐，最稳定）
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 基础安装（CUDA 12.1+）</span>
+pip install vllm
+
+<span class="cm"># 指定 CUDA 版本安装</span>
+pip install vllm<span class="op">==</span><span class="num">0.8.3</span> <span class="cm"># 或最新版</span>
+
+<span class="cm"># 使用国内镜像（中国大陆推荐）</span>
+pip install vllm -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式二：源码安装（开发者、需要修改源码时）
+# ═══════════════════════════════════════════════════════════</span>
+git clone https://github.com/vllm-project/vllm.git
+<span class="kw">cd</span> vllm
+pip install -e .
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式三：Docker 安装（推荐生产环境）
+# ═══════════════════════════════════════════════════════════</span>
+docker pull vllm/vllm-openai:latest
+<span class="cm"># 详见第 12 章</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 验证安装
+# ═══════════════════════════════════════════════════════════</span>
+python -c <span class="str">"import vllm; print(vllm.__version__)"</span></pre>
+
+<h3>2.3 环境检查</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 检查 CUDA 版本</span>
+nvidia-smi
+nvcc --version
+
+<span class="cm"># 检查 PyTorch CUDA 可用性</span>
+python -c <span class="str">"import torch; print(f'CUDA可用: {torch.cuda.is_available()}, 显卡数: {torch.cuda.device_count()}')"</span>
+
+<span class="cm"># 检查显存</span>
+python -c <span class="str">"import torch; [print(f'卡{i}: {torch.cuda.get_device_properties(i).total_memory/1e9:.1f}GB') for i in range(torch.cuda.device_count())]"</span>
+
+<span class="cm"># 检查 vLLM 支持哪些模型架构</span>
+python -c <span class="str">"from vllm import ModelRegistry; print(ModelRegistry.get_supported_archs())"</span></pre>
+
+<div class="highlight-warn">
+  <strong>⚠️ 版本兼容性：</strong>
+  <br>• vLLM 0.4.x → CUDA 11.8 / 12.1, PyTorch 2.1+
+  <br>• vLLM 0.5.x → CUDA 12.1+, PyTorch 2.2+
+  <br>• vLLM 0.6.x → CUDA 12.1+, PyTorch 2.3+, FlashAttention 2
+  <br>• vLLM 0.8.x → CUDA 12.4+, PyTorch 2.6+, 支持 Hopper( H100 ) 架构
+  <br>• 低版本 CUDA 请使用 Docker 镜像（自带 CUDA 环境）
+</div>
+</section>
+
+<!-- ═══════════════════ 3 ═══════════════════ -->
+<section id="sec3">
+<h2><span class="emoji">🧩</span> 3. 核心概念：你必须知道的</h2>
+
+<h3>3.1 PagedAttention — vLLM 的灵魂</h3>
+<p>传统推理中，KV Cache 是一整块连续内存，预先分配最大可能大小。这导致：</p>
+<ul>
+  <li><strong>内部碎片</strong>：分配的比实际需要的多，浪费 60%~80%</li>
+  <li><strong>外部碎片</strong>：不同请求的 KV Cache 大小不一，内存无法复用</li>
+</ul>
+<p>PagedAttention 借鉴操作系统<strong>分页内存管理</strong>的思想：</p>
+<ul>
+  <li>KV Cache 分成固定大小的"块"（Block），每块 16 或 32 个 token</li>
+  <li>不需要连续的内存空间——物理上可以是零散的页面</li>
+  <li>通过"页表"（Block Table）将逻辑地址映射到物理地址</li>
+  <li><strong>结果：显存利用率从 ~30% 提升到 ~95%</strong></li>
+</ul>
+
+<h3>3.2 连续批处理（Continuous Batching）</h3>
+<p>传统批处理：</p>
+<ul>
+  <li>收集一批请求 → 同时推理 → 等所有请求完成 → 返回结果</li>
+  <li>短板效应：最慢的请求拖慢整批，短的请求在干等</li>
+</ul>
+<p>vLLM 的连续批处理：</p>
+<ul>
+  <li>每个请求独立管理，按 token 粒度调度</li>
+  <li>每推理一步（一个 token）后重新调度</li>
+  <li>完成的请求立即移出，新请求随时加入</li>
+  <li>GPU 始终在处理"有效计算"，不浪费在等待上</li>
+  <li><strong>结果：吞吐量提升 2~4 倍</strong></li>
+</ul>
+
+<h3>3.3 推理引擎 vs 训练框架</h3>
+<table>
+  <tr><th>维度</th><th>推理（Inference）</th><th>训练（Training）</th></tr>
+  <tr><td>目标</td><td>快速生成文本</td><td>更新模型权重</td></tr>
+  <tr><td>显存需求</td><td>权重 + KV Cache</td><td>权重 + 梯度 + 优化器状态</td></tr>
+  <tr><td>批量大小</td><td>动态小批量</td><td>大批量</td></tr>
+  <tr><td>KV Cache</td><td>需要缓存（逐 token 生成）</td><td>不需要（训练时一次性计算）</td></tr>
+  <tr><td>典型框架</td><td>vLLM, TGI, llama.cpp</td><td>DeepSpeed, Megatron, FSDP</td></tr>
+</table>
+
+<h3>3.4 Prefill 与 Decode 阶段</h3>
+<p>LLM 推理分两个阶段：</p>
+<ul>
+  <li><strong>Prefill（预填充）</strong>：一次性处理用户输入的 prompt，计算第一个输出 token。计算密集型，GPU 利用率高</li>
+  <li><strong>Decode（解码）</strong>：逐个生成后续 token，每次只算一个 token。内存访问密集型，GPU 利用率低</li>
+</ul>
+<p>vLLM 的优化重点就在 Decode 阶段——通过批处理把多个请求的 Decode 合并计算，提高 GPU 利用率。</p>
+</section>
+
+<!-- ═══════════════════ 4 ═══════════════════ -->
+<section id="sec4">
+<h2><span class="emoji">🚀</span> 4. 快速启动你的第一个模型</h2>
+
+<h3>4.1 Python API 方式</h3>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 最简单的 vLLM 推理代码
+# ═══════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">vllm</span> <span class="kw">import</span> LLM, SamplingParams
+
+<span class="cm"># 1. 加载模型</span>
+<span class="cm"># • model: HuggingFace 模型名或本地路径</span>
+<span class="cm"># • 首次运行会自动从 HF 下载模型权重</span>
+llm = LLM(
+    model=<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,  <span class="cm"># 模型名称或路径</span>
+    tensor_parallel_size=<span class="num">1</span>,              <span class="cm"># GPU 数，1=单卡</span>
+    dtype=<span class="str">"auto"</span>,                         <span class="cm"># 自动选择数据类型</span>
+    max_model_len=<span class="num">8192</span>,                  <span class="cm"># 最大上下文长度</span>
+    gpu_memory_utilization=<span class="num">0.9</span>,           <span class="cm"># GPU 显存利用率</span>
+)
+
+<span class="cm"># 2. 配置生成参数</span>
+sampling_params = SamplingParams(
+    temperature=<span class="num">0.7</span>,        <span class="cm"># 温度：越高越随机，越低越确定</span>
+    top_p=<span class="num">0.9</span>,               <span class="cm"># Top-p 采样：累积概率到 0.9</span>
+    max_tokens=<span class="num">1024</span>,        <span class="cm"># 最大生成长度</span>
+    stop=[<span class="str">"&lt;/s&gt;"</span>, <span class="str">"&lt;|im_end|&gt;"</span>],  <span class="cm"># 停止词</span>
+)
+
+<span class="cm"># 3. 推理</span>
+outputs = llm.generate([<span class="str">"Hello, how are you?"</span>], sampling_params)
+
+<span class="cm"># 4. 输出结果</span>
+<span class="kw">for</span> output <span class="kw">in</span> outputs:
+    prompt = output.prompt
+    generated_text = output.outputs[<span class="num">0</span>].text
+    <span class="builtin">print</span>(f<span class="str">"输入: {prompt}"</span>)
+    <span class="builtin">print</span>(f<span class="str">"输出: {generated_text}"</span>)</pre>
+
+<h3>4.2 OpenAI 兼容 API 服务方式</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 一行命令启动 API 服务
+# ═══════════════════════════════════════════════════════════</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --port <span class="num">8000</span> \
+  --host <span class="num">0.0.0.0</span>
+
+<span class="cm"># 启动后即可用 OpenAI 客户端调用</span>
+<span class="cm"># curl http://localhost:8000/v1/chat/completions -d '{"model":"Qwen/Qwen2.5-7B-Instruct","messages":[{"role":"user","content":"你好"}]}'</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 调用 API 服务的客户端代码
+# ═══════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
+
+<span class="cm"># 创建客户端（指向你的 vLLM 服务）</span>
+client = OpenAI(
+    base_url=<span class="str">"http://localhost:8000/v1"</span>,
+    api_key=<span class="str">"EMPTY"</span>,  <span class="cm"># vLLM 默认不校验 API Key</span>
+)
+
+<span class="cm"># 聊天补全</span>
+response = client.chat.completions.create(
+    model=<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,
+    messages=[
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">"你是一个有用的助手"</span>},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用Python写一个快速排序"</span>},
+    ],
+    temperature=<span class="num">0.7</span>,
+    max_tokens=<span class="num">2048</span>,
+)
+
+<span class="builtin">print</span>(response.choices[<span class="num">0</span>].message.content)</pre>
+
+<div class="highlight">
+  <strong>💡 两种方式的区别：</strong>
+  <br>• <strong>Python API</strong>：适合脚本、批量任务、测试。直接加载模型，功能最全
+  <br>• <strong>API Server</strong>：适合生产服务、多客户端调用。支持并发、异步、流式输出
+  <br>• 日常开发先用 Python API 测试，稳定后改用 API Server 部署
+</div>
+</section>
+
+<!-- ═══════════════════ 5 ═══════════════════ -->
+<section id="sec5">
+<h2><span class="emoji">⚙️</span> 5. 部署参数全解析</h2>
+
+<p>vLLM 的参数非常多，这里按功能分类详细解释每一个重要参数。</p>
+
+<h3>5.1 模型加载参数</h3>
+
+<pre><span class="lang-label">bash</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model &lt;模型名或路径&gt;         <span class="cm"># 必填：HF 模型 ID 或本地路径</span>
+  --revision main                <span class="cm"># 模型分支/版本，如 main、quantized</span>
+  --tokenizer &lt;名称&gt;             <span class="cm"># 分词器，默认同 model，可分开指定</span>
+  --trust-remote-code            <span class="cm"># 信任远程代码（自定义模型架构必加！）</span>
+  --download-dir ~/.cache/huggingface  <span class="cm"># 模型下载缓存目录</span>
+  --load-format auto             <span class="cm"># 加载格式: auto/safetensors/pt/gguf</span></pre>
+
+<table>
+  <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
+  <tr><td><code>--model</code></td><td>（必填）</td><td>HuggingFace 模型 ID（如 <code>Qwen/Qwen2.5-7B-Instruct</code>）或本地路径（如 <code>./models/my-model</code>）</td></tr>
+  <tr><td><code>--trust-remote-code</code></td><td>False</td><td>是否执行模型的自定义 Python 代码。Qwen、DeepSeek、ChatGLM 等非 transformers 原生架构<strong>必须加</strong></td></tr>
+  <tr><td><code>--revision</code></td><td>main</td><td>模型仓库的分支名或 commit hash。量化版通常在 <code>quantized</code> 分支</td></tr>
+  <tr><td><code>--tokenizer</code></td><td>同 model</td><td>分词器名称。某些量化模型需要用特定的 tokenizer</td></tr>
+  <tr><td><code>--load-format</code></td><td>auto</td><td>权重加载格式：<code>auto</code>（自动检测）、<code>safetensors</code>、<code>pt</code>（PyTorch）、<code>gguf</code>、<code>bitsandbytes</code></td></tr>
+  <tr><td><code>--download-dir</code></td><td>~/.cache/ huggingface</td><td>模型下载缓存位置。可设到 SSD 加速加载</td></tr>
+</table>
+
+<h3>5.2 内存与显存控制</h3>
+
+<pre><span class="lang-label">bash</span>
+  --max-model-len &lt;长度&gt;        <span class="cm"># 最大上下文长度（prompt + 生成）</span>
+  --gpu-memory-utilization &lt;比例&gt; <span class="cm"># GPU 显存利用率，0~1</span>
+  --max-num-batched-tokens &lt;数&gt;  <span class="cm"># 单批最大 token 数</span>
+  --max-num-seqs &lt;数&gt;           <span class="cm"># 单批最大序列数</span>
+  --enable-prefix-caching        <span class="cm"># 启用前缀缓存（相同 prompt 前缀复用）</span>
+  --swap-space &lt;大小&gt;            <span class="cm"># CPU 交换空间（显存不够时溢出到内存）</span></pre>
+
+<table>
+  <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
+  <tr><td><code>--max-model-len</code></td><td>模型原生</td><td>限制上下文长度。显存不够时降低此值可腾出大量空间。例如 8192→4096 可省约一半 KV Cache 显存</td></tr>
+  <tr><td><code>--gpu-memory-utilization</code></td><td>0.9</td><td>vLLM 最多使用多少比例的 GPU 显存。剩余留给 CUDA kernel、模型加载临时空间。显存紧张可设 0.95，稳定运行设 0.8</td></tr>
+  <tr><td><code>--max-num-batched-tokens</code></td><td>动态</td><td>限制每批最多处理的 token 数。值越大吞吐越高但显存消耗越大</td></tr>
+  <tr><td><code>--max-num-seqs</code></td><td>256</td><td>限制同时处理的请求数。值越大并发能力越强</td></tr>
+  <tr><td><code>--enable-prefix-caching</code></td><td>False</td><td>缓存相同 prefix 的 KV Cache。适合 system prompt 固定、多轮对话场景</td></tr>
+  <tr><td><code>--swap-space</code></td><td>4GB</td><td>当显存不足时，把部分 KV Cache 换到 CPU 内存（性能会下降）</td></tr>
+</table>
+
+<h3>5.3 推理质量参数</h3>
+
+<table>
+  <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
+  <tr><td><code>--temperature</code></td><td>1.0</td><td>采样温度。越低模型越"保守"（重复性高），越高越"创造性"（可能跑题）。代码生成推荐 0.1~0.3，创意写作推荐 0.7~0.9</td></tr>
+  <tr><td><code>--top-p</code></td><td>1.0</td><td>核采样。只从前 top_p 概率的 token 中采样。0.9 表示"只从概率和 90% 的候选词中选"</td></tr>
+  <tr><td><code>--top-k</code></td><td>-1</td><td>只从前 k 个概率最高的 token 中采样。-1 表示不限制</td></tr>
+  <tr><td><code>--max-tokens</code></td><td>模型上限</td><td>每次请求最多生成多少个 token</td></tr>
+  <tr><td><code>--stop</code></td><td>[]</td><td>停止词列表。遇到这些词就停止生成，如 ["&lt;/s&gt;", "&lt;|im_end|&gt;"]</td></tr>
+  <tr><td><code>--frequency-penalty</code></td><td>0.0</td><td>频率惩罚。>0 会减少重复用词，推荐 0.1~0.5</td></tr>
+  <tr><td><code>--presence-penalty</code></td><td>0.0</td><td>存在惩罚。>0 鼓励谈论新话题</td></tr>
+  <tr><td><code>--repetition-penalty</code></td><td>1.0</td><td>重复惩罚。>1.0 减少重复，1.1 是常用值</td></tr>
+</table>
+
+<h3>5.4 性能与加速参数</h3>
+
+<pre><span class="lang-label">bash</span>
+  --dtype auto                   <span class="cm"># 数据类型：auto/half/float16/bfloat16/float</span>
+  --quantization &lt;类型&gt;          <span class="cm"># 量化方法：awq/gptq/fp8/int8/None</span>
+  --kv-cache-dtype auto          <span class="cm"># KV Cache 精度：auto/fp8/fp16</span>
+  --device cuda                  <span class="cm"># 推理设备：cuda/neuron/openvino</span>
+  --enforce-eager                <span class="cm"># 禁用 CUDA Graph（默认启用）</span>
+  --enable-chunked-prefill       <span class="cm"># 启用分块预填充（大 batch 优化）</span>
+  --speculative-model &lt;模型&gt;     <span class="cm"># 投机解码草稿模型</span>
+  --num-speculative-tokens &lt;数&gt;  <span class="cm"># 投机解码每次猜测的 token 数</span></pre>
+
+<table>
+  <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
+  <tr><td><code>--dtype</code></td><td>auto</td><td>模型推理精度。推荐 <code>auto</code>（模型原生格式），显存不够用 <code>half</code>（FP16）。BF16 比 FP16 更稳定</td></tr>
+  <tr><td><code>--quantization</code></td><td>None</td><td>量化格式。具体见第 6 章</td></tr>
+  <tr><td><code>--kv-cache-dtype</code></td><td>auto</td><td>KV Cache 的精度。<code>fp8</code> 可省一半 KV Cache 显存但精度略降</td></tr>
+  <tr><td><code>--enforce-eager</code></td><td>False</td><td>禁用 CUDA Graph。调试时用（更容易看到完整报错），生产环境保持默认</td></tr>
+  <tr><td><code>--enable-chunked-prefill</code></td><td>False</td><td>将长 prompt 切成多块处理。长 prompt + 高并发场景下减少显存峰值</td></tr>
+  <tr><td><code>--speculative-model</code></td><td>None</td><td>投机解码：用小模型（如 0.5B）先快速猜几个 token，大模型验证。可提速 2~3 倍</td></tr>
+</table>
+
+<h3>5.5 服务参数</h3>
+
+<pre><span class="lang-label">bash</span>
+  --host 0.0.0.0                 <span class="cm"># 监听地址（0.0.0.0=所有网卡）</span>
+  --port 8000                    <span class="cm"># 监听端口</span>
+  --api-key &lt;密钥&gt;               <span class="cm"># API 访问密钥（可选）</span>
+  --served-model-name &lt;名&gt;       <span class="cm"># API 中显示的模型名（可随意起名）</span>
+  --response-role assistant      <span class="cm"># 响应角色名</span>
+  --disable-log-requests         <span class="cm"># 禁用请求日志（保护隐私）</span>
+  --max-log-len &lt;长度&gt;           <span class="cm"># 日志中 prompt 截断长度</span>
+  --log-stats                    <span class="cm"># 打印性能统计</span>
+  --uvicorn-log-level info       <span class="cm"># uvicorn 日志级别</span></pre>
+
+<div class="highlight-warn">
+  <strong>⚠️ 常见参数组合场景：</strong>
+  <br>
+  <br><strong>场景 A：单卡 24GB，跑 7B 模型（最常用）</strong>
+  <br><code>--model Qwen/Qwen2.5-7B-Instruct --max-model-len 8192 --gpu-memory-utilization 0.9 --dtype auto</code>
+  <br>
+  <br><strong>场景 B：显存紧张，降精度跑</strong>
+  <br><code>--model Qwen/Qwen2.5-7B-Instruct --quantization awq --max-model-len 4096 --gpu-memory-utilization 0.95</code>
+  <br>
+  <br><strong>场景 C：高并发生产服务</strong>
+  <br><code>--model models/my-model --tensor-parallel-size 2 --max-num-seqs 512 --enable-prefix-caching --port 8000</code>
+</div>
+</section>
+
+<!-- ═══════════════════ 6 ═══════════════════ -->
+<section id="sec6">
+<h2><span class="emoji">📦</span> 6. 量化方法详解</h2>
+
+<p><strong>量化（Quantization）</strong> 是把模型权重从高精度（FP16/BF16）压缩到低精度（INT4/INT8/FP8）的技术。目的是：</p>
+<ul>
+  <li><strong>减少显存占用</strong>：FP16→INT4，显存降到 1/4</li>
+  <li><strong>加速推理</strong>：低精度计算更快</li>
+  <li><strong>降低功耗</strong>：更少的数据搬运</li>
+</ul>
+
+<h3>6.1 vLLM 支持的量化格式</h3>
+
+<table>
+  <tr><th>格式</th><th>精度</th><th>显存节省</th><th>精度损失</th><th>适用场景</th></tr>
+  <tr><td>FP16 / BF16</td><td>16-bit</td><td>1×（基准）</td><td>无</td><td>显存充足、追求最佳质量</td></tr>
+  <tr><td>FP8</td><td>8-bit</td><td>~2×</td><td>极微</td><td>H100/Hopper 原生支持，速度最快</td></tr>
+  <tr><td>INT8 (W8A8)</td><td>8-bit</td><td>~2×</td><td>微</td><td>需要平衡速度和质量的场景</td></tr>
+  <tr><td>AWQ</td><td>4-bit</td><td>~4×</td><td>小</td><td><strong>最推荐</strong>：精度好、速度快、生态广</td></tr>
+  <tr><td>GPTQ</td><td>4-bit</td><td>~4×</td><td>小</td><td>早期格式，生态成熟但加载较慢</td></tr>
+  <tr><td>INT4 (GGUF)</td><td>4-bit</td><td>~4×</td><td>中</td><td>llama.cpp 生态，vLLM 0.8+ 支持</td></tr>
+  <tr><td>NF4 (bitsandbytes)</td><td>4-bit</td><td>~4×</td><td>中</td><td>QLoRA 训练用的格式，推理也能用</td></tr>
+</table>
+
+<h3>6.2 AWQ 量化（推荐）</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式一：直接下载社区量化好的模型（推荐）
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 很多模型社区已经做好的 AWQ 版本：</span>
+<span class="cm"># TheBloke/Llama-2-7B-AWQ</span>
+<span class="cm"># Qwen/Qwen2.5-7B-Instruct-AWQ</span>
+<span class="cm"># TechxGenus/Meta-Llama-3.1-8B-Instruct-AWQ</span>
+
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-7B-Instruct-AWQ \
+  --quantization awq \
+  --max-model-len <span class="num">8192</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式二：自己量化（需要 GPU）
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 安装 AutoAWQ</span>
+pip install autoawq
+
+<span class="cm"># 量化脚本</span>
+<span class="kw">from</span> <span class="builtin">awq</span> <span class="kw">import</span> AutoAWQForCausalLM
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoTokenizer
+
+model_path = <span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>
+quant_path = <span class="str">"./models/Qwen2.5-7B-AWQ"</span>
+
+model = AutoAWQForCausalLM.from_pretrained(model_path)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+<span class="cm"># 量化配置</span>
+quant_config = {
+    <span class="str">"zero_point"</span>: <span class="kw">True</span>,      <span class="cm"># 使用零点量化</span>
+    <span class="str">"q_group_size"</span>: <span class="num">128</span>,    <span class="cm"># 分组大小，越小精度越高</span>
+    <span class="str">"w_bit"</span>: <span class="num">4</span>,              <span class="cm"># 量化位数</span>
+    <span class="str">"version"</span>: <span class="str">"GEMM"</span>,       <span class="cm"># GEMM 通用 / GEMV 快速</span>
+}
+
+<span class="cm"># 执行量化（需要 GPU，约需 20GB 显存）</span>
+model.quantize(tokenizer, quant_config=quant_config)
+
+<span class="cm"># 保存量化模型</span>
+model.save_quantized(quant_path)
+tokenizer.save_pretrained(quant_path)</pre>
+
+<h3>6.3 FP8 量化（H100/Hopper 最优）</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># FP8 需要 H100/H800/H200 等 Hopper 架构 GPU</span>
+<span class="cm"># Ampere（A100）和 Ada（RTX 4090）<strong>不支持</strong>硬件 FP8</span>
+
+python -m vllm.entrypoints.openai.api_server \
+  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --quantization fp8 \
+  --kv-cache-dtype fp8 \         <span class="cm"># KV Cache 也用 FP8</span>
+  --dtype auto</pre>
+
+<h3>6.4 量化精度对比</h3>
+<table>
+  <tr><th>模型</th><th>FP16</th><th>AWQ 4-bit</th><th>GPTQ 4-bit</th><th>FP8</th></tr>
+  <tr><td>Llama-3.1-8B</td><td>16 GB</td><td>~5 GB</td><td>~5 GB</td><td>~8 GB</td></tr>
+  <tr><td>Qwen2.5-7B</td><td>14 GB</td><td>~4.5 GB</td><td>~4.5 GB</td><td>~7 GB</td></tr>
+  <tr><td>Llama-3.1-70B</td><td>140 GB</td><td>~40 GB</td><td>~40 GB</td><td>~70 GB</td></tr>
+  <tr><td>Qwen2.5-72B</td><td>144 GB</td><td>~41 GB</td><td>~41 GB</td><td>~72 GB</td></tr>
+  <tr><td>DeepSeek-V3 (671B MoE)</td><td>~400 GB</td><td>~110 GB</td><td>~110 GB</td><td>~200 GB</td></tr>
+</table>
+
+<div class="highlight-warn">
+  <strong>⚠️ 量化注意事项：</strong>
+  <br>• <strong>不是所有模型都有量化版</strong>——优先在 HF 搜 "模型名 + AWQ"
+  <br>• <strong>量化模型用 --quantization 指定格式</strong>，否则 vLLM 可能按 FP16 加载导致 OOM
+  <br>• <strong>AWQ 推荐优先于 GPTQ</strong>——AWQ 加载更快，精度略好
+  <br>• <strong>INT4 量化后质量下降</strong>——7B AWQ ≈ 6.5B FP16 的水平，大多数场景可接受
+  <br>• <strong>代码/数学任务对量化更敏感</strong>——这些场景建议用 8-bit 或保持 FP16
+</div>
+</section>
+
+<!-- ═══════════════════ 7 ═══════════════════ -->
+<section id="sec7">
+<h2><span class="emoji">⚡</span> 7. 模型加速技术</h2>
+
+<h3>7.1 CUDA Graph</h3>
+<p>vLLM 默认启用。将模型推理的 CUDA kernel 调用序列"录制"成一张 Graph，后续直接重放，跳过 Python 层调度开销。</p>
+<ul>
+  <li><strong>效果</strong>：延迟降低 20%~40%，吞吐提升 10%~30%</li>
+  <li><strong>代价</strong>：首次启动需 1~2 分钟构建 Graph，占用少量额外显存</li>
+  <li><strong>禁用</strong>：加 <code>--enforce-eager</code>（调试或低延迟场景）</li>
+</ul>
+
+<h3>7.2 FlashAttention</h3>
+<p>vLLM 内置 FlashAttention-2/3 支持，自动启用：</p>
+<ul>
+  <li>将 Attention 计算融合成单个 CUDA kernel</li>
+  <li>避免读写 KV Cache 到显存再读回的"显存墙"问题</li>
+  <li>vLLM 0.6+ 默认启用 FlashAttention-3（Hopper GPU）</li>
+  <li><strong>效果</strong>：长上下文场景加速 2~4 倍</li>
+</ul>
+
+<h3>7.3 投机解码（Speculative Decoding）</h3>
+<p>用一个小模型先快速"猜"十几个 token，大模型一次验证，错了就回退。</p>
+
+<pre><span class="lang-label">bash</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --speculative-model meta-llama/Llama-3.2-1B-Instruct \
+  --num-speculative-tokens <span class="num">5</span> \
+  --speculative-draft-tensor-parallel-size <span class="num">1</span></pre>
+
+<table>
+  <tr><th>场景</th><th>加速比</th><th>说明</th></tr>
+  <tr><td>大模型(70B) + 小草稿(1B)</td><td>1.5~2.5×</td><td>草稿模型越小加速越明显</td></tr>
+  <tr><td>小模型(7B) + 更小(0.5B)</td><td>1.2~1.5×</td><td>模型越小加速收益递减</td></tr>
+  <tr><td>代码生成场景</td><td>最高 3×</td><td>代码可预测性强，草稿命中率高</td></tr>
+</table>
+
+<h3>7.4 前缀缓存（Prefix Caching）</h3>
+<p>适用于固定 system prompt、多轮对话：</p>
+<ul>
+  <li>相同的 prompt 前缀（如 system prompt）的 KV Cache 自动复用</li>
+  <li>新请求不需要重新计算相同的部分</li>
+  <li><strong>效果</strong>：长 context 场景加速 2~3 倍</li>
+  <li>启用：<code>--enable-prefix-caching</code></li>
+</ul>
+
+<h3>7.5 分块预填充（Chunked Prefill）</h3>
+<p>把长 prompt 切成小块，和 Decode 阶段交错执行：</p>
+<ul>
+  <li>避免长 prompt 独占 GPU 导致其他请求等待</li>
+  <li>高并发场景下显著降低 P99 延迟</li>
+  <li>启用：<code>--enable-chunked-prefill</code></li>
+</ul>
+
+<h3>7.6 各种加速技术效果对比</h3>
+<table>
+  <tr><th>技术</th><th>延迟降低</th><th>吞吐提升</th><th>适用场景</th></tr>
+  <tr><td>CUDA Graph</td><td>20~40%</td><td>10~30%</td><td>所有场景（默认开启）</td></tr>
+  <tr><td>FlashAttention</td><td>30~60%</td><td>2~4×</td><td>长上下文（默认开启）</td></tr>
+  <tr><td>投机解码</td><td>30~60%</td><td>1.5~3×</td><td>草稿模型 + 大模型</td></tr>
+  <tr><td>前缀缓存</td><td>20~50%</td><td>1.5~3×</td><td>固定 system prompt</td></tr>
+  <tr><td>分块预填充</td><td>P99↓</td><td>10~20%</td><td>长 prompt + 高并发</td></tr>
+  <tr><td>连续批处理</td><td>—</td><td>2~4×</td><td>所有场景（默认开启）</td></tr>
+</table>
+</section>
+
+<!-- ═══════════════════ 8 ═══════════════════ -->
+<section id="sec8">
+<h2><span class="emoji">🧮</span> 8. 内存占用精确计算</h2>
+
+<p>这是部署中最容易出问题的地方。下面给出精确的计算公式。</p>
+
+<h3>8.1 模型权重占用的显存</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 精确公式：</span>
+<span class="cm"># 显存 = 参数量 × 每参数字节数</span>
+<span class="cm">#</span>
+<span class="cm"># FP32  → 4 字节/参数</span>
+<span class="cm"># FP16  → 2 字节/参数</span>
+<span class="cm"># BF16  → 2 字节/参数</span>
+<span class="cm"># INT8  → 1 字节/参数</span>
+<span class="cm"># INT4  → 0.5 字节/参数</span></pre>
+
+<table>
+  <tr><th>模型</th><th>参数量</th><th>FP16</th><th>INT8</th><th>INT4 (AWQ/GPTQ)</th></tr>
+  <tr><td>Qwen2.5-1.5B</td><td>1.5B</td><td>3 GB</td><td>1.5 GB</td><td>0.75 GB</td></tr>
+  <tr><td>Qwen2.5-7B</td><td>7B</td><td>14 GB</td><td>7 GB</td><td>3.5 GB</td></tr>
+  <tr><td>Llama-3.1-8B</td><td>8B</td><td>16 GB</td><td>8 GB</td><td>4 GB</td></tr>
+  <tr><td>Qwen2.5-14B</td><td>14B</td><td>28 GB</td><td>14 GB</td><td>7 GB</td></tr>
+  <tr><td>Qwen2.5-32B</td><td>32B</td><td>64 GB</td><td>32 GB</td><td>16 GB</td></tr>
+  <tr><td>Llama-3.1-70B</td><td>70B</td><td>140 GB</td><td>70 GB</td><td>35 GB</td></tr>
+  <tr><td>Qwen2.5-72B</td><td>72B</td><td>144 GB</td><td>72 GB</td><td>36 GB</td></tr>
+  <tr><td>Mixtral 8×7B (MoE)</td><td>47B</td><td>94 GB</td><td>47 GB</td><td>24 GB</td></tr>
+  <tr><td>DeepSeek-V3 (MoE)</td><td>671B</td><td>~400 GB</td><td>~200 GB</td><td>~110 GB</td></tr>
+</table>
+
+<h3>8.2 KV Cache 占用的显存</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 精确公式：</span>
+<span class="cm"># KV Cache 显存 = 2 (K + V) × 层数 × 注意力头数 × 每头维度 × 精度 × 上下文长度</span>
+<span class="cm">#</span>
+<span class="cm"># 对于 Llama-3.1-8B：45 层, 32 头, head_dim=128</span>
+<span class="cm"># = 2 × 45 × 32 × 128 × 2 (FP16) × 8192</span>
+<span class="cm"># ≈ 6 GB（8192 上下文时）</span>
+<span class="cm">#</span>
+<span class="cm"># 简短公式：</span>
+<span class="cm"># FP16 KV Cache (GB) ≈ 层数 × 头数 × head_dim × 2 × context_length / 536,870,912</span></pre>
+
+<table>
+  <tr><th>模型</th><th>层数</th><th>头数</th><th>2K</th><th>4K</th><th>8K</th><th>32K</th><th>128K</th></tr>
+  <tr><td>Llama-3.1-8B</td><td>32</td><td>32</td><td>0.75 GB</td><td>1.5 GB</td><td>3 GB</td><td>12 GB</td><td>48 GB</td></tr>
+  <tr><td>Qwen2.5-7B</td><td>28</td><td>28</td><td>0.6 GB</td><td>1.2 GB</td><td>2.4 GB</td><td>9.6 GB</td><td>38 GB</td></tr>
+  <tr><td>Qwen2.5-72B (GQA)</td><td>80</td><td>8 (KV)</td><td>0.5 GB</td><td>1 GB</td><td>2 GB</td><td>8 GB</td><td>32 GB</td></tr>
+  <tr><td>DeepSeek-V3 (MLA)</td><td>67</td><td>—</td><td>~0.1 GB</td><td>~0.2 GB</td><td>~0.4 GB</td><td>~1.6 GB</td><td>~6.4 GB</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>💡 关键发现：</strong>
+  <br>• <strong>GQA（分组查询注意力）</strong>能大幅减少 KV Cache——KV 头数 = 注意力头数 / 组数
+  <br>• <strong>MLA（多头潜在注意力，DeepSeek 用）</strong>把 KV Cache 压缩到几乎可忽略
+  <br>• <strong>上下文越长，KV Cache 占比越大</strong>——8K 以上 KV Cache 可能超过权重本身
+</div>
+
+<h3>8.3 总显存计算示例</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 场景：Qwen2.5-7B, FP16, 8K 上下文, batch_size=4
+# ═══════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm"># 模型权重:  7B × 2 bytes = 14 GB</span>
+<span class="cm"># KV Cache:  2.4 GB (单请求 8K) × 4 (batch) = 9.6 GB</span>
+<span class="cm"># 激活值 + CUDA Graph + 其他: ~3 GB</span>
+<span class="cm"># ─────────────────────────────────</span>
+<span class="cm"># 总计:      ~26.6 GB（24GB 显卡放不下！）</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 解决：降精度或缩上下文
+# ═══════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm"># 方案 A: AWQ 4-bit + 8K ctx + batch=4</span>
+<span class="cm">#   权重: 3.5 GB + KV Cache: 9.6 GB + 其他: 2 GB = 15 GB ✅</span>
+<span class="cm">#</span>
+<span class="cm"># 方案 B: FP16 + 4K ctx + batch=2</span>
+<span class="cm">#   权重: 14 GB + KV Cache: 2.4 GB + 其他: 3 GB = 19.4 GB ✅</span>
+<span class="cm">#</span>
+<span class="cm"># 方案 C: AWQ 4-bit + 4K ctx + batch=4</span>
+<span class="cm">#   权重: 3.5 GB + KV Cache: 2.4 GB + 其他: 2 GB = 7.9 GB ✅ ← RTX 4060 都能跑</span></pre>
+
+<h3>8.4 显存诊断命令</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 启动时查看显存分配</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --gpu-memory-utilization <span class="num">0.9</span> \
+  --log-stats                     <span class="cm"># 打印详细统计</span>
+
+<span class="cm"># 运行时查看显存占用</span>
+nvidia-smi -l <span class="num">2</span>                    <span class="cm"># 每 2 秒刷新</span>
+
+<span class="cm"># vLLM 暴露的指标端点（Prometheus 格式）</span>
+curl http://localhost:8000/metrics
+
+<span class="cm"># 查看模型实际 KV Cache 分配</span>
+curl http://localhost:8000/v1/internal/stat</pre>
+
+<div class="highlight-danger">
+  <strong>🚨 常见 OOM 原因：</strong>
+  <br>1. <strong>max-model-len 太高</strong>——上下文越长，KV Cache 越大。从 4096 开始尝试
+  <br>2. <strong>gpu-memory-utilization 太高</strong>——设 0.85 留出余量
+  <br>3. <strong>batch 太大</strong>——降低 max-num-seqs 或 max-num-batched-tokens
+  <br>4. <strong>CUDA Graph 额外占显存</strong>——显存快满时加 --enforce-eager 禁用
+  <br>5. <strong>量化格式与加载方式不匹配</strong>——AWQ 模型没加 --quantization awq 会按 FP16 加载
+</div>
+</section>
+
+<!-- ═══════════════════ 9 ═══════════════════ -->
+<section id="sec9">
+<h2><span class="emoji">🔗</span> 9. 多 GPU 与分布式部署</h2>
+
+<h3>9.1 张量并行（Tensor Parallelism）</h3>
+<p>将模型的一层切成多份，每张 GPU 算一份，通过通信同步结果。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 2 张 GPU 跑 70B 模型</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --tensor-parallel-size <span class="num">2</span> \     <span class="cm"># 使用 2 张 GPU</span>
+  --port <span class="num">8000</span>
+
+<span class="cm"># 4 张 GPU（适合 70B AWQ）</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-72B-Instruct-AWQ \
+  --tensor-parallel-size <span class="num">4</span> \
+  --quantization awq \
+  --port <span class="num">8000</span></pre>
+
+<table>
+  <tr><th>模型</th><th>单卡 24G</th><th>2×24G</th><th>4×24G</th><th>8×24G</th></tr>
+  <tr><td>7B (FP16)</td><td>✅ 勉强</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>7B (AWQ)</td><td>✅ 流畅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>14B (FP16)</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>32B (AWQ)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>70B (FP16)</td><td>❌</td><td>❌</td><td>⚠️ 勉强</td><td>✅</td></tr>
+  <tr><td>70B (AWQ)</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>72B (FP16)</td><td>❌</td><td>❌</td><td>⚠️</td><td>✅</td></tr>
+  <tr><td>72B (AWQ)</td><td>❌</td><td>✅ 勉强</td><td>✅</td><td>✅</td></tr>
+</table>
+
+<h3>9.2 流水线并行（Pipeline Parallelism）</h3>
+<p>将模型的不同层分配到不同 GPU，层间串行计算。</p>
+<pre><span class="lang-label">bash</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --pipeline-parallel-size <span class="num">2</span> \   <span class="cm"># 2 张 GPU 流水线</span>
+  --port <span class="num">8000</span></pre>
+
+<div class="highlight-warn">
+  <strong>⚠️ TP vs PP：</strong>
+  <br>• <strong>TP（张量并行）</strong>：每步计算都需要 GPU 间通信（NVLink 最佳），通信量大
+  <br>• <strong>PP（流水线并行）</strong>：只需在层边界传输中间结果，通信量小
+  <br>• <strong>推荐</strong>：同一台机器用 TP（NVLink 快），多台机器用 PP（网络慢）
+  <br>• 也可以组合使用：<code>--tensor-parallel-size 2 --pipeline-parallel-size 2</code>
+</div>
+
+<h3>9.3 多节点部署</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 节点 1（主节点）</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --tensor-parallel-size <span class="num">8</span> \
+  --distributed-executor-backend ray \  <span class="cm"># 使用 Ray 做分布式</span>
+  --port <span class="num">8000</span>
+
+<span class="cm"># 节点 2~N（自动发现主节点）</span>
+<span class="cm"># 需要设置环境变量:</span>
+<span class="cm"># export RAY_HEAD_IP=&lt;主节点IP&gt;</span>
+<span class="cm"># 然后同样的命令</span></pre>
+
+<div class="highlight">
+  <strong>💡 实践建议：</strong>
+  <br>• 4 张卡以内 → 单机 TP 就够了
+  <br>• 4~8 张卡 → 单机 TP + PP 组合
+  <br>• 8 张卡以上 → 多节点 + TP + PP
+  <br>• 跨节点需要高速网络（InfiniBand/RoCE），普通千兆会成瓶颈
+</div>
+</section>
+
+<!-- ═══════════════════ 10 ═══════════════════ -->
+<section id="sec10">
+<h2><span class="emoji">🔌</span> 10. OpenAI 兼容 API 调用</h2>
+
+<h3>10.1 支持的 API 端点</h3>
+<table>
+  <tr><th>端点</th><th>说明</th></tr>
+  <tr><td><code>GET /v1/models</code></td><td>列出可用模型</td></tr>
+  <tr><td><code>POST /v1/chat/completions</code></td><td>聊天补全（最常用）</td></tr>
+  <tr><td><code>POST /v1/completions</code></td><td>文本补全</td></tr>
+  <tr><td><code>POST /v1/embeddings</code></td><td>文本嵌入（需要模型支持）</td></tr>
+  <tr><td><code>GET /health</code></td><td>健康检查</td></tr>
+  <tr><td><code>GET /metrics</code></td><td>Prometheus 指标</td></tr>
+</table>
+
+<h3>10.2 各种语言调用示例</h3>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# Python — 基础调用
+# ═══════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
+
+client = OpenAI(base_url=<span class="str">"http://localhost:8000/v1"</span>, api_key=<span class="str">"-"</span>)
+
+<span class="cm"># 流式输出（推荐，用户体验好）</span>
+stream = client.chat.completions.create(
+    model=<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,
+    messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"讲个笑话"</span>}],
+    stream=<span class="kw">True</span>,
+    max_tokens=<span class="num">512</span>,
+)
+<span class="kw">for</span> chunk <span class="kw">in</span> stream:
+    <span class="builtin">print</span>(chunk.choices[<span class="num">0</span>].delta.content <span class="kw">or</span> <span class="str">""</span>, end=<span class="str">""</span>)</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# curl 调用
+# ═══════════════════════════════════════════════════════════</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "messages": [{"role": "user", "content": "你好"}],
+    "temperature": 0.7,
+    "max_tokens": 512,
+    "stream": true
+  }'</span></pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# Python — 高级参数
+# ═══════════════════════════════════════════════════════════</span>
+response = client.chat.completions.create(
+    model=<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,
+    messages=[
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">"你是一个数学家"</span>},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"1+1=?"</span>},
+    ],
+    temperature=<span class="num">0.1</span>,           <span class="cm"># 低温度，更确定</span>
+    top_p=<span class="num">0.9</span>,
+    max_tokens=<span class="num">2048</span>,
+    stop=[<span class="str">"&lt;/s&gt;"</span>, <span class="str">"&lt;|im_end|&gt;"</span>],  <span class="cm"># 停止词</span>
+    frequency_penalty=<span class="num">0.3</span>,     <span class="cm"># 减少重复</span>
+    presence_penalty=<span class="num">0.3</span>,      <span class="cm"># 鼓励新话题</span>
+    seed=<span class="num">42</span>,                   <span class="cm"># 固定随机种子，可复现</span>
+)
+
+<span class="builtin">print</span>(response.choices[<span class="num">0</span>].message.content)
+<span class="builtin">print</span>(f<span class="str">"使用 tokens: {response.usage.total_tokens}"</span>)</pre>
+</section>
+
+<!-- ═══════════════════ 11 ═══════════════════ -->
+<section id="sec11">
+<h2><span class="emoji">📊</span> 11. 性能调优</h2>
+
+<h3>11.1 吞吐量 vs 延迟</h3>
+
+<table>
+  <tr><th>优化目标</th><th>关键参数</th><th>调整方向</th></tr>
+  <tr><td>最大吞吐（离线批处理）</td><td><code>max-num-seqs</code></td><td>增大（256→1024），填满 GPU</td></tr>
+  <tr><td>最低延迟（实时对话）</td><td><code>max-num-seqs</code></td><td>减小（256→8），不要让请求排队</td></tr>
+  <tr><td>平衡</td><td><code>max-num-batched-tokens</code></td><td>设到显存能承受的最大值</td></tr>
+  <tr><td>降低 P99 延迟</td><td><code>enable-chunked-prefill</code></td><td>启用，减少长 prompt 的"霸占"效应</td></tr>
+</table>
+
+<h3>11.2 性能调优清单</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 高性能生产配置示例
+# ═══════════════════════════════════════════════════════════</span>
+
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-7B-Instruct-AWQ \
+  --quantization awq \
+  --max-model-len <span class="num">8192</span> \
+  --gpu-memory-utilization <span class="num">0.9</span> \
+  --max-num-seqs <span class="num">256</span> \
+  --max-num-batched-tokens <span class="num">8192</span> \
+  --enable-prefix-caching \
+  --enable-chunked-prefill \
+  --kv-cache-dtype fp8 \
+  --port <span class="num">8000</span> \
+  --host <span class="num">0.0.0.0</span> \
+  --log-stats</pre>
+
+<h3>11.3 基准测试</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># vLLM 自带 benchmark 脚本</span>
+
+<span class="cm"># 基准测试：吞吐量</span>
+python benchmarks/benchmark_throughput.py \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --num-prompts <span class="num">100</span> \
+  --input-len <span class="num">512</span> \
+  --output-len <span class="num">256</span>
+
+<span class="cm"># 基准测试：延迟</span>
+python benchmarks/benchmark_latency.py \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --input-len <span class="num">128</span> \
+  --output-len <span class="num">128</span></pre>
+
+<h3>11.4 监控指标</h3>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># vLLM 暴露 Prometheus 指标（/metrics 端点）</span>
+curl -s http://localhost:8000/metrics | grep vllm
+
+<span class="cm"># 关键指标解读：</span>
+<span class="cm"># vllm:num_requests_running    — 当前正在处理的请求数</span>
+<span class="cm"># vllm:num_requests_waiting    — 排队等待的请求数</span>
+<span class="cm"># vllm:gpu_cache_usage         — GPU KV Cache 使用率（0~1）</span>
+<span class="cm"># vllm:gpu_prefix_cache_hit    — 前缀缓存命中率</span>
+<span class="cm"># vllm:request_throughput      — 每秒完成请求数</span>
+<span class="cm"># vllm:request_latency_seconds — 请求延迟分布</span></pre>
+</section>
+
+<!-- ═══════════════════ 12 ═══════════════════ -->
+<section id="sec12">
+<h2><span class="emoji">🐳</span> 12. Docker 部署</h2>
+
+<h3>12.1 拉取并运行</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 最简单的 Docker 部署
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 拉取官方镜像</span>
+docker pull vllm/vllm-openai:latest
+
+<span class="cm"># 运行容器（单 GPU）</span>
+docker run --gpus all \
+  -p <span class="num">8000</span>:<span class="num">8000</span> \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  vllm/vllm-openai:latest \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --port <span class="num">8000</span></pre>
+
+<h3>12.2 Docker Compose 生产配置</h3>
+
+<pre><span class="lang-label">yaml</span>
+<span class="cm"># docker-compose.yml — 生产部署配置</span>
+version: <span class="str">"3.9"</span>
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
+    restart: unless-stopped
+    ports:
+      - <span class="str">"8000:8000"</span>
+    volumes:
+      - <span class="str">"~/.cache/huggingface:/root/.cache/huggingface"</span>
+      - <span class="str">"./models:/models"</span>          <span class="cm"># 本地模型文件</span>
+    environment:
+      - <span class="str">HUGGING_FACE_HUB_TOKEN=</span>      <span class="cm"># 访问 gated 模型用</span>
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all              <span class="cm"># 使用所有 GPU</span>
+              capabilities: [gpu]
+    command: [
+      <span class="str">"--model"</span>, <span class="str">"Qwen/Qwen2.5-7B-Instruct-AWQ"</span>,
+      <span class="str">"--quantization"</span>, <span class="str">"awq"</span>,
+      <span class="str">"--max-model-len"</span>, <span class="str">"8192"</span>,
+      <span class="str">"--gpu-memory-utilization"</span>, <span class="str">"0.9"</span>,
+      <span class="str">"--port"</span>, <span class="str">"8000"</span>,
+      <span class="str">"--host"</span>, <span class="str">"0.0.0.0"</span>,
+      <span class="str">"--enable-prefix-caching"</span>,
+    ]</pre>
+
+<h3>12.3 带模型的 Docker 镜像构建</h3>
+
+<pre><span class="lang-label">dockerfile</span>
+<span class="cm"># Dockerfile — 把模型打包进镜像</span>
+FROM vllm/vllm-openai:latest
+
+<span class="cm"># 提前下载模型到镜像（避免每次启动下载）</span>
+RUN python -c <span class="str">"from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-7B-Instruct-AWQ')"</span>
+
+<span class="cm"># 启动命令</span>
+ENTRYPOINT [<span class="str">"python"</span>, <span class="str">"-m"</span>, <span class="str">"vllm.entrypoints.openai.api_server"</span>]
+CMD [<span class="str">"--model"</span>, <span class="str">"Qwen/Qwen2.5-7B-Instruct-AWQ"</span>, <span class="str">"--port"</span>, <span class="str">"8000"</span>]</pre>
+
+<pre><span class="lang-label">bash</span>
+docker build -t my-vllm:latest .
+docker run --gpus all -p 8000:8000 my-vllm:latest</pre>
+</section>
+
+<!-- ═══════════════════ 13 ═══════════════════ -->
+<section id="sec13">
+<h2><span class="emoji">🏭</span> 13. 生产环境配置</h2>
+
+<h3>13.1 Nginx 反向代理</h3>
+
+<pre><span class="lang-label">nginx</span>
+<span class="cm"># /etc/nginx/sites-available/vllm</span>
+upstream vllm_backend {
+    server 127.0.0.1:8000;
+    <span class="cm"># server 127.0.0.1:8001;  # 多实例负载均衡</span>
+}
+
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    client_max_body_size 10m;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+
+    location / {
+        proxy_pass http://vllm_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade <span class="str">$http_upgrade</span>;
+        proxy_set_header Connection <span class="str">"upgrade"</span>;
+        proxy_set_header Host <span class="str">$host</span>;
+        proxy_set_header X-Real-IP <span class="str">$remote_addr</span>;
+    }
+}</pre>
+
+<h3>13.2 负载均衡（多实例）</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 启动多个 vLLM 实例（不同端口）</span>
+python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen2.5-7B-Instruct --port 8000 &
+python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen2.5-7B-Instruct --port 8001 &
+
+<span class="cm"># 用 Nginx 做负载均衡（upstream 中加多个 server）</span>
+<span class="cm"># 或用 systemd 管理</span></pre>
+
+<h3>13.3 Systemd 服务配置</h3>
+
+<pre><span class="lang-label">ini</span>
+<span class="cm"># /etc/systemd/system/vllm.service</span>
+[Unit]
+Description=vLLM API Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/python -m vllm.entrypoints.openai.api_server \
+    --model /models/Qwen2.5-7B-Instruct-AWQ \
+    --quantization awq \
+    --max-model-len 8192 \
+    --gpu-memory-utilization 0.9 \
+    --port 8000 \
+    --host 0.0.0.0
+Restart=always
+RestartSec=10
+Environment=<span class="str">"CUDA_VISIBLE_DEVICES=0"</span>
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target</pre>
+
+<pre><span class="lang-label">bash</span>
+sudo systemctl daemon-reload
+sudo systemctl enable vllm
+sudo systemctl start vllm
+sudo systemctl status vllm</pre>
+
+<h3>13.4 安全配置</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 设置 API Key</span>
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --api-key sk-xxxxxxxxxxxxxx  <span class="cm"># 客户端需要带 Authorization: Bearer sk-xxx</span>
+
+<span class="cm"># 限制监听地址（内网部署）</span>
+  --host 127.0.0.1  <span class="cm"># 只监听本地，不暴露到外网</span>
+
+<span class="cm"># 禁用请求日志（保护用户隐私）</span>
+  --disable-log-requests \
+  --max-log-len 100</pre>
+</section>
+
+<!-- ═══════════════════ 14 ═══════════════════ -->
+<section id="sec14">
+<h2><span class="emoji">❓</span> 14. 常见问题与排错</h2>
+
+<h3>14.1 启动报错</h3>
+
+<div class="highlight-warn">
+  <strong>❌ CUDA 内存不足（CUDA out of memory）</strong>
+  <br><strong>原因</strong>：模型 + KV Cache 超过 GPU 显存
+  <br><strong>解决</strong>：
+  <br>1. 降低 <code>--max-model-len</code>（4096 → 2048）
+  <br>2. 降低 <code>--gpu-memory-utilization</code>（0.9 → 0.8）
+  <br>3. 启用量化：<code>--quantization awq</code>
+  <br>4. 加 <code>--enforce-eager</code> 禁用 CUDA Graph
+  <br>5. 减少 <code>--max-num-seqs</code>
+</div>
+
+<div class="highlight-warn">
+  <strong>❌ ValueError: The model's max model seq length is too large</strong>
+  <br><strong>原因</strong>：模型原生支持 128K 上下文，但显存不够
+  <br><strong>解决</strong>：
+  <br>• 加 <code>--max-model-len 8192</code> 或 <code>4096</code> 限制上下文
+  <br>• vLLM 默认使用模型的最大长度，小显卡必须主动限制
+</div>
+
+<div class="highlight-warn">
+  <strong>❌ RuntimeError: Unknown model architecture</strong>
+  <br><strong>原因</strong>：模型使用了自定义架构（Qwen、DeepSeek、ChatGLM 等）
+  <br><strong>解决</strong>：
+  <br>• <strong>加 --trust-remote-code</strong>（大多数情况）
+  <br>• 如果还不行，检查 vLLM 版本是否支持该模型（升级 vLLM）
+</div>
+
+<h3>14.2 运行时问题</h3>
+
+<div class="highlight-warn">
+  <strong>❌ 推理速度很慢（远低于预期）</strong>
+  <br><strong>原因</strong>：GPU 利用率低，可能是 batch 太小或 CPU 瓶颈
+  <br><strong>解决</strong>：
+  <br>1. 增加并发请求数（多客户端同时调用）
+  <br>2. 检查 <code>nvidia-smi</code> GPU 利用率是否 > 80%
+  <br>3. 加 <code>--enable-chunked-prefill</code>
+  <br>4. 确保不是 CPU 上的数据预处理瓶颈
+</div>
+
+<div class="highlight-warn">
+  <strong>❌ 生成的内容重复或胡言乱语</strong>
+  <br><strong>原因</strong>：量化精度损失 + 采样参数不当
+  <br><strong>解决</strong>：
+  <br>1. 降低 temperature（0.7 → 0.3）
+  <br>2. 增加 repetition_penalty（1.0 → 1.1）
+  <br>3. 尝试 FP16 或 FP8 量化（比 INT4 质量好）
+  <br>4. 使用 instruct 版本的模型（不是 base 版）
+</div>
+
+<div class="highlight-warn">
+  <strong>❌ 流式输出卡顿、断断续续</strong>
+  <br><strong>原因</strong>：服务器处理速度跟不上请求
+  <br><strong>解决</strong>：
+  <br>1. 减少并发请求数
+  <br>2. 降低 max_tokens
+  <br>3. 升级 GPU 或增加分布式部署
+</div>
+
+<h3>14.3 模型相关问题</h3>
+
+<div class="highlight-warn">
+  <strong>❌ 模型下载失败（Connection timeout）</strong>
+  <br><strong>原因</strong>：中国大陆无法直接访问 HuggingFace
+  <br><strong>解决</strong>：
+  <br>• 使用镜像：<code>export HF_ENDPOINT=https://hf-mirror.com</code>
+  <br>• 或用 ModelScope：<code>--model modelscope.cn/... </code>
+</div>
+
+<div class="highlight-warn">
+  <strong>❌ 量化模型加载后 OOM</strong>
+  <br><strong>原因</strong>：量化模型没指定 <code>--quantization</code> 参数，vLLM 按 FP16 加载
+  <br><strong>解决</strong>：
+  <br>• AWQ 模型：<code>--quantization awq</code>
+  <br>• GPTQ 模型：<code>--quantization gptq</code>
+  <br>• FP8 模型：<code>--quantization fp8</code>
+</div>
+
+<h3>14.4 快速排错检查表</h3>
+<table>
+  <tr><th>症状</th><th>检查点</th></tr>
+  <tr><td>启动就 OOM</td><td>显存够吗？max-model-len 设了吗？量化参数加了吗？</td></tr>
+  <tr><td>跑一会 OOM</td><td>max-num-seqs 是不是太大？前缀缓存开了吗？</td></tr>
+  <tr><td>模型不认识</td><td>加 --trust-remote-code 了吗？vLLM 版本够新吗？</td></tr>
+  <tr><td>速度慢</td><td>GPU 利用率多少？并发请求够吗？CPU 瓶颈？</td></tr>
+  <tr><td>输出乱码</td><td>temperature 太高？量化精度太低？用对 instruct 版本了吗？</td></tr>
+  <tr><td>客户端连不上</td><td>host 设 0.0.0.0 了吗？端口防火墙放行了吗？</td></tr>
+</table>
+</section>
+
+<!-- ═══════════════════ 15 ═══════════════════ -->
+<section id="sec15">
+<h2><span class="emoji">🎯</span> 15. 综合实战：完整部署脚本</h2>
+
+<p>下面是一个完整的、生产可用的一键部署脚本。</p>
+
+<h3>15.1 一键部署脚本</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm">#!/bin/bash
+# ═══════════════════════════════════════════════════════════
+# deploy_vllm.sh — vLLM 一键部署脚本
+# 用法: bash deploy_vllm.sh [model_name] [gpu_count]
+# ═══════════════════════════════════════════════════════════</span>
+set -euo pipefail
+
+MODEL=${1:-<span class="str">"Qwen/Qwen2.5-7B-Instruct-AWQ"</span>}
+GPU_COUNT=${2:-1}
+PORT=${3:-8000}
+
+<span class="builtin">echo</span> <span class="str">"========================================"</span>
+<span class="builtin">echo</span> <span class="str">"  vLLM 部署脚本"</span>
+<span class="builtin">echo</span> <span class="str">"  模型: $MODEL"</span>
+<span class="builtin">echo</span> <span class="str">"  GPU数: $GPU_COUNT"</span>
+<span class="builtin">echo</span> <span class="str">"  端口: $PORT"</span>
+<span class="builtin">echo</span> <span class="str">"========================================"</span>
+
+<span class="cm"># 1. 检查环境</span>
+<span class="kw">if</span> ! command -v nvidia-smi &gt; /dev/null <span class="kw">2&gt;&amp;1</span>; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"❌ 未检测到 NVIDIA GPU"</span>
+    <span class="kw">exit</span> 1
+<span class="kw">fi</span>
+
+<span class="cm"># 2. 检查显存</span>
+TOTAL_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
+FREE_MEM=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
+<span class="builtin">echo</span> <span class="str">"📊 GPU 显存: 总共 ${TOTAL_MEM}MB, 空闲 ${FREE_MEM}MB"</span>
+
+<span class="cm"># 3. 设置 HuggingFace 镜像</span>
+<span class="kw">if</span> [ -n <span class="str">"${HF_ENDPOINT:-}"</span> ]; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"📦 使用 HF 镜像: $HF_ENDPOINT"</span>
+<span class="kw">fi</span>
+
+<span class="cm"># 4. 自动选择量化方式</span>
+QUANT_ARG=<span class="str">""</span>
+<span class="kw">if</span> [[ <span class="str">"$MODEL"</span> == *<span class="str">"AWQ"</span>* ]]; <span class="kw">then</span>
+    QUANT_ARG=<span class="str">"--quantization awq"</span>
+<span class="kw">elif</span> [[ <span class="str">"$MODEL"</span> == *<span class="str">"GPTQ"</span>* ]]; <span class="kw">then</span>
+    QUANT_ARG=<span class="str">"--quantization gptq"</span>
+<span class="kw">elif</span> [[ <span class="str">"$MODEL"</span> == *<span class="str">"fp8"</span>* || <span class="str">"$MODEL"</span> == *<span class="str">"FP8"</span>* ]]; <span class="kw">then</span>
+    QUANT_ARG=<span class="str">"--quantization fp8"</span>
+<span class="kw">fi</span>
+
+<span class="cm"># 5. 自动计算 max-model-len</span>
+<span class="kw">if</span> [ <span class="str">"$TOTAL_MEM"</span> -lt 16000 ]; <span class="kw">then</span>
+    MAX_LEN=4096
+<span class="kw">elif</span> [ <span class="str">"$TOTAL_MEM"</span> -lt 32000 ]; <span class="kw">then</span>
+    MAX_LEN=8192
+<span class="kw">else</span>
+    MAX_LEN=16384
+<span class="kw">fi</span>
+
+<span class="cm"># 6. 构建启动命令</span>
+CMD=<span class="str">"python -m vllm.entrypoints.openai.api_server \
+  --model $MODEL \
+  --port $PORT \
+  --host 0.0.0.0 \
+  --tensor-parallel-size $GPU_COUNT \
+  --max-model-len $MAX_LEN \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --enable-prefix-caching \
+  $QUANT_ARG"</span>
+
+<span class="builtin">echo</span> <span class="str">""</span>
+<span class="builtin">echo</span> <span class="str">"🚀 启动命令:"</span>
+<span class="builtin">echo</span> <span class="str">"$CMD"</span>
+<span class="builtin">echo</span> <span class="str">""</span>
+<span class="builtin">echo</span> <span class="str">"📝 启动日志:"</span>
+
+<span class="cm"># 7. 启动服务</span>
+<span class="nb">eval</span> <span class="str">"$CMD"</span></pre>
+
+<h3>15.2 客户端测试脚本</h3>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm">#!/usr/bin/env python3
+# ═══════════════════════════════════════════════════════════
+# test_vllm.py — 测试 vLLM 服务的客户端
+# ═══════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> <span class="builtin">requests</span>
+<span class="kw">import</span> <span class="builtin">json</span>
+<span class="kw">import</span> <span class="builtin">time</span>
+
+BASE_URL = <span class="str">"http://localhost:8000"</span>
+
+<span class="kw">def</span> <span class="fn">test_health</span>():
+    <span class="str">"""测试服务是否存活"""</span>
+    resp = requests.get(f<span class="str">"{BASE_URL}/health"</span>)
+    <span class="builtin">print</span>(f<span class="str">"健康检查: {resp.status_code}"</span>)
+    <span class="kw">return</span> resp.status_code == <span class="num">200</span>
+
+<span class="kw">def</span> <span class="fn">test_chat</span>():
+    <span class="str">"""测试聊天补全"""</span>
+    payload = {
+        <span class="str">"model"</span>: <span class="str">"Qwen/Qwen2.5-7B-Instruct-AWQ"</span>,
+        <span class="str">"messages"</span>: [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用 Python 写一个冒泡排序"</span>}],
+        <span class="str">"temperature"</span>: <span class="num">0.3</span>,
+        <span class="str">"max_tokens"</span>: <span class="num">1024</span>,
+        <span class="str">"stream"</span>: <span class="kw">True</span>,
+    }
+    start = time.time()
+    resp = requests.post(
+        f<span class="str">"{BASE_URL}/v1/chat/completions"</span>,
+        json=payload,
+        stream=<span class="kw">True</span>,
+    )
+    tokens = <span class="num">0</span>
+    <span class="kw">for</span> line <span class="kw">in</span> resp.iter_lines():
+        <span class="kw">if</span> line:
+            line = line.decode(<span class="str">"utf-8"</span>)
+            <span class="kw">if</span> line.startswith(<span class="str">"data: [DONE]"</span>):
+                <span class="kw">break</span>
+            <span class="kw">if</span> line.startswith(<span class="str">"data: "</span>):
+                data = json.loads(line[<span class="num">6</span>:])
+                token = data[<span class="str">"choices"</span>][<span class="num">0</span>][<span class="str">"delta"</span>].get(<span class="str">"content"</span>, <span class="str">""</span>)
+                <span class="kw">if</span> token:
+                    <span class="builtin">print</span>(token, end=<span class="str">""</span>, flush=<span class="kw">True</span>)
+                    tokens += <span class="num">1</span>
+    elapsed = time.time() - start
+    <span class="builtin">print</span>(f<span class="str">"\n\n⏱ 生成 {tokens} tokens, 耗时 {elapsed:.2f}s, 速度 {tokens/elapsed:.1f} t/s"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="kw">if</span> test_health():
+        test_chat()
+    <span class="kw">else</span>:
+        <span class="builtin">print</span>(<span class="str">"❌ 服务未就绪"</span>)</pre>
+
+<h3>15.3 不同硬件的推荐配置速查表</h3>
+
+<table>
+  <tr><th>硬件</th><th>显存</th><th>推荐模型</th><th>量化</th><th>上下文</th></tr>
+  <tr><td>RTX 3060</td><td>12 GB</td><td>Qwen2.5-7B</td><td>AWQ 4-bit</td><td>4K</td></tr>
+  <tr><td>RTX 4060</td><td>8 GB</td><td>Qwen2.5-7B</td><td>AWQ 4-bit</td><td>2K</td></tr>
+  <tr><td>RTX 3090</td><td>24 GB</td><td>Qwen2.5-14B</td><td>FP16</td><td>8K</td></tr>
+  <tr><td>RTX 4090</td><td>24 GB</td><td>Llama-3.1-8B</td><td>FP16</td><td>16K</td></tr>
+  <tr><td>A100 40G</td><td>40 GB</td><td>Qwen2.5-32B</td><td>AWQ 4-bit</td><td>8K</td></tr>
+  <tr><td>A100 80G</td><td>80 GB</td><td>Llama-3.1-70B</td><td>AWQ 4-bit</td><td>8K</td></tr>
+  <tr><td>H100</td><td>80 GB</td><td>Llama-3.1-70B</td><td>FP8</td><td>16K</td></tr>
+  <tr><td>DGX Spark</td><td>128 GB</td><td>Qwen2.5-32B</td><td>FP16 / AWQ</td><td>16K</td></tr>
+  <tr><td>2×RTX 3090</td><td>48 GB</td><td>Qwen2.5-32B</td><td>FP16</td><td>8K</td></tr>
+  <tr><td>4×RTX 3090</td><td>96 GB</td><td>Llama-3.1-70B</td><td>AWQ 4-bit</td><td>8K</td></tr>
+  <tr><td>8×A100 80G</td><td>640 GB</td><td>DeepSeek-V3</td><td>FP8</td><td>16K</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>📚 总结：vLLM 部署四步法</strong>
+  <br>1. <strong>选模型</strong> → 根据硬件显存选择合适的模型和量化方式（见上表）
+  <br>2. <strong>算内存</strong> → 模型权重 + KV Cache（上下文越长越大）+ 余量
+  <br>3. <strong>配参数</strong> → max-model-len, gpu-memory-utilization, quantization
+  <br>4. <strong>启动测试</strong> → 先用小上下文测试，确认稳定后逐步加大
+</div>
+</section>
+
+<div class="footer">
+  <p>📘 vLLM 从入门到精通 · 教学文档</p>
+  <p>vLLM 版本 0.8.x · 文档更新于 2026-07</p>
+</div>
+
+</div>
+</body>
+</html>
