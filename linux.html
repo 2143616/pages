@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux 从入门到精通 — 常用指令完全教学</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #181b24; --border: #262a36;
+    --accent: #6c8cff; --green: #4ade80; --orange: #fb923c; --red: #f87171;
+    --text: #e1e5ee; --text-dim: #8b92a5; --code-bg: #1e212b; --heading: #f0f2f8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 0 1.5rem; }
+
+  .sidebar {
+    position: fixed; left: 0; top: 0; width: 220px; height: 100vh;
+    background: var(--card); border-right: 1px solid var(--border);
+    padding: 1.5rem .8rem; overflow-y: auto; z-index: 100;
+  }
+  .sidebar h2 { font-size: .72rem; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .6rem; }
+  .sidebar nav { display: flex; flex-direction: column; gap: .15rem; }
+  .sidebar a {
+    color: var(--text-dim); text-decoration: none; font-size: .68rem;
+    padding: .2rem .5rem; border-radius: 4px; transition: all .12s;
+  }
+  .sidebar a:hover { color: var(--accent); background: rgba(108,140,255,.08); }
+  .sidebar .l2 { padding-left: 1.1rem; font-size: .63rem; }
+  .sidebar .cat { font-size: .62rem; color: var(--orange); margin-top: .4rem; padding-left: .5rem; font-weight: 600; }
+
+  .main { margin-left: 220px; padding: 2rem 0 6rem; }
+
+  h1, h2, h3, h4 { color: var(--heading); line-height: 1.3; }
+  h1 { font-size: 2rem; margin: 2rem 0 .5rem; text-align: center; }
+  .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 2.5rem; font-size: .92rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .7rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  h4 { font-size: .85rem; margin: 1rem 0 .3rem; color: var(--accent); }
+  p { margin-bottom: .9rem; }
+  a { color: var(--accent); }
+  strong { color: var(--heading); }
+  ul, ol { margin-bottom: .9rem; padding-left: 1.5rem; }
+  li { margin-bottom: .25rem; }
+
+  .hero {
+    text-align: center; padding: 2rem 0 1.2rem;
+    background: linear-gradient(135deg, rgba(108,140,255,.08) 0%, transparent 70%);
+    border-radius: 16px;
+  }
+  .hero .badge {
+    display: inline-block; padding: .18rem .55rem; border-radius: 999px;
+    font-size: .65rem; font-weight: 600; margin: .25rem;
+  }
+  .badge-blue { background: rgba(108,140,255,.15); color: var(--accent); border: 1px solid rgba(108,140,255,.25); }
+  .badge-green { background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.2); }
+  .badge-orange { background: rgba(251,146,60,.12); color: var(--orange); border: 1px solid rgba(251,146,60,.2); }
+
+  .info-box, .tip-box, .warn-box, .err-box {
+    padding: .75rem 1rem; border-radius: 8px; margin: 1rem 0; border-left: 3px solid; font-size: .88rem;
+  }
+  .info-box { background: rgba(108,140,255,.06); border-color: var(--accent); }
+  .tip-box  { background: rgba(74,222,128,.05); border-color: var(--green); }
+  .warn-box { background: rgba(251,146,60,.06); border-color: var(--orange); }
+  .err-box  { background: rgba(248,113,113,.05); border-color: var(--red); }
+
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .82em; background: var(--code-bg); padding: .12em .35em; border-radius: 4px; color: #c9d1d9;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: .85rem 1rem; overflow-x: auto; margin: .8rem 0; font-size: .76rem; line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .c1 { color: #8b949e; font-style: italic; }
+  .nb { color: #79c0ff; } .s { color: #a5d6ff; } .kc { color: #79c0ff; }
+  .kn { color: #ff7b72; } .o { color: #ffa657; } .mi { color: #79c0ff; }
+  .cm { color: #8b949e; font-style: italic; }
+
+  .cmd-table { width: 100%; border-collapse: collapse; margin: .8rem 0; font-size: .78rem; }
+  .cmd-table th, .cmd-table td { padding: .4rem .6rem; border: 1px solid var(--border); text-align: left; }
+  .cmd-table th { background: var(--card); color: var(--accent); font-weight: 600; font-size: .75rem; }
+  .cmd-table tr:nth-child(even) td { background: rgba(255,255,255,.015); }
+  .cmd-table code { font-size: .9em; }
+
+  .footer { text-align: center; margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border); font-size: .72rem; color: var(--text-dim); }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h2>📑 目录</h2>
+  <nav>
+    <a href="#intro">1. Linux 是什么</a>
+    <div class="cat">📂 文件操作</div>
+    <a href="#ls" class="l2">ls — 列出文件</a>
+    <a href="#cd" class="l2">cd/pwd — 目录切换</a>
+    <a href="#cp-mv" class="l2">cp/mv/rm — 复制移动删除</a>
+    <a href="#mkdir" class="l2">mkdir/touch — 创建</a>
+    <a href="#find" class="l2">find/locate — 查找</a>
+    <div class="cat">👀 文件查看</div>
+    <a href="#cat" class="l2">cat/head/tail — 查看内容</a>
+    <a href="#less" class="l2">less/more — 分页阅读</a>
+    <a href="#grep" class="l2">grep — 文本搜索</a>
+    <a href="#wc" class="l2">wc/sort/uniq — 统计排序</a>
+    <div class="cat">🔧 系统管理</div>
+    <a href="#ps" class="l2">ps/top — 进程管理</a>
+    <a href="#kill" class="l2">kill — 终止进程</a>
+    <a href="#chmod" class="l2">chmod/chown — 权限</a>
+    <a href="#df" class="l2">df/du — 磁盘空间</a>
+    <a href="#nvidia" class="l2">nvidia-smi — GPU 监控</a>
+    <div class="cat">🌐 网络</div>
+    <a href="#curl" class="l2">curl/wget — 网络请求</a>
+    <a href="#ssh" class="l2">ssh/scp — 远程连接</a>
+    <a href="#netstat" class="l2">netstat/ss — 端口查看</a>
+    <div class="cat">📦 包管理</div>
+    <a href="#apt" class="l2">apt — 软件安装</a>
+    <a href="#pip" class="l2">pip — Python 包</a>
+    <a href="#conda" class="l2">conda — 环境管理</a>
+    <div class="cat">⚡ 进阶</div>
+    <a href="#pipe" class="l2">管道与重定向</a>
+    <a href="#alias" class="l2">alias/变量</a>
+    <a href="#script" class="l2">Shell 脚本基础</a>
+    <a href="#tmux" class="l2">tmux — 会话管理</a>
+  </nav>
+</aside>
+
+<div class="main">
+<div class="container">
+
+<section class="hero">
+  <h1>🐧 Linux 从入门到精通</h1>
+  <p class="subtitle">
+    常用指令完全教学 · 面向 AI/ML 工程师
+    <br>
+    <span class="badge badge-blue">Ubuntu 24.04</span>
+    <span class="badge badge-green">Bash</span>
+    <span class="badge badge-orange">实用至上</span>
+  </p>
+</section>
+
+<!-- ═══ 1 ═══ -->
+<h2 id="intro">1. Linux 是什么</h2>
+
+<p><strong>Linux</strong> 是一个开源的操作系统内核，广泛用于服务器、嵌入式系统、超级计算机和 AI 训练平台。绝大多数 AI/ML 工具（PyTorch、TensorFlow、CUDA、Docker）都以 Linux 为首要支持平台。</p>
+
+<table class="cmd-table">
+<tr><th>概念</th><th>说明</th></tr>
+<tr><td><strong>Shell</strong></td><td>命令行解释器，用户通过它和系统交互。最常用的是 <strong>Bash</strong>。</td></tr>
+<tr><td><strong>终端 (Terminal)</strong></td><td>运行 Shell 的窗口程序。</td></tr>
+<tr><td><strong>命令</strong></td><td>你输入的一行文本，Shell 解析并执行。</td></tr>
+<tr><td><strong>文件系统</strong></td><td>一切皆文件。从根 <code>/</code> 开始的树形结构。</td></tr>
+</table>
+
+<pre><code><span class="c1"># 打开终端后的第一件事：看看你在哪</span>
+whoami        <span class="c1"># 当前用户名</span>
+pwd           <span class="c1"># 当前目录路径</span>
+hostname      <span class="c1"># 主机名</span>
+uname -a      <span class="c1"># 系统内核版本信息</span></code></pre>
+
+<div class="info-box">
+<strong>💡 学习路径：</strong>先掌握文件操作（每天用）→ 系统管理（排查问题）→ 网络工具（部署服务）→ Shell 脚本（自动化）。每一步都有清晰的目标。
+</div>
+
+<!-- ═══ 文件操作 ═══ -->
+<h2>📂 文件操作指令</h2>
+
+<h3 id="ls">ls — 列出文件和目录</h3>
+<p>最常用的命令，没有之一。</p>
+
+<pre><code><span class="c1"># 基本用法</span>
+ls                    <span class="c1"># 列出当前目录（不显示隐藏文件）</span>
+ls -l                 <span class="c1"># 长格式：权限、大小、修改时间</span>
+ls -la                <span class="c1"># 包含隐藏文件（以.开头的文件）</span>
+ls -lh                <span class="c1"># 人类可读的文件大小（K/M/G）</span>
+ls -lS                <span class="c1"># 按文件大小排序</span>
+ls -lt                <span class="c1"># 按修改时间排序（最新在最前）</span>
+ls -ltr               <span class="c1"># 按修改时间反向排序（最旧在最前）</span>
+ls -R                 <span class="c1"># 递归列出子目录</span>
+ls *.py               <span class="c1"># 通配符：只列出 .py 文件</span></code></pre>
+
+<p>输出格式解读（<code>ls -l</code>）：</p>
+<pre><code>-rwxr-xr-x 1 hyl hyl 1234 Jul  3 10:00 script.py
+^^^^^^^^^ ^   ^^^ ^^^ ^^^^
+ 权限      链接 用户 组   大小  时间    文件名</code></pre>
+<p>权限位 <code>-rwxr-xr-x</code> 解析：第 1 位 <code>-</code>（文件）或 <code>d</code>（目录），后 9 位每 3 位一组：<strong>u</strong>ser / <strong>g</strong>roup / <strong>o</strong>thers，每位 <code>r</code>（读 4）、<code>w</code>（写 2）、<code>x</code>（执行 1）。</p>
+
+<h3 id="cd">cd / pwd — 目录切换</h3>
+
+<pre><code><span class="c1"># cd = change directory</span>
+cd /home/hyl        <span class="c1"># 绝对路径：从根 / 开始</span>
+cd Documents        <span class="c1"># 相对路径：从当前目录开始</span>
+cd ..               <span class="c1"># 上一级目录</span>
+cd ../..            <span class="c1"># 上两级</span>
+cd ~                <span class="c1"># 家目录（等价于 cd /home/用户名）</span>
+cd -                <span class="c1"># 上一个目录（来回切换很有用）</span>
+cd /                <span class="c1"># 根目录</span>
+
+pwd                 <span class="c1"># 显示当前目录绝对路径</span></code></pre>
+
+<h3 id="cp-mv">cp / mv / rm — 复制、移动、删除</h3>
+
+<pre><code><span class="c1"># cp = copy</span>
+cp file1.txt file2.txt            <span class="c1"># 复制文件</span>
+cp -r dir1/ dir2/                 <span class="c1"># 递归复制目录</span>
+cp -i file1.txt dir2/             <span class="c1"># 交互模式（覆盖前询问）</span>
+cp -v file1.txt dir2/             <span class="c1"># 显示复制过程</span>
+cp -a dir1/ dir2/                 <span class="c1"># 归档模式：保留权限、时间戳</span>
+
+<span class="c1"># mv = move（也可用于重命名）</span>
+mv old.txt new.txt                <span class="c1"># 重命名文件</span>
+mv file.txt dir2/                 <span class="c1"># 移动文件到目录</span>
+mv -i file.txt dir2/              <span class="c1"># 覆盖前询问</span>
+
+<span class="c1"># rm = remove（⚠️ 没有回收站，删了就没了！）</span>
+rm file.txt                       <span class="c1"># 删除文件</span>
+rm -r dir/                        <span class="c1"># 递归删除目录及其内容</span>
+rm -rf dir/                       <span class="c1"># 强制删除（⚠️ 最危险的命令之一）</span>
+rm -i file.txt                    <span class="c1"># 删除前确认</span></code></pre>
+
+<div class="warn-box">
+<strong>⚠️ <code>rm -rf /</code> 会删除整个系统！</strong>永远不要运行。重要文件建议用 <code>rm -i</code> 或先 <code>mv</code> 到临时目录。
+</div>
+
+<h3 id="mkdir">mkdir / touch — 创建目录和文件</h3>
+
+<pre><code><span class="c1"># mkdir = make directory</span>
+mkdir new_dir                     <span class="c1"># 创建目录</span>
+mkdir -p a/b/c/d                  <span class="c1"># 递归创建（父目录不存在时自动创建）</span>
+mkdir -m 755 dir                  <span class="c1"># 创建并设置权限</span>
+
+<span class="c1"># touch — 创建空文件 或 更新文件时间戳</span>
+touch file.txt                    <span class="c1"># 创建空文件（已存在则更新时间戳）</span>
+touch -t 202607031000 file.txt    <span class="c1"># 设置指定时间戳</span></code></pre>
+
+<h3 id="find">find / locate — 查找文件</h3>
+
+<pre><code><span class="c1"># find — 实时搜索，功能强大但稍慢</span>
+find . -name "*.py"               <span class="c1"># 按文件名查找</span>
+find . -type f -name "*.txt"      <span class="c1"># 只找文件（-type d 找目录）</span>
+find . -size +100M                <span class="c1"># 查找大于 100MB 的文件</span>
+find . -mtime -7                  <span class="c1"># 最近 7 天内修改的文件</span>
+find . -name "*.log" -delete      <span class="c1"># 找到后直接删除（⚠️ 小心）</span>
+find . -name "*.py" -exec wc -l {} \;  <span class="c1"># 对每个结果执行命令</span>
+
+<span class="c1"># locate — 基于数据库，速度极快（需先 updatedb）</span>
+locate "*.pdf"                    <span class="c1"># 查找所有 PDF</span>
+locate -i "README"                <span class="c1"># 忽略大小写</span></code></pre>
+
+<!-- ═══ 文件查看 ═══ -->
+<h2>👀 文件查看指令</h2>
+
+<h3 id="cat">cat / head / tail — 查看文件内容</h3>
+
+<pre><code><span class="c1"># cat = concatenate（连接输出）</span>
+cat file.txt                      <span class="c1"># 显示整个文件</span>
+cat -n file.txt                   <span class="c1"># 显示行号</span>
+cat file1.txt file2.txt > merged.txt <span class="c1"># 合并文件</span>
+
+<span class="c1"># head — 只看开头</span>
+head -n 20 file.txt               <span class="c1"># 前 20 行（默认 10 行）</span>
+head -c 100 file.txt              <span class="c1"># 前 100 个字符</span>
+
+<span class="c1"># tail — 只看末尾（调试日志最有用）</span>
+tail -n 20 file.txt               <span class="c1"># 最后 20 行</span>
+tail -f app.log                   <span class="c1"># 🔥 实时追踪日志文件（Ctrl+C 退出）</span>
+tail -n 100 -f app.log            <span class="c1"># 先显示最后 100 行，再实时追踪</span></code></pre>
+
+<div class="tip-box">
+<strong>💡 <code>tail -f</code> 是调试利器：</strong>启动服务时在另一个终端执行 <code>tail -f log.txt</code>，服务日志会实时打印，不用反复打开文件。
+</div>
+
+<h3 id="less">less / more — 分页阅读</h3>
+
+<pre><code><span class="c1"># less — 功能更强大（推荐）</span>
+less large_file.txt               <span class="c1"># 分页浏览（空格翻页，q 退出）</span>
+less -N file.txt                  <span class="c1"># 显示行号</span>
+less +F file.txt                  <span class="c1"># 类似 tail -f（Ctrl+C 退出追踪模式）</span>
+<span class="c1"># 浏览中的快捷键：</span>
+<span class="c1">#   j/k  — 上下滚动一行</span>
+<span class="c1">#   Ctrl+D/U — 下半页/上半页</span>
+<span class="c1">#   g/G  — 第一行/最后一行</span>
+<span class="c1">#   /关键词 — 向前搜索（n 下一个）</span>
+<span class="c1">#   ?关键词 — 向后搜索</span>
+<span class="c1">#   q    — 退出</span></code></pre>
+
+<h3 id="grep">grep — 文本搜索（AI 工程师最常用之一）</h3>
+
+<pre><code><span class="c1"># grep = globally search a regular expression</span>
+grep "error" app.log              <span class="c1"># 搜索包含 error 的行</span>
+grep -i "error" app.log           <span class="c1"># 忽略大小写</span>
+grep -n "error" app.log           <span class="c1"># 显示行号</span>
+grep -c "error" app.log           <span class="c1"># 只计数（多少行匹配）</span>
+grep -v "error" app.log           <span class="c1"># 反向匹配：不含 error 的行</span>
+grep -r "def " ./src/             <span class="c1"># 递归搜索目录下所有文件</span>
+grep -r --include="*.py" "import" . <span class="c1"># 只搜 .py 文件</span>
+grep -l "error" *.log             <span class="c1"># 只显示匹配的文件名</span>
+grep -A3 -B2 "error" log.txt     <span class="c1"># 前后文：匹配行前2行+后3行</span></code></pre>
+
+<div class="info-box">
+<strong>💡 grep 三部曲：</strong>先 <code>grep -n</code> 定位行号 → <code>sed -n '100,120p'</code> 看上下文 → <code>less +120</code> 进入浏览。
+</div>
+
+<h3 id="wc">wc / sort / uniq — 统计与排序</h3>
+
+<pre><code><span class="c1"># wc = word count</span>
+wc -l file.txt                    <span class="c1"># 行数（最常用）</span>
+wc -w file.txt                    <span class="c1"># 单词数</span>
+wc -c file.txt                    <span class="c1"># 字符数（字节数）</span>
+
+<span class="c1"># sort — 排序</span>
+sort file.txt                     <span class="c1"># 字母序排序</span>
+sort -n file.txt                  <span class="c1"># 按数字排序</span>
+sort -r file.txt                  <span class="c1"># 反向排序</span>
+sort -k2 file.txt                 <span class="c1"># 按第二列排序</span>
+
+<span class="c1"># uniq — 去重（必须先 sort）</span>
+sort file.txt | uniq              <span class="c1"># 去重</span>
+sort file.txt | uniq -c           <span class="c1"># 统计每个元素出现次数</span>
+sort file.txt | uniq -d           <span class="c1"># 只显示重复的</span></code></pre>
+
+<pre><code><span class="c1"># 实战：统计日志中每种错误出现次数 top 10</span>
+grep "ERROR" app.log | sort | uniq -c | sort -rn | head -10</code></pre>
+
+<!-- ═══ 系统管理 ═══ -->
+<h2>🔧 系统管理指令</h2>
+
+<h3 id="ps">ps / top / htop — 进程管理</h3>
+
+<pre><code><span class="c1"># ps = process status</span>
+ps aux                            <span class="c1"># 🔥 列出所有进程（最常用）</span>
+ps aux | grep python              <span class="c1"># 只看 Python 进程</span>
+ps -ef --forest                   <span class="c1"># 树形显示进程父子关系</span>
+ps aux --sort=-%mem | head -10   <span class="c1"># 按内存使用排序 top10</span>
+ps aux --sort=-%cpu | head -10   <span class="c1"># 按 CPU 使用排序 top10</span>
+
+<span class="c1"># top — 实时进程监视器</span>
+top                               <span class="c1"># 全屏交互界面（按 q 退出）</span>
+<span class="c1"># 快捷键：P(按CPU排序) M(按内存) 1(查看多核) k(杀进程)</span>
+
+<span class="c1"># htop — top 的增强版（需要安装）</span>
+htop                              <span class="c1"># 彩色界面，支持鼠标操作</span></code></pre>
+
+<h3 id="kill">kill — 终止进程</h3>
+
+<pre><code><span class="c1"># 先找到进程 PID</span>
+ps aux | grep python
+<span class="c1"># 或用 pgrep</span>
+pgrep -l python                   <span class="c1"># 列出所有 python 进程的 PID</span>
+
+<span class="c1"># 终止进程</span>
+kill 12345                        <span class="c1"># 优雅终止（SIGTERM）</span>
+kill -9 12345                     <span class="c1"># 🔥 强制杀死（SIGKILL，慎用）</span>
+kill -15 12345                    <span class="c1"># 等价于 kill（SIGTERM）</span>
+
+<span class="c1"># 批量操作</span>
+pkill python                      <span class="c1"># 杀死所有 python 进程（⚠️ 小心）</span>
+killall python3                   <span class="c1"># 同上</span></code></pre>
+
+<div class="warn-box">
+<strong>⚠️ <code>kill -9</code> 是最后手段：</strong>先试普通 <code>kill</code>（SIGTERM），让进程优雅退出（保存数据、释放资源）。只有进程不响应时才用 SIGKILL。
+</div>
+
+<h3 id="chmod">chmod / chown — 权限管理</h3>
+
+<pre><code><span class="c1"># chmod = change mode</span>
+<span class="c1"># 数字方式（推荐）：r=4, w=2, x=1</span>
+chmod 755 script.py               <span class="c1"># rwxr-xr-x：所有者全权，其他人读+执行</span>
+chmod 644 file.txt                <span class="c1"># rw-r--r--：所有者读写，其他人只读</span>
+chmod 600 secret.txt              <span class="c1"># rw-------：仅所有者读写</span>
+chmod -R 755 dir/                 <span class="c1"># 递归修改目录下所有文件</span>
+
+<span class="c1"># 符号方式</span>
+chmod +x script.py                <span class="c1"># 增加执行权限</span>
+chmod u+x script.py               <span class="c1"># 仅给所有者增加执行权限</span>
+chmod go-w file.txt               <span class="c1"># 去掉组和其他人的写权限</span>
+
+<span class="c1"># chown = change owner</span>
+chown hyl:admins file.txt         <span class="c1"># 修改所有者和组</span>
+chown -R hyl:admins dir/          <span class="c1"># 递归修改</span></code></pre>
+
+<h3 id="df">df / du — 磁盘空间管理</h3>
+
+<pre><code><span class="c1"># df = disk free — 查看磁盘分区使用情况</span>
+df -h                             <span class="c1"># 🔥 人类可读格式（最常用）</span>
+df -h /                           <span class="c1"># 只看根分区</span>
+df -h --total                     <span class="c1"># 显示总计</span>
+
+<span class="c1"># du = disk usage — 查看目录/文件大小</span>
+du -sh *                          <span class="c1"># 🔥 当前目录下每个项目总大小</span>
+du -sh dir/                       <span class="c1"># 查看目录总大小</span>
+du -h --max-depth=1               <span class="c1"># 只看一层子目录的大小</span>
+du -sh /home/hly/* | sort -rh    <span class="c1"># 按大小排序</span></code></pre>
+
+<pre><code><span class="c1"># 实战：找出当前目录最大的 5 个文件</span>
+du -ah . | sort -rh | head -5</code></pre>
+
+<h3 id="nvidia">nvidia-smi — GPU 监控（AI 工程师必备）</h3>
+
+<pre><code><span class="c1"># 基础信息</span>
+nvidia-smi                        <span class="c1"># 🔥 GPU 实时状态（显存、温度、进程）</span>
+
+<span class="c1"># 查询模式</span>
+nvidia-smi --query-gpu=name,memory.used,memory.total,temperature.gpu --format=csv
+<span class="c1"># 输出：NVIDIA GeForce RTX 2060 SUPER, 7443 MiB, 8192 MiB, 49</span>
+
+<span class="c1"># 持续监控</span>
+nvidia-smi -l 1                   <span class="c1"># 每秒刷新一次</span>
+watch -n 1 nvidia-smi             <span class="c1"># 用 watch 更稳定</span>
+
+<span class="c1"># 查看 GPU 进程</span>
+nvidia-smi pmon                   <span class="c1"># 进程监控模式</span>
+fuser -v /dev/nvidia*             <span class="c1"># 查看哪些进程在使用 GPU</span></code></pre>
+
+<div class="tip-box">
+<strong>💡 <code>watch -n 1 nvidia-smi</code> 是调试 GPU 程序的标配：</strong>在另一个终端持续监控显存和利用率，观察训练/推理过程中的 GPU 使用情况。
+</div>
+
+<!-- ═══ 网络 ═══ -->
+<h2>🌐 网络指令</h2>
+
+<h3 id="curl">curl / wget — 网络请求与下载</h3>
+
+<pre><code><span class="c1"># curl — 发送 HTTP 请求（API 调试利器）</span>
+curl http://localhost:8000/health               <span class="c1"># GET 请求</span>
+curl -s http://example.com                      <span class="c1"># silent 模式（不显示进度）</span>
+curl -o output.html http://example.com           <span class="c1"># 保存到文件</span>
+curl -I https://example.com                      <span class="c1"># 只获取响应头</span>
+
+<span class="c1"># 🔥 AI 工程师日常：测试推理服务</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer token-abc123" \
+  -d '{"model":"qwen","messages":[{"role":"user","content":"hi"}]}'</code></pre>
+
+<pre><code><span class="c1"># wget — 下载文件（支持断点续传）</span>
+wget https://example.com/file.zip               <span class="c1"># 下载文件</span>
+wget -c https://example.com/bigfile.zip         <span class="c1"># 🔥 断点续传（下载中断后继续）</span>
+wget -O output.zip https://example.com/file.zip <span class="c1"># 指定保存文件名</span>
+wget -i urls.txt                                <span class="c1"># 从文件读取多个 URL 批量下载</span></code></pre>
+
+<h3 id="ssh">ssh / scp — 远程连接与文件传输</h3>
+
+<pre><code><span class="c1"># SSH 登录远程服务器</span>
+ssh hyl@192.168.1.100              <span class="c1"># 用户名@IP</span>
+ssh -p 2222 hyl@server.com         <span class="c1"># 指定端口（默认 22）</span>
+ssh -i ~/.ssh/id_rsa hyl@server   <span class="c1"># 指定私钥文件</span>
+
+<span class="c1"># 🔥 免密登录设置（配一次永久有效）</span>
+ssh-keygen -t ed25519             <span class="c1"># 生成密钥对（一直回车）</span>
+ssh-copy-id hyl@server            <span class="c1"># 将公钥复制到服务器</span>
+<span class="c1"># 之后 ssh 就不再问密码了</span></code></pre>
+
+<pre><code><span class="c1"># SCP — 安全复制文件</span>
+scp file.txt hyl@server:/home/hyl/             <span class="c1"># 上传文件到服务器</span>
+scp -r dir/ hyl@server:/home/hyl/              <span class="c1"># 递归上传目录</span>
+scp hyl@server:/home/hyl/file.txt ./            <span class="c1"># 从服务器下载</span>
+
+<span class="c1"># rsync — 增量同步（🔥 推荐大文件和目录）</span>
+rsync -avz dir/ hyl@server:/home/hyl/dir/      <span class="c1"># 增量同步</span>
+rsync -avz --progress dir/ hyl@server:dir/     <span class="c1"># 显示进度</span>
+<span class="c1"># rsync 只传输差异部分，比 scp 快得多</span></code></pre>
+
+<h3 id="netstat">netstat / ss — 端口与服务查看</h3>
+
+<pre><code><span class="c1"># ss — 现代版 netstat（更快）</span>
+ss -tlnp                          <span class="c1"># 🔥 查看所有监听端口及其进程</span>
+ss -tuln                          <span class="c1"># TCP + UDP 监听端口</span>
+ss -antp | grep 8000              <span class="c1"># 查看端口 8000 被谁占用</span>
+
+<span class="c1"># 传统 netstat（需安装 net-tools）</span>
+netstat -tlnp                     <span class="c1"># 查看监听端口</span>
+netstat -antp                     <span class="c1"># 所有连接</span></code></pre>
+
+<pre><code><span class="c1"># 实战：端口被占用了怎么办？</span>
+ss -tlnp | grep 8000              <span class="c1"># 找到占用 8000 端口的进程</span>
+kill -9 &lt;PID&gt;                     <span class="c1"># 杀死该进程</span></code></pre>
+
+<!-- ═══ 包管理 ═══ -->
+<h2>📦 包管理指令</h2>
+
+<h3 id="apt">apt — Debian/Ubuntu 软件包管理</h3>
+
+<pre><code><span class="c1"># apt = Advanced Package Tool</span>
+sudo apt update                   <span class="c1"># 🔥 更新软件包列表（必先执行）</span>
+sudo apt upgrade                  <span class="c1"># 🔥 升级所有可升级的包</span>
+sudo apt install htop             <span class="c1"># 安装软件包</span>
+sudo apt remove htop              <span class="c1"># 卸载</span>
+sudo apt autoremove               <span class="c1"># 清理无用依赖</span>
+sudo apt search "keyword"         <span class="c1"># 搜索软件包</span>
+sudo apt show htop                <span class="c1"># 查看软件包详情</span></code></pre>
+
+<div class="tip-box">
+<strong>💡 Ubuntu 快捷键：</strong>如果你在 vLLM conda 环境里（<code>source activate vllm</code>），<code>sudo</code> 可能找不到。用 <code>sudo env "PATH=$PATH" apt install xxx</code> 或在 root shell 中直接运行。
+</div>
+
+<h3 id="pip">pip — Python 包管理</h3>
+
+<pre><code><span class="c1"># pip = Python Package Installer</span>
+pip install numpy                  <span class="c1"># 安装包</span>
+pip install numpy==1.26.0          <span class="c1"># 安装指定版本</span>
+pip install -r requirements.txt    <span class="c1"># 🔥 批量安装（项目迁移必备）</span>
+pip uninstall numpy                <span class="c1"># 卸载</span>
+pip list                           <span class="c1"># 列出已安装包</span>
+pip list --outdated               <span class="c1"># 列出有更新的包</span>
+pip freeze > requirements.txt      <span class="c1"># 🔥 导出当前环境依赖</span>
+
+<span class="c1"># 国内换源（速度快很多）</span>
+pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+<span class="c1"># 代理问题（AI 工程师常见）</span>
+unset HTTP_PROXY HTTPS_PROXY       <span class="c1"># 如果有 SOCKS 冲突，先取消代理</span>
+pip install vllm</code></pre>
+
+<h3 id="conda">conda — Python 环境管理（数据科学标配）</h3>
+
+<pre><code><span class="c1"># 环境管理</span>
+conda create -n myenv python=3.11  <span class="c1"># 🔥 创建新环境</span>
+conda activate myenv               <span class="c1"># 激活环境</span>
+conda deactivate                   <span class="c1"># 退出环境</span>
+conda env list                     <span class="c1"># 列出所有环境</span>
+conda remove -n myenv --all       <span class="c1"># 删除环境</span>
+
+<span class="c1"># 包管理</span>
+conda install numpy pytorch -c pytorch  <span class="c1"># 安装包</span>
+conda list                          <span class="c1"># 列出当前环境所有包</span>
+conda update --all                  <span class="c1"># 更新所有包</span>
+conda clean --all                   <span class="c1"># 清理缓存（释放磁盘空间）</span>
+
+<span class="c1"># 环境导出与复制</span>
+conda env export > environment.yaml <span class="c1"># 🔥 导出环境配置</span>
+conda env create -f environment.yaml <span class="c1"># 从文件创建环境</span></code></pre>
+
+<div class="info-box">
+<strong>💡 conda vs pip：</strong>conda 管理<strong>整个环境</strong>（包括 CUDA、系统库），pip 只管理 Python 包。AI 项目建议先用 conda 建环境，再用 pip 装 Python 包。
+</div>
+
+<!-- ═══ 进阶 ═══ -->
+<h2>⚡ 进阶技巧</h2>
+
+<h3 id="pipe">管道 | 与重定向 ></h3>
+
+<p>这是 Linux 最强大的设计——<strong>一个命令的输出作为另一个命令的输入</strong>。</p>
+
+<pre><code><span class="c1"># 管道 | — 串联命令</span>
+ps aux | grep python               <span class="c1"># 在进程列表中搜索 python</span>
+cat log.txt | grep "ERROR" | head -5  <span class="c1"># 多层管道</span>
+dmesg | tail -20                   <span class="c1"># 查看内核日志最后 20 行</span>
+history | grep "git"               <span class="c1"># 搜索历史命令</span></code></pre>
+
+<pre><code><span class="c1"># 重定向 > 和 >></span>
+echo "hello" > file.txt            <span class="c1"># 覆盖写入</span>
+echo "world" >> file.txt           <span class="c1"># 追加写入</span>
+ls -la > output.txt                <span class="c1"># 将 ls 的输出保存到文件</span>
+
+<span class="c1"># 错误重定向</span>
+python script.py 2> error.log      <span class="c1"># 只重定向错误（stderr）</span>
+python script.py > all.log 2>&1    <span class="c1"># 🔥 标准输出和错误都到同一个文件</span>
+python script.py &> all.log        <span class="c1"># 同上（Bash 4+ 简写）</span></code></pre>
+
+<h3 id="alias">alias / 环境变量</h3>
+
+<pre><code><span class="c1"># alias — 命令别名（省去每次输入长命令）</span>
+alias ll='ls -la'                  <span class="c1"># 临时设置</span>
+alias gpull='git pull origin master'
+alias py='python3'
+
+<span class="c1"># 🔥 永久别名：写入 ~/.bashrc</span>
+echo "alias ll='ls -la'" >> ~/.bashrc
+source ~/.bashrc                   <span class="c1"># 立即生效</span></code></pre>
+
+<pre><code><span class="c1"># 环境变量</span>
+echo $PATH                         <span class="c1"># 查看 PATH（可执行文件搜索路径）</span>
+export PATH="/my/bin:$PATH"        <span class="c1"># 临时添加路径</span>
+export CUDA_VISIBLE_DEVICES=0      <span class="c1"># 🔥 指定使用哪块 GPU</span>
+export HF_ENDPOINT=https://hf-mirror.com  <span class="c1"># HuggingFace 国内镜像</span>
+export http_proxy=socks5://127.0.0.1:7897 <span class="c1"># 设置代理</span>
+
+<span class="c1"># 查看所有环境变量</span>
+env
+env | grep CUDA                    <span class="c1"># 过滤</span></code></pre>
+
+<h3 id="script">Shell 脚本基础</h3>
+
+<pre><code><span class="c1">#!/bin/bash</span>
+<span class="c1"># 上面这行叫 shebang，告诉系统用 Bash 解释器</span>
+
+<span class="c1"># 变量</span>
+name=<span class="s">"world"</span>
+<span class="nb">echo</span> <span class="s">"Hello, $name!"</span>              <span class="c1"># 使用变量</span>
+
+<span class="c1"># 循环</span>
+<span class="k">for</span> i <span class="k">in</span> <span class="o">{</span><span class="m">1</span>..5<span class="o">}</span>; <span class="k">do</span>
+    <span class="nb">echo</span> <span class="s">"Count: $i"</span>
+<span class="k">done</span>
+
+<span class="c1"># 条件</span>
+<span class="k">if</span> <span class="o">[</span> -f <span class="s">"file.txt"</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s">"文件存在"</span>
+<span class="k">fi</span></code></pre>
+
+<pre><code><span class="c1"># 🔥 实用脚本：批量重命名</span>
+<span class="k">for</span> f <span class="k">in</span> *.txt; <span class="k">do</span>
+    mv <span class="s2">"<span class="nv">$f</span>"</span> <span class="s2">"<span class="nv">${f</span><span class="p">%.txt</span><span class="nv">}</span>.md"</span>
+<span class="k">done</span></code></pre>
+
+<pre><code><span class="c1"># 运行脚本</span>
+chmod +x script.sh                 <span class="c1"># 加执行权限</span>
+./script.sh                        <span class="c1"># 运行</span>
+bash script.sh                     <span class="c1"># 或用 bash 运行</span></code></pre>
+
+<h3 id="tmux">tmux — 终端会话管理器</h3>
+<p>在远程服务器上工作必备——即使 SSH 断开，程序也不会中断。</p>
+
+<pre><code><span class="c1"># 安装</span>
+sudo apt install tmux
+
+<span class="c1"># 基本操作</span>
+tmux new -s mysession              <span class="c1"># 🔥 创建新会话</span>
+tmux detach                        <span class="c1"># 断开会话（程序继续运行）</span>
+<span class="c1"># 快捷键：Ctrl+B 然后 D</span>
+tmux attach -t mysession           <span class="c1"># 🔥 重新连接会话</span>
+tmux ls                            <span class="c1"># 列出所有会话</span>
+
+<span class="c1"># 分屏（Ctrl+B 后）</span>
+<span class="c1">#   % — 垂直分屏</span>
+<span class="c1">#   " — 水平分屏</span>
+<span class="c1">#   方向键 — 切换分屏</span>
+<span class="c1">#   Ctrl+方向键 — 调整分屏大小</span>
+
+<span class="c1"># 🔥 实战场景：训练模型时</span>
+tmux new -s train
+<span class="c1"># 在 tmux 里运行 python train.py</span>
+<span class="c1"># Ctrl+B, D 脱离会话</span>
+<span class="c1"># 即使关闭终端，训练仍在继续</span>
+<span class="c1"># 回来时：tmux attach -t train</span></code></pre>
+
+<!-- ═══ 附录 ═══ -->
+<h2>📋 速查表</h2>
+
+<table class="cmd-table">
+<tr><th>分类</th><th>命令</th><th>作用</th></tr>
+<tr><td rowspan="5">文件</td><td><code>ls -la</code></td><td>列出所有文件（含隐藏）</td></tr>
+<tr><td><code>cp -r</code></td><td>复制目录</td></tr>
+<tr><td><code>mv</code></td><td>移动/重命名</td></tr>
+<tr><td><code>rm -rf</code></td><td>⚠️ 强制删除</td></tr>
+<tr><td><code>find . -name "*.py"</code></td><td>查找文件</td></tr>
+<tr><td rowspan="4">查看</td><td><code>cat -n</code></td><td>查看文件（含行号）</td></tr>
+<tr><td><code>tail -f</code></td><td>实时追踪日志</td></tr>
+<tr><td><code>grep -rn "xxx" .</code></td><td>递归搜索文本</td></tr>
+<tr><td><code>less</code></td><td>分页浏览</td></tr>
+<tr><td rowspan="4">系统</td><td><code>ps aux</code></td><td>查看所有进程</td></tr>
+<tr><td><code>nvidia-smi -l 1</code></td><td>GPU 实时监控</td></tr>
+<tr><td><code>df -h</code></td><td>磁盘空间</td></tr>
+<tr><td><code>du -sh *</code></td><td>目录大小</td></tr>
+<tr><td rowspan="3">网络</td><td><code>curl</code></td><td>HTTP API 测试</td></tr>
+<tr><td><code>ss -tlnp</code></td><td>查看监听端口</td></tr>
+<tr><td><code>ssh-copy-id</code></td><td>配置免密登录</td></tr>
+<tr><td rowspan="3">包</td><td><code>pip install -r</code></td><td>批量安装 Python 包</td></tr>
+<tr><td><code>conda create -n</code></td><td>创建 conda 环境</td></tr>
+<tr><td><code>sudo apt update</code></td><td>更新包列表</td></tr>
+<tr><td rowspan="3">技巧</td><td><code>命令 | grep xxx</code></td><td>管道过滤</td></tr>
+<tr><td><code>命令 > file 2>&1</code></td><td>重定向输出和错误</td></tr>
+<tr><td><code>tmux new -s name</code></td><td>持久会话</td></tr>
+</table>
+
+<div class="info-box">
+<strong>📌 学习建议：</strong>
+<ul>
+  <li>不要死记命令，理解概念和查找方法更重要</li>
+  <li><code>man 命令</code> 或 <code>命令 --help</code> 随时查看帮助</li>
+  <li>多练是最好的学习方式——日常操作尽量用命令行</li>
+  <li>收藏这份文档或打印速查表，随时参考</li>
+</ul>
+</div>
+
+<hr style="border-color: var(--border); margin: 2rem 0;">
+
+<div class="tip-box">
+<strong>🔍 遇到不会的命令怎么办？</strong>
+<pre><code><span class="c1"># 1. 查帮助</span>
+ls --help | head -20
+man ls
+
+<span class="c1"># 2. 快速搜索（用 apropos）</span>
+apropos "compress"                 <span class="c1"># 搜索所有与压缩相关的命令</span>
+
+<span class="c1"># 3. 查历史</span>
+history | grep "docker"
+<span class="c1"># 然后 !123 重新执行第 123 条历史命令</span>
+
+<span class="c1"># 4. 问 AI</span>
+<span class="c1"># "在 Linux 中如何找到最近修改过的文件？"</span></code></pre>
+</div>
+
+<p class="footer">
+  基于 Ubuntu 24.04 / Bash 实操编写 · 最后更新：2026 年 7 月 · 适用于 AI/ML 工程师
+</p>
+
+</div>
+</div>
+
+</body>
+</html>

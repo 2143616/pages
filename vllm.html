@@ -162,6 +162,9 @@ td { color: var(--fg2); }
     <li><a href="#sec13">13. 生产环境配置</a></li>
     <li><a href="#sec14">14. 常见问题与排错</a></li>
     <li><a href="#sec15">15. 综合实战：完整部署脚本</a></li>
+    <li><a href="#case-rtx2060">📋 附录: RTX 2060 部署</a></li>
+    <li><a href="#case-4bit">🔢 附录2: 4-bit 量化</a></li>
+    <li><a href="#case-accel">🚀 附录3: 加速优化与测速</a></li>
   </ul>
 </div>
 
@@ -1460,6 +1463,830 @@ BASE_URL = <span class="str">"http://localhost:8000"</span>
   <p>📘 vLLM 从入门到精通 · 教学文档</p>
   <p>vLLM 版本 0.8.x · 文档更新于 2026-07</p>
 </div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 以下为实战部署案例：RTX 2060 SUPER + vLLM 0.24.0 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<section id="case-rtx2060">
+<h2>附录：实战部署案例 — RTX 2060 SUPER + Qwen2.5-1.5B</h2>
+<p class="subtitle">从零搭建 vLLM 推理服务并完成速度基准测试 · 2026-07</p>
+
+<style>
+.case-badge { display:inline-block; padding:.2rem .6rem; border-radius:999px; font-size:.7rem; font-weight:600; margin:.3rem; }
+.case-badge-blue { background:rgba(108,140,255,.15); color:#6c8cff; border:1px solid rgba(108,140,255,.25); }
+.case-badge-green { background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.2); }
+.case-badge-orange { background:rgba(251,146,60,.12); color:#fb923c; border:1px solid rgba(251,146,60,.2); }
+.case-info-box, .case-tip-box, .case-warn-box { padding:.85rem 1.1rem; border-radius:10px; margin:1.2rem 0; border-left:3px solid; }
+.case-info-box { background:rgba(108,140,255,.08); border-color:#6c8cff; }
+.case-tip-box  { background:rgba(74,222,128,.06); border-color:#4ade80; }
+.case-warn-box { background:rgba(251,146,60,.08); border-color:#fb923c; }
+</style>
+
+<p>
+  <span class="case-badge case-badge-blue">vLLM 0.24.0</span>
+  <span class="case-badge case-badge-green">RTX 2060 SUPER</span>
+  <span class="case-badge case-badge-orange">8GB VRAM</span>
+  <span class="case-badge case-badge-blue">~95 tok/s</span>
+</p>
+
+<h3>硬件环境</h3>
+<table class="table">
+<tr><th>组件</th><th>型号/规格</th></tr>
+<tr><td>GPU</td><td>NVIDIA GeForce RTX 2060 SUPER (8GB GDDR6, SM 7.5)</td></tr>
+<tr><td>驱动</td><td>595.71.05 · CUDA 13.2</td></tr>
+<tr><td>CPU</td><td>Intel Core i7-9700 (8核 3.0GHz)</td></tr>
+<tr><td>内存</td><td>16GB DDR4</td></tr>
+<tr><td>系统</td><td>Ubuntu 24.04 · Linux 6.17.0-35</td></tr>
+</table>
+
+<h3>1. 环境搭建</h3>
+
+<pre><code># 创建 conda 环境
+conda create -n vllm python=3.11 -y
+conda activate vllm
+
+# 安装 vLLM（如遇 SOCKS 代理问题先 unset 代理）
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy
+pip install vllm
+
+# 验证安装
+python -c "import vllm; print(vllm.__version__)"  # → 0.24.0</code></pre>
+
+<h3>2. NVFP4 兼容性验证</h3>
+
+<pre><code>from vllm.model_executor.layers.quantization.modelopt import ModelOptNvFp4Config
+print(ModelOptNvFp4Config.get_min_capability())  # → 75 (Turing SM 7.5 ✅)</code></pre>
+
+<table class="table">
+<tr><th>量化格式</th><th>最低 SM</th><th>RTX 2060 SUPER</th></tr>
+<tr><td>NVFP4 (ModelOpt)</td><td>SM 75</td><td>✅ 理论兼容</td></tr>
+<tr><td>MXFP4</td><td>SM 80</td><td>❌ 不兼容（需 Ampere+）</td></tr>
+<tr><td>FP8 (W8A8)</td><td>SM 89</td><td>❌ 不兼容（需 Ada+）</td></tr>
+</table>
+
+<div class="case-warn-box">
+<strong>⚠️ 注意：</strong>RTX 2060 SUPER <strong>理论支持 NVFP4</strong>，但 vLLM 的 NVFP4 实现不支持动态量化，需要预量化 checkpoint。目前 HuggingFace 上所有预量化 NVFP4 模型文件都超过 8GB（最小 9.79GB），无法放入 8GB VRAM。
+</div>
+
+<h3>3. 模型选择与下载</h3>
+
+<table class="table">
+<tr><th>模型</th><th>参数量</th><th>文件大小</th></tr>
+<tr><td>Qwen2.5-1.5B-Instruct</td><td>1.5B</td><td>3.09 GB</td></tr>
+</table>
+
+<pre><code># 从国内镜像下载
+export HF_ENDPOINT=https://hf-mirror.com
+wget -c -O model.safetensors \
+  "https://hf-mirror.com/Qwen/Qwen2.5-1.5B-Instruct/resolve/main/model.safetensors"</code></pre>
+
+<h3>4. 启动服务</h3>
+
+<pre><code>vllm serve /path/to/models/Qwen2.5-1.5B-Instruct \
+  --host 0.0.0.0 --port 8000 \
+  --max-model-len 2048 \
+  --gpu-memory-utilization 0.85 \
+  --trust-remote-code \
+  --dtype float16 \
+  --api-key token-abc123</code></pre>
+
+<div class="case-tip-box">
+<strong>💡 </strong>RTX 2060 SUPER 不支持 bfloat16，日志中会出现 <code>Falling back to torch.float16</code> 警告，这是正常的。
+</div>
+
+<h3>5. 测试验证</h3>
+
+<pre><code># curl 测试
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer *** \
+  -d '{
+    "model": "/path/to/Qwen2.5-1.5B-Instruct",
+    "messages": [{"role": "user", "content": "你好"}],
+    "max_tokens": 50
+  }'
+
+# Python 客户端
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="token-abc123")
+resp = client.chat.completions.create(
+    model="/path/to/Qwen2.5-1.5B-Instruct",
+    messages=[{"role":"user","content":"什么是深度学习？"}],
+    max_tokens=100)
+print(resp.choices[0].message.content)</code></pre>
+
+<h3>6. 速度测试结果</h3>
+
+<table class="table">
+<tr><th>测试</th><th>生成 tokens</th><th>耗时</th><th>速度</th></tr>
+<tr><td>Test 1</td><td>100</td><td>1.06s</td><td><strong>94.1 tok/s</strong></td></tr>
+<tr><td>Test 2</td><td>100</td><td>1.04s</td><td><strong>95.8 tok/s</strong></td></tr>
+<tr><td>Test 3</td><td>8</td><td>0.09s</td><td><strong>84.7 tok/s</strong></td></tr>
+<tr><td colspan="3"><strong>平均</strong></td><td><strong>94.5 tok/s</strong></td></tr>
+</table>
+
+<h3>7. 常见问题</h3>
+
+<div class="case-warn-box">
+<strong>Q：SOCKS 代理导致 pip 安装失败？</strong><br>
+<strong>A：</strong><code>unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy</code> 后再安装。
+</div>
+
+<div class="case-warn-box">
+<strong>Q：CUDA out of memory？</strong><br>
+<strong>A：</strong>降低 <code>--max-model-len</code> 或 <code>--gpu-memory-utilization</code>，或换更小模型。
+</div>
+
+<div class="case-warn-box">
+<strong>Q：NVFP4 用不了？</strong><br>
+<strong>A：</strong>硬件 SM 7.5 支持 NVFP4，但目前缺少 <4B 的预量化模型。可用 NVIDIA ModelOpt 自行量化小模型，或在 DGX Spark (Blackwell) 上直接跑 NVFP4 大模型。
+</div>
+
+<hr>
+<p style="text-align:center;color:#8b92a5;font-size:.78rem;">
+  基于实际操作流程编写 · 最后更新：2026 年 7 月
+</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 以下为 4-bit 量化实战案例 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<section id="case-4bit">
+<h2>附录 2：bitsandbytes 4-bit (NF4) 量化部署</h2>
+<p class="subtitle">在 vLLM 中对 Qwen2.5-1.5B 应用动态 4-bit 量化 · 2026-07</p>
+
+<style>
+.case-badge { display:inline-block; padding:.2rem .6rem; border-radius:999px; font-size:.7rem; font-weight:600; margin:.3rem; }
+.case-badge-blue { background:rgba(108,140,255,.15); color:#6c8cff; border:1px solid rgba(108,140,255,.25); }
+.case-badge-green { background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.2); }
+.case-badge-orange { background:rgba(251,146,60,.12); color:#fb923c; border:1px solid rgba(251,146,60,.2); }
+.case-info-box, .case-tip-box, .case-warn-box, .case-err-box { padding:.85rem 1.1rem; border-radius:10px; margin:1.2rem 0; border-left:3px solid; }
+.case-info-box { background:rgba(108,140,255,.08); border-color:#6c8cff; }
+.case-tip-box  { background:rgba(74,222,128,.06); border-color:#4ade80; }
+.case-warn-box { background:rgba(251,146,60,.08); border-color:#fb923c; }
+.case-err-box  { background:rgba(248,113,113,.06); border-color:#f87171; }
+</style>
+
+<p>
+  <span class="case-badge case-badge-blue">bitsandbytes 0.49.2</span>
+  <span class="case-badge case-badge-green">NF4 4-bit</span>
+  <span class="case-badge case-badge-orange">动态量化</span>
+  <span class="case-badge case-badge-blue">~53 tok/s</span>
+</p>
+
+<h3>概述</h3>
+
+<p>vLLM 支持使用 <strong>bitsandbytes</strong> 库对模型进行<strong>动态 4-bit 量化</strong>（NF4 格式）。与 AWQ/GPTQ 需要预量化不同，bitsandbytes 在模型加载时实时将权重转换为 4-bit，不需要预处理工具链，<strong>开箱即用</strong>。</p>
+
+<table class="table">
+<tr><th>量化方式</th><th>需要预量化</th><th>推理速度</th><th>精度损失</th><th>适用场景</th></tr>
+<tr><td>bitsandbytes NF4 (动态)</td><td>❌ 不需要</td><td>较慢（实时解量化）</td><td>中等</td><td>快速验证、小模型省显存</td></tr>
+<tr><td>AWQ (静态)</td><td>✅ 需要</td><td>快（原生 4-bit 计算）</td><td>低</td><td>生产部署</td></tr>
+<tr><td>GPTQ (静态)</td><td>✅ 需要</td><td>快</td><td>低</td><td>生产部署</td></tr>
+<tr><td>NVFP4 (静态)</td><td>✅ 需要</td><td>快</td><td>低</td><td>NVIDIA 生态</td></tr>
+</table>
+
+<h3>安装依赖</h3>
+
+<pre><code># 安装 bitsandbytes
+pip install bitsandbytes
+
+# 验证安装
+python -c "import bitsandbytes; print(bitsandbytes.__version__)"
+# → 0.49.2</code></pre>
+
+<div class="case-tip-box">
+<strong>💡 </strong>bitsandbytes 在 vLLM 0.24.0 中已内置集成，安装后即可使用 <code>--quantization bitsandbytes</code> 参数，无需额外配置。
+</div>
+
+<h3>启动 4-bit 量化服务</h3>
+
+<p>与 FP16 部署的唯一区别是增加 <code>--quantization bitsandbytes --load-format bitsandbytes</code> 两个参数：</p>
+
+<pre><code># 停止之前的 FP16 服务（Ctrl+C 或 kill 进程）
+# 然后用 4-bit 量化启动
+
+vllm serve /path/to/models/Qwen2.5-1.5B-Instruct \
+  --host 0.0.0.0 --port 8000 \
+  --max-model-len 2048 \
+  --gpu-memory-utilization 0.85 \
+  --trust-remote-code \
+  --dtype float16 \
+  --quantization bitsandbytes \
+  --load-format bitsandbytes \
+  --api-key token-abc123</code></pre>
+
+<div class="case-info-box">
+<strong>📌 参数说明：</strong>
+<ul>
+  <li><code>--quantization bitsandbytes</code> — 启用 bitsandbytes 4-bit NF4 量化</li>
+  <li><code>--load-format bitsandbytes</code> — 以 bitsandbytes 格式加载权重（必须在 quantization 之后指定）</li>
+  <li>其他参数与 FP16 部署完全一致</li>
+</ul>
+</div>
+
+<h3>启动日志关键输出</h3>
+
+<pre><code># 权重转换成 4-bit 格式
+...
+# CUDA Graph 捕获完成
+Capturing CUDA graphs: 100%|██████████| 51/51
+
+# 引擎初始化完成（约 52 秒）
+init engine (profile, create kv cache, warmup model) took 52.46 s
+
+# API 服务就绪
+Supported tasks: ['generate']
+Uvicorn running on http://0.0.0.0:8000</code></pre>
+
+<h3>测试验证</h3>
+
+<pre><code># 列出模型
+curl http://localhost:8000/v1/models \
+  -H "Authorization: Bearer *** 
+
+# 对话测试
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer *** \
+  -d '{
+    "model": "/path/to/Qwen2.5-1.5B-Instruct",
+    "messages": [{"role": "user", "content": "什么是人工智能？"}],
+    "max_tokens": 100
+  }'</code></pre>
+
+<pre><code># Python 测试
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="token-abc123")
+
+resp = client.chat.completions.create(
+    model="/path/to/Qwen2.5-1.5B-Instruct",
+    messages=[{"role": "user", "content": "Explain deep learning in one sentence."}],
+    max_tokens=50
+)
+print(resp.choices[0].message.content)</code></pre>
+
+<h3>FP16 vs 4-bit 性能对比</h3>
+
+<table class="table">
+<tr><th>指标</th><th>FP16</th><th>bitsandbytes 4-bit NF4</th></tr>
+<tr><td><strong>模型权重大小</strong></td><td>~3.0 GB</td><td>~0.75 GB</td></tr>
+<tr><td><strong>VRAM 占用</strong></td><td>~7.4 GB (92%)</td><td>~7.1 GB (87%)</td></tr>
+<tr><td><strong>生成速度</strong></td><td><strong>94.5 tok/s</strong></td><td><strong>52.7 tok/s</strong></td></tr>
+<tr><td>Test 1 (100 tokens)</td><td>1.06s → 94.1 tok/s</td><td>2.39s → 41.8 tok/s</td></tr>
+<tr><td>Test 2 (100 tokens)</td><td>1.04s → 95.8 tok/s</td><td>1.40s → 71.4 tok/s</td></tr>
+<tr><td>TTFT (首 Token 延迟)</td><td>~0.09s</td><td>~0.3s（量化解码开销）</td></tr>
+</table>
+
+<h3>速度分析</h3>
+
+<p><strong>为什么 4-bit 反而更慢？</strong></p>
+
+<p>bitsandbytes 的 NF4 是<strong>动态量化</strong>格式：</p>
+<ul>
+  <li>权重以 4-bit NF4 格式存储（省显存 ✅）</li>
+  <li>但每次计算前必须<strong>实时解量化</strong>回 FP16（增加计算开销 ❌）</li>
+  <li>在 RTX 2060 SUPER（Turing）上缺乏原生 4-bit Tensor Core 支持，解量化完全靠 CUDA 核心完成</li>
+</ul>
+
+<p><strong>什么时候 4-bit 量化有意义？</strong></p>
+<ul>
+  <li>当<strong>显存不够</strong>跑 FP16 版本时——比如 8GB VRAM 想跑 7B 模型</li>
+  <li>Qwen2.5-1.5B 本身很小，4-bit 的优势无法体现</li>
+  <li>对于 7B 模型：FP16 需 ~14GB（不够）→ 4-bit 仅 ~3.5GB（够！）</li>
+</ul>
+
+<h4>4-bit 量化后显存为什么还是那么高？</h4>
+
+<p>这是 vLLM 的显存分配策略导致的常见困惑。实测对比：</p>
+
+<table class="table">
+<tr><th>项目</th><th>FP16</th><th>4-bit NF4</th><th>说明</th></tr>
+<tr><td>模型权重</td><td>~3000 MB</td><td><strong>~750 MB</strong></td><td>✅ 4-bit 确实省了 2250 MB</td></tr>
+<tr><td>CUDA Graph</td><td>~707 MB</td><td>~707 MB</td><td>不变</td></tr>
+<tr><td><strong>vLLM 预分配总额</strong></td><td><strong>~7373 MB</strong></td><td><strong>~7373 MB</strong></td><td>❌ 一样！受 <code>gpu-memory-utilization</code> 控制</td></tr>
+<tr><td>额外空间去向</td><td>—</td><td>→ KV Cache / Batch 容量</td><td>✅ 省下的内存被内部重分配</td></tr>
+<tr><td><strong>实际使用</strong></td><td><strong>~7443 MB</strong></td><td><strong>~7665 MB</strong></td><td>KV Cache 更大所以反而多了</td></tr>
+</table>
+
+<p><strong>根本原因</strong>：vLLM 在启动时根据 <code>--gpu-memory-utilization</code>（默认 0.9）一次性预分配显存。4-bit 省下的权重空间 <strong>没有被释放给系统</strong>，而是被 vLLM 内部重新分配给 <strong>更大的 KV Cache</strong> 和 <strong>更大的 batch 容量</strong>。</p>
+
+<p><strong>所以 4-bit 不是用来给当前模型省显存的</strong>——对同一个模型，vLLM 预分配的总量不变。它的真正价值是：<strong>在同样的预分配空间里，塞进一个更大的模型</strong>。</p>
+
+<table class="table">
+<tr><th>场景</th><th>FP16</th><th>4-bit NF4</th></tr>
+<tr><td>Qwen2.5-1.5B（权重）</td><td>~3 GB ✅ 放得下</td><td>~0.75 GB ✅ 更小</td></tr>
+<tr><td>Qwen2.5-7B（权重）</td><td>~14 GB ❌ 8GB 不够</td><td>~3.5 GB ✅ 8GB 够</td></tr>
+<tr><td>Llama-3.1-8B（权重）</td><td>~16 GB ❌</td><td>~4 GB ✅ 刚好</td></tr>
+</table>
+
+<div class="case-info-box">
+<strong>📌 一句话：</strong>4-bit 量化的价值不是让当前模型更省显存，而是<strong>让本来放不下的模型变得放得下</strong>。如果你的模型 FP16 已经能跑，就不需要 4-bit。
+</div>
+
+<div class="case-tip-box">
+<strong>💡 推荐策略：</strong>
+<ul>
+  <li>显存充足 → <strong>FP16</strong>（速度优先）</li>
+  <li>显存刚好不够 → <strong>bitsandbytes 4-bit</strong>（省显存，能跑起来）</li>
+  <li>追求速度 &amp; 精度 → <strong>AWQ/GPTQ</strong>（静态量化，需要预量化工具）</li>
+  <li>NVIDIA 新硬件 → <strong>NVFP4</strong>（原生 4-bit 计算，速度快）</li>
+</ul>
+</div>
+
+<h3>常见问题</h3>
+
+<div class="case-err-box">
+<strong>Q：ModuleNotFoundError: No module named 'bitsandbytes'</strong><br>
+<strong>A：</strong>先安装：<code>pip install bitsandbytes</code>。安装后验证：<code>python -c "import bitsandbytes; print(bitsandbytes.__version__)"</code>
+</div>
+
+<div class="case-err-box">
+<strong>Q：Warning: bitsandbytes quantization is not compatible with CUDA graphs</strong><br>
+<strong>A：</strong>vLLM 会自动处理兼容性问题。如果遇到错误，可以加 <code>--enforce-eager</code> 参数禁用 CUDA graph。
+</div>
+
+<div class="case-err-box">
+<strong>Q：开启投机解码后 4-bit 速度反而更慢？有实测数据吗？</strong><br>
+<strong>A：</strong>有。在 RTX 2060 SUPER + 1.5B + 4-bit 上用 ngram 投机解码的实测日志：<br>
+<pre><code>SpecDecoding metrics:
+  Mean acceptance length: 1.28    # 猜 5 个 token，平均只接受 1.28 个
+  Per-position acceptance rate:
+    0.125, 0.094, 0.062, 0.000, 0.000
+    # 第1个token接受率12.5%，第2个9.4%，第3个6.2%
+    # 第4、5个完全被拒（0%）
+  Avg Draft acceptance rate: 5.6%  # 整体接受率仅 5.6%</code></pre>
+<p>ngram 从 prompt 中匹配片段，但对自由生成场景命中率极低（5.6%）。猜了 5 个 token，实际只接受了不到 1.3 个，验证开销反而超过了直接解码。投机解码在 <strong>70B+ 大模型</strong> 上才能发挥价值（见附录 3 第 8 节）。</p>
+</div>
+
+<div class="case-err-box">
+<strong>Q：4-bit 量化后速度比 FP16 还慢？</strong><br>
+<strong>A：</strong>正常现象。动态量化需要在推理时实时解量化，增加了计算开销。对于小模型（<3B），FP16 通常更快。4-bit 的真正价值在于让<b>大模型</b>能在有限显存上运行。
+</div>
+
+<div class="case-err-box">
+<strong>Q：能不能用 AWQ 代替 bitsandbytes？</strong><br>
+<strong>A：</strong>可以，但 AWQ 需要先用量化工具生成 AWQ 格式的 checkpoint，然后 vLLM 用 <code>--quantization awq</code> 加载。bitsandbytes 的优势是无需预处理，即装即用。
+</div>
+
+<hr>
+<p style="text-align:center;color:#8b92a5;font-size:.78rem;">
+  基于实际操作流程编写 · 最后更新：2026 年 7 月
+</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 以下为模型加速优化与速度测试教程 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<section id="case-accel">
+<h2>附录 3：vLLM 模型加速优化与速度测试</h2>
+<p class="subtitle">基于文档第 7 节加速技术，对 Qwen2.5-1.5B 进行优化并基准测试 · 2026-07</p>
+
+<style>
+.case-badge { display:inline-block; padding:.2rem .6rem; border-radius:999px; font-size:.7rem; font-weight:600; margin:.3rem; }
+.case-badge-blue { background:rgba(108,140,255,.15); color:#6c8cff; border:1px solid rgba(108,140,255,.25); }
+.case-badge-green { background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.2); }
+.case-badge-orange { background:rgba(251,146,60,.12); color:#fb923c; border:1px solid rgba(251,146,60,.2); }
+.case-info-box, .case-tip-box, .case-warn-box, .case-err-box { padding:.85rem 1.1rem; border-radius:10px; margin:1.2rem 0; border-left:3px solid; }
+.case-info-box { background:rgba(108,140,255,.08); border-color:#6c8cff; }
+.case-tip-box  { background:rgba(74,222,128,.06); border-color:#4ade80; }
+.case-warn-box { background:rgba(251,146,60,.08); border-color:#fb923c; }
+.case-err-box  { background:rgba(248,113,113,.06); border-color:#f87171; }
+</style>
+
+<p>
+  <span class="case-badge case-badge-blue">vLLM 0.24.0</span>
+  <span class="case-badge case-badge-green">CUDA Graph</span>
+  <span class="case-badge case-badge-orange">Prefix Cache</span>
+  <span class="case-badge case-badge-blue">59.6 tok/s</span>
+</p>
+
+<h3>概述</h3>
+
+<p>vLLM 内置了多项加速技术。本文档基于官方教程第 7 节的加速策略，对已部署的 Qwen2.5-1.5B 模型进行优化，并对比优化前后的性能差异。</p>
+
+<table class="table">
+<tr><th>加速技术</th><th>vLLM 默认状态</th><th>文档说明的加速效果</th></tr>
+<tr><td>CUDA Graph</td><td>✅ 默认开启</td><td>延迟降低 20~40%，吞吐提升 10~30%</td></tr>
+<tr><td>FlashAttention</td><td>✅ 默认开启</td><td>长上下文加速 2~4 倍</td></tr>
+<tr><td>连续批处理</td><td>✅ 默认开启</td><td>吞吐提升 2~4 倍</td></tr>
+<tr><td>前缀缓存 (Prefix Caching)</td><td>✅ 默认开启（V1）</td><td>长 context 加速 2~3 倍</td></tr>
+<tr><td>分块预填充 (Chunked Prefill)</td><td>✅ 默认开启（V1）</td><td>P99 延迟降低，高并发友好</td></tr>
+<tr><td>投机解码</td><td>❌ 需要额外配置</td><td>1.5~3×（需要草稿模型）</td></tr>
+</table>
+
+<h3>1. 核心加速参数解析</h3>
+
+<h4>--gpu-memory-utilization</h4>
+<p>控制 vLLM 使用 GPU 显存的比例（默认 0.9）。剩余部分留给 CUDA Graph 和其他开销。</p>
+<ul>
+  <li><strong>增大</strong>（0.9~0.95）：更多显存用于 KV Cache → 支持更大 batch 和更长上下文</li>
+  <li><strong>减小</strong>（0.7~0.85）：留更多余量，避免 OOM</li>
+  <li>对于 8GB VRAM：0.85 使用 ~6.8GB，0.9 使用 ~7.2GB</li>
+</ul>
+
+<h4>--max-num-seqs</h4>
+<p>最多同时处理的请求数（默认 256）。</p>
+<ul>
+  <li><strong>增大</strong>（256→1024）：可同时处理更多请求，提高吞吐（适合离线批处理）</li>
+  <li><strong>减小</strong>（256→8）：减少排队延迟，降低单请求延迟（适合实时对话）</li>
+</ul>
+
+<h4>--max-num-batched-tokens</h4>
+<p>每批最多处理多少 token（默认 2048~8192）。</p>
+<ul>
+  <li>增大可让 GPU 更饱和，提升吞吐</li>
+  <li>受 <code>gpu-memory-utilization</code> 限制，设太大可能 OOM</li>
+</ul>
+
+<h4>--enable-prefix-caching</h4>
+<p>缓存相同 prompt 前缀的 KV Cache。vLLM V1 引擎默认开启。</p>
+<ul>
+  <li>固定 system prompt、多轮对话场景收益大</li>
+  <li>监控指标：<code>gpu_prefix_cache_hit</code> 命中率</li>
+</ul>
+
+<h4>--enable-chunked-prefill</h4>
+<p>把长 prompt 切成小块，与 Decode 交错执行。V1 引擎默认开启。</p>
+<ul>
+  <li>避免长 prompt "霸占" GPU 导致其他请求等待</li>
+  <li>降低 P99 延迟</li>
+</ul>
+
+<h4>--enforce-eager</h4>
+<p>禁用 CUDA Graph，每步都走 Python 调度。</p>
+<ul>
+  <li><strong>优点</strong>：减少显存占用（CUDA Graph 约 0.6~1GB），调试更方便</li>
+  <li><strong>缺点</strong>：速度下降 20~40%（见文档 7.1 节）</li>
+  <li><strong>适用</strong>：bitsandbytes 兼容性问题、低显存场景、调试</li>
+</ul>
+
+<h3>2. 优化前后的启动命令对比</h3>
+
+<table class="table">
+<tr><th>配置</th><th>基础版（附录 2）</th><th>🚀 优化版</th></tr>
+<tr>
+<td>gpu-memory-utilization</td><td>0.85</td><td><strong>0.9</strong></td>
+</tr>
+<tr>
+<td>max-num-seqs</td><td>默认</td><td><strong>256</strong></td>
+</tr>
+<tr>
+<td>max-num-batched-tokens</td><td>默认</td><td><strong>8192</strong></td>
+</tr>
+<tr><td>prefix-caching</td><td>默认开启</td><td>显式指定</td></tr>
+<tr><td>chunked-prefill</td><td>默认开启</td><td>显式指定</td></tr>
+</table>
+
+<p>优化版启动命令：</p>
+
+<pre><code>vllm serve /path/to/models/Qwen2.5-1.5B-Instruct \
+  --host 0.0.0.0 --port 8000 \
+  --max-model-len 2048 \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --dtype float16 \
+  --quantization bitsandbytes \
+  --load-format bitsandbytes \
+  --max-num-seqs 256 \
+  --max-num-batched-tokens 8192 \
+  --enable-prefix-caching \
+  --enable-chunked-prefill \
+  --api-key token-abc123</code></pre>
+
+<h3>3. 性能提升实测对比</h3>
+
+<table class="table">
+<tr><th>测试场景</th><th>基础版</th><th>🚀 优化版</th><th>提升</th></tr>
+<tr><td><strong>单请求平均速度</strong></td><td>52.7 tok/s</td><td><strong>59.6 tok/s</strong></td><td><strong>+13%</strong></td></tr>
+<tr><td>Run 1 (100 tokens)</td><td>2.39s → 41.8 tok/s</td><td>2.70s → 37.0 tok/s</td><td>首次慢（CUDA Graph 预热）</td></tr>
+<tr><td>Run 2 (100 tokens)</td><td>1.40s → 71.4 tok/s</td><td>1.41s → 70.8 tok/s</td><td>~持平</td></tr>
+<tr><td>Run 3 (100 tokens)</td><td>—</td><td>1.41s → 70.8 tok/s</td><td>稳定</td></tr>
+<tr><td><strong>并发吞吐 (5 req)</strong></td><td>—</td><td><strong>57.7 tok/s</strong></td><td>系统总吞吐</td></tr>
+<tr><td><strong>前缀缓存</strong></td><td>—</td><td><strong>~63 tok/s</strong></td><td>稳定重复请求</td></tr>
+<tr><td>GPU 显存</td><td>7.1 GB (87%)</td><td><strong>7.7 GB (94%)</strong></td><td>更多 KV Cache</td></tr>
+</table>
+
+<h3>4. 速度测试教程</h3>
+
+<p>以下提供三种测速方式，从简单到全面。</p>
+
+<h4>方式一：curl 快速测试</h4>
+
+<p>最简单的单次测试，适合快速验证：</p>
+
+<pre><code># 计时请求（Linux time 命令）
+/usr/bin/time -f "real %e" curl -s --max-time 60 \
+  http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer *** \
+  -d '{
+    "model": "/path/to/Qwen2.5-1.5B-Instruct",
+    "messages": [{"role": "user", "content": "Write a paragraph about AI."}],
+    "max_tokens": 100
+  }' | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+u=d['usage']
+print(f'prompt={u[\"prompt_tokens\"]} gen={u[\"completion_tokens\"]}')
+"</code></pre>
+
+<h4>方式二：Python 测速脚本</h4>
+
+<p>标准化的多轮测试脚本，适合对比不同配置：</p>
+
+<pre><code><span class="c1"># benchmark.py — vLLM 通用测速脚本</span>
+<span class="kn">import</span> requests, json, time
+
+URL = <span class="s">"http://localhost:8000/v1/chat/completions"</span>
+HEADERS = {<span class="s">"Content-Type"</span>: <span class="s">"application/json"</span>,
+           <span class="s">"Authorization"</span>: <span class="s">"Bearer token-abc123"</span>}
+MODEL = <span class="s">"/path/to/Qwen2.5-1.5B-Instruct"</span>
+
+<span class="c1"># ── 单请求延迟测试 ──</span>
+<span class="nb">print</span>(<span class="s">"单请求延迟测试:"</span>)
+payload = {
+    <span class="s">"model"</span>: MODEL,
+    <span class="s">"messages"</span>: [{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Write a paragraph."</span>}],
+    <span class="s">"max_tokens"</span>: <span class="mi">100</span>, <span class="s">"temperature"</span>: <span class="mf">0.1</span>
+}
+<span class="k">for</span> i <span class="ow">in</span> <span class="nb">range</span>(<span class="mi">3</span>):
+    start = time.time()
+    r = requests.post(URL, headers=HEADERS, json=payload, timeout=<span class="mi">60</span>)
+    elapsed = time.time() - start
+    data = r.json()
+    ct = data[<span class="s">'usage'</span>][<span class="s">'completion_tokens'</span>]
+    <span class="nb">print</span>(<span class="s">f"  Run {i+1}: {elapsed:.2f}s gen={ct} {ct/elapsed:.1f} tok/s"</span>)
+
+<span class="c1"># ── 并发吞吐测试 ──</span>
+<span class="kn">import</span> concurrent.futures
+<span class="nb">print</span>(<span class="s">"\n并发吞吐测试 (5 个并发请求):"</span>)
+
+<span class="k">def</span> <span class="nf">send_req</span>(<span class="n">idx</span>):
+    start = time.time()
+    r = requests.post(URL, headers=HEADERS, json=payload, timeout=<span class="mi">60</span>)
+    elapsed = time.time() - start
+    ct = r.json()[<span class="s">'usage'</span>][<span class="s">'completion_tokens'</span>]
+    <span class="k">return</span> idx, elapsed, ct
+
+start = time.time()
+<span class="k">with</span> concurrent.futures.ThreadPoolExecutor(max_workers=<span class="mi">5</span>) <span class="k">as</span> ex:
+    futures = [ex.submit(send_req, i) <span class="k">for</span> i <span class="ow">in</span> <span class="nb">range</span>(<span class="mi">5</span>)]
+    results = [f.result() <span class="k">for</span> f <span class="ow">in</span> concurrent.futures.as_completed(futures)]
+
+total_time = time.time() - start
+total_tokens = <span class="nb">sum</span>(r[<span class="mi">2</span>] <span class="k">for</span> r <span class="ow">in</span> results)
+<span class="nb">print</span>(<span class="s">f"  总耗时: {total_time:.2f}s"</span>)
+<span class="nb">print</span>(<span class="s">f"  总生成: {total_tokens} tokens"</span>)
+<span class="nb">print</span>(<span class="s">f"  系统吞吐: {total_tokens/total_time:.1f} tok/s"</span>)
+
+<span class="c1"># ── 前缀缓存测试 ──</span>
+<span class="nb">print</span>(<span class="s">"\n前缀缓存测试 (相同 system prompt):"</span>)
+system = <span class="s">"You are a helpful assistant."</span>
+<span class="k">for</span> i <span class="ow">in</span> <span class="nb">range</span>(<span class="mi">3</span>):
+    p = {
+        <span class="s">"model"</span>: MODEL,
+        <span class="s">"messages"</span>: [
+            {<span class="s">"role"</span>: <span class="s">"system"</span>, <span class="s">"content"</span>: system},
+            {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">f"Fact #{i+1}"</span>}
+        ],
+        <span class="s">"max_tokens"</span>: <span class="mi">30</span>
+    }
+    start = time.time()
+    r = requests.post(URL, headers=HEADERS, json=p, timeout=<span class="mi">60</span>)
+    elapsed = time.time() - start
+    ct = r.json()[<span class="s">'usage'</span>][<span class="s">'completion_tokens'</span>]
+    <span class="nb">print</span>(<span class="s">f"  Run {i+1}: {elapsed:.2f}s {ct/elapsed:.1f} tok/s"</span>)</code></pre>
+
+<h4>方式三：vLLM 内置 Benchmark 工具</h4>
+
+<p>vLLM 自带专业压测脚本（在 vLLM 源码的 benchmarks/ 目录下）：</p>
+
+<pre><code><span class="c1"># 安装 benchmark 依赖</span>
+pip install aiohttp numpy
+
+<span class="c1"># 吞吐量测试</span>
+python /path/to/vllm/benchmarks/benchmark_throughput.py \
+  --model /path/to/Qwen2.5-1.5B-Instruct \
+  --num-prompts 50 \
+  --input-len 128 \
+  --output-len 128
+
+<span class="c1"># 延迟测试</span>
+python /path/to/vllm/benchmarks/benchmark_latency.py \
+  --model /path/to/Qwen2.5-1.5B-Instruct \
+  --input-len 128 \
+  --output-len 128</code></pre>
+
+<h3>5. 实测数据解读</h3>
+
+<h4>单请求速度波动原因</h4>
+<ul>
+  <li><strong>第一次请求慢</strong>：CUDA Graph 需要预热（Triton kernel JIT 编译），约 1~2 秒</li>
+  <li><strong>后续请求稳定</strong>：Graph 已缓存，稳定在 ~70 tok/s</li>
+  <li>因此基准测试应 <strong>丢弃第一次结果</strong> 或先发一个 warmup 请求</li>
+</ul>
+
+<h4>bitsandbytes 慢于 FP16 的原因</h4>
+<ul>
+  <li>NF4 权重以 4-bit 存储，但 RTX 2060 SUPER (Turing) 没有原生 4-bit Tensor Core</li>
+  <li>每次矩阵乘法前必须 <strong>实时解量化</strong> 回 FP16</li>
+  <li>解量化由 CUDA 核心完成，增加了额外计算开销</li>
+  <li>小模型（1.5B）的计算量小，解量化开销占比大 → 速度下降明显</li>
+</ul>
+
+<h4>并发吞吐分析</h4>
+<ul>
+  <li>5 个并发请求时，系统总吞吐 ~57.7 tok/s</li>
+  <li>单个请求的延迟从 ~1.4s 增加到 ~4.3s（等待 GPU 调度）</li>
+  <li>这是 vLLM 连续批处理的正常行为——牺牲单请求延迟换取整体吞吐</li>
+</ul>
+
+<h3>6. 不同场景的推荐配置</h3>
+
+<table class="table">
+<tr><th>场景</th><th>max-num-seqs</th><th>gpu-mem-util</th><th>量化</th><th>说明</th></tr>
+<tr>
+  <td>实时对话（低延迟）</td>
+  <td>8~16</td>
+  <td>0.85</td>
+  <td>FP16</td>
+  <td>减少排队，首 token 更快</td>
+</tr>
+<tr>
+  <td>离线批处理（高吞吐）</td>
+  <td>512~1024</td>
+  <td>0.95</td>
+  <td>AWQ/GPTQ</td>
+  <td>填满 GPU，最大化吞吐</td>
+</tr>
+<tr>
+  <td>8GB VRAM 跑 7B 模型</td>
+  <td>64~256</td>
+  <td>0.9</td>
+  <td>4-bit NF4</td>
+  <td>权重仅 3.5GB，省给 KV Cache</td>
+</tr>
+<tr>
+  <td>开发调试</td>
+  <td>8</td>
+  <td>0.8</td>
+  <td>FP16</td>
+  <td>留足显存余量，避免 OOM</td>
+</tr>
+</table>
+
+<h3>8. 投机解码实战（Speculative Decoding）</h3>
+
+<p>投机解码是文档 <a href="#sec7">第 7.3 节</a> 介绍的核心加速技术。它用一个小模型（草稿模型）快速猜测后续 token，再由主模型一次性验证，<strong>猜对了就一次生成多个 token</strong>。</p>
+
+<h4>原理</h4>
+<ul>
+  <li><strong>草稿模型</strong>：一个更小的模型，快速生成 N 个候选 token（如 5 个）</li>
+  <li><strong>主模型验证</strong>：主模型一次前向传播，验证草稿的 N 个 token 是否合理</li>
+  <li><strong>接受/回退</strong>：接受的 token 直接输出，第一个被拒绝的 token 及之后的全部丢弃</li>
+  <li>理想情况下，一次前向传播产出多个 token，大幅提升解码速度</li>
+</ul>
+
+<h4>两种实现方式</h4>
+
+<table class="table">
+<tr><th>方式</th><th>是否需要下载</th><th>原理</th><th>适用场景</th></tr>
+<tr>
+  <td><strong>ngram 投机解码</strong></td>
+  <td>❌ 不需要（纯配置参数）</td>
+  <td>从已有 prompt 中匹配 n-gram 片段作为草稿</td>
+  <td>小模型、快速测试、无需额外资源</td>
+</tr>
+<tr>
+  <td><strong>Draft Model 投机解码</strong></td>
+  <td>✅ 需要下载草稿模型</td>
+  <td>用独立的小模型（如 0.5B）做草稿生成</td>
+  <td>大模型（70B+），草稿模型越小加速越明显</td>
+</tr>
+</table>
+
+<h4>ngram 投机解码（无需下载，纯配置）</h4>
+
+<p>vLLM 支持使用 <code>--speculative-config</code> 参数以 JSON 格式传递投机解码配置：</p>
+
+<pre><code><span class="c1"># 启动命令示例（仅增加 --speculative-config 参数）</span>
+vllm serve /path/to/Qwen2.5-1.5B-Instruct \
+  --host 0.0.0.0 --port 8000 \
+  --max-model-len 2048 \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --dtype float16 \
+  --quantization bitsandbytes \
+  --load-format bitsandbytes \
+  --max-num-seqs 256 \
+  --max-num-batched-tokens 8192 \
+  --enable-prefix-caching \
+  --enable-chunked-prefill \
+  --speculative-config '<span class="s">{"method":"ngram","num_speculative_tokens":5,"prompt_lookup_max":10,"prompt_lookup_min":1}</span>' \
+  --api-key token-abc123</code></pre>
+
+<div class="case-info-box">
+<strong>📌 参数说明：</strong>
+<ul>
+  <li><code>method: "ngram"</code> — 使用 n-gram 匹配方式（无需草稿模型）</li>
+  <li><code>num_speculative_tokens: 5</code> — 每次猜测 5 个 token</li>
+  <li><code>prompt_lookup_max: 10</code> — 最大 n-gram 匹配长度</li>
+  <li><code>prompt_lookup_min: 1</code> — 最小 n-gram 匹配长度</li>
+</ul>
+</div>
+
+<h4>Draft Model 投机解码（需下载草稿模型）</h4>
+
+<p>对于大模型场景，使用独立的草稿模型加速效果更明显：</p>
+
+<pre><code><span class="c1"># 下载草稿模型（如 Qwen2.5-0.5B）</span>
+export HF_ENDPOINT=https://hf-mirror.com
+wget -c -O /path/to/draft/model.safetensors \
+  <span class="s">"https://hf-mirror.com/Qwen/Qwen2.5-0.5B-Instruct/resolve/main/model.safetensors"</span>
+
+<span class="c1"># 启动时指定草稿模型</span>
+vllm serve /path/to/Qwen2.5-1.5B-Instruct \
+  --speculative-config '<span class="s">{"method":"draft_model","model":"/path/to/Qwen2.5-0.5B-Instruct","num_speculative_tokens":5}</span>' \
+  ...其他参数同上...</code></pre>
+
+<h4>实测结果：ngram 投机解码在 1.5B 模型上的表现</h4>
+
+<table class="table">
+<tr><th>测试</th><th>普通模式</th><th>+ ngram 投机解码</th><th>说明</th></tr>
+<tr><td>Run 1 (首次)</td><td>2.70s → 37.0 tok/s</td><td><strong>11.33s → 8.8 tok/s</strong></td><td>首次含 JIT 编译 + ngram 预热</td></tr>
+<tr><td>Run 2</td><td>1.41s → 70.8 tok/s</td><td><strong>7.68s → 13.0 tok/s</strong></td><td>稳定后仍然慢</td></tr>
+<tr><td>Run 3</td><td>1.41s → 70.8 tok/s</td><td><strong>7.74s → 12.9 tok/s</strong></td><td>趋势一致</td></tr>
+<tr><td><strong>平均</strong></td><td><strong>59.6 tok/s</strong></td><td><strong>12.9 tok/s</strong></td><td>❌ 反而减速</td></tr>
+<tr><td>并发吞吐 (5 req)</td><td>57.7 tok/s</td><td>32.2 tok/s</td><td>并发也下降</td></tr>
+</table>
+
+<h4>为什么 1.5B 小模型上投机解码反而更慢？</h4>
+
+<ul>
+  <li><strong>ngram 匹配有开销</strong>：从 prompt 中搜索匹配片段需要额外计算</li>
+  <li><strong>小模型解码本身就很快</strong>：1.5B 单次前向传播约 14ms，ngram 搜索可能超过这个时间</li>
+  <li><strong>草稿命中率低</strong>：ngram 从 prompt 中匹配，对自由生成场景的命中率不高</li>
+  <li><strong>投机解码的价值在大模型</strong>：70B 单次前向传播 ~500ms，此时 ngram 搜索 ~10ms 的代价可以忽略，一旦命中就大赚</li>
+</ul>
+
+<div class="case-tip-box">
+<strong>💡 投机解码适用场景总结：</strong>
+<ul>
+  <li>✅ <strong>70B+ 大模型</strong>：加速 1.5~2.5×，收益远大于开销</li>
+  <li>✅ <strong>代码生成</strong>：代码可预测性强，草稿命中率高，最高 3×</li>
+  <li>✅ <strong>固定模板输出</strong>：prompt 和输出模式固定，ngram 命中率高</li>
+  <li>❌ <strong>1.5B 小模型</strong>：解码本身快，投机解码开销 > 收益</li>
+  <li>❌ <strong>创造性写作</strong>：内容不可预测，草稿命中率低</li>
+</ul>
+</div>
+
+<h4>在 70B+ 大模型上使用投机解码的示例</h4>
+
+<pre><code><span class="c1"># 70B 大模型 + 1B 小草稿（文档 7.3 节推荐配置）</span>
+vllm serve meta-llama/Meta-Llama-3.1-70B-Instruct \
+  --speculative-config '<span class="s">{"method":"draft_model","model":"meta-llama/Llama-3.2-1B-Instruct","num_speculative_tokens":5}</span>' \
+  --tensor-parallel-size 4 \
+  --gpu-memory-utilization 0.9 \
+  --max-model-len 8192
+
+<span class="c1"># 预期加速比：1.5~2.5×（文档 7.3 节表格）</span></code></pre>
+
+<h3>7. 常见问题</h3>
+
+<div class="case-err-box">
+<strong>Q：为什么第一次请求特别慢（~2.7s），后续就快了（~1.4s）？</strong><br>
+<strong>A：</strong>首次请求会触发 Triton kernel JIT 编译和 CUDA Graph 预热。这是正常现象。生产环境中通常会有 keep-alive 请求保持 Graph 活跃。
+</div>
+
+<div class="case-err-box">
+<strong>Q：加了 --max-num-seqs 256 但没有效果？</strong><br>
+<strong>A：</strong>单请求场景下 batch 参数不生效。并发场景才能体现 max-num-seqs 的作用。用 5 个并发请求测试，再看系统总吞吐。
+</div>
+
+<div class="case-err-box">
+<strong>Q：--enforce-eager 能不能加速？</strong><br>
+<strong>A：</strong>不能加速，反而会降速 20~40%（因为跳过了 CUDA Graph）。只有在 bitsandbytes 兼容性出问题时才使用。
+</div>
+
+<div class="case-err-box">
+<strong>Q：如何查看前缀缓存命中率？</strong><br>
+<strong>A：</strong>查看 vLLM 的 Prometheus 指标或日志。日志中会输出 <code>Prefix cache hit rate: X%</code>。
+</div>
+
+<div class="case-err-box">
+<strong>Q：8GB VRAM 上 4-bit 量化值得吗？</strong><br>
+<strong>A：</strong>对于 1.5B 模型不值得（FP16 更快）。但对于 7B 模型<strong>非常值得</strong>——FP16 需要 14GB 放不下，4-bit 仅 3.5GB 就能跑。这个场景下速度降一半但能跑才是关键。
+</div>
+
+<hr>
+<p style="text-align:center;color:#8b92a5;font-size:.78rem;">
+  基于实际操作流程编写 · 最后更新：2026 年 7 月
+</p>
+</section>
 
 </div>
 </body>

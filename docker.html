@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker 完全教程</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-secondary: #8b949e;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --green: #3fb950;
+  --orange: #d2991d;
+  --red: #f85149;
+  --purple: #a371f7;
+  --code-bg: #1c2128;
+  --inline-code: #343941;
+  --sidebar-width: 260px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  display: flex;
+}
+/* 侧边栏 */
+aside {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 24px 16px;
+  z-index: 100;
+}
+aside h2 {
+  font-size: 18px;
+  color: var(--accent);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+aside nav a {
+  display: block;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  transition: all 0.15s;
+}
+aside nav a:hover, aside nav a.active {
+  color: var(--text);
+  background: var(--bg-tertiary);
+}
+aside nav a.sub { padding-left: 28px; font-size: 12px; }
+/* 主内容 */
+main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  max-width: 900px;
+  padding: 40px 48px;
+}
+h1 { font-size: 36px; color: var(--accent); margin-bottom: 8px; }
+h2 { font-size: 26px; color: var(--text); margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 20px; color: var(--accent); margin: 32px 0 12px; }
+h4 { font-size: 16px; color: var(--purple); margin: 20px 0 8px; }
+p { margin: 12px 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); text-decoration: underline; }
+code {
+  background: var(--inline-code);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  color: var(--orange);
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+  line-height: 1.55;
+}
+pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+/* 提示框 */
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--bg-secondary);
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 6px 6px 0;
+}
+.callout.warn { border-left-color: var(--orange); }
+.callout.danger { border-left-color: var(--red); }
+.callout.tip { border-left-color: var(--green); }
+.callout strong { color: var(--accent); }
+.callout.warn strong { color: var(--orange); }
+.callout.danger strong { color: var(--red); }
+.callout.tip strong { color: var(--green); }
+/* 表格 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 14px;
+}
+th { background: var(--bg-tertiary); color: var(--accent); font-weight: 600; }
+/* 标签 */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.tag-blue { background: rgba(88,166,255,0.15); color: var(--accent); }
+.tag-green { background: rgba(63,185,80,0.15); color: var(--green); }
+.tag-orange { background: rgba(210,153,29,0.15); color: var(--orange); }
+.tag-red { background: rgba(248,81,73,0.15); color: var(--red); }
+/* 响应式 */
+@media (max-width: 768px) {
+  aside { display: none; }
+  main { margin-left: 0; padding: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 侧边栏 ============ -->
+<aside>
+  <h2>Docker 完全教程</h2>
+  <nav>
+    <a href="#s1">1. Docker 概述</a>
+    <a href="#s2">2. 安装与配置</a>
+    <a href="#s3">3. 核心概念</a>
+    <a href="#s4">4. 镜像管理</a>
+    <a href="#s5">5. 容器管理</a>
+    <a href="#s6">6. Dockerfile 详解</a>
+    <a href="#s7" class="sub">6.1 常用指令</a>
+    <a href="#s8" class="sub">6.2 多阶段构建</a>
+    <a href="#s9" class="sub">6.3 最佳实践</a>
+    <a href="#s10">7. 数据管理</a>
+    <a href="#s11" class="sub">7.1 Volumes</a>
+    <a href="#s12" class="sub">7.2 Bind Mounts</a>
+    <a href="#s13" class="sub">7.3 tmpfs</a>
+    <a href="#s14">8. 网络管理</a>
+    <a href="#s15" class="sub">8.1 网络驱动</a>
+    <a href="#s16" class="sub">8.2 自定义网络</a>
+    <a href="#s17">9. Docker Compose</a>
+    <a href="#s18" class="sub">9.1 Compose 文件</a>
+    <a href="#s19" class="sub">9.2 Compose 命令</a>
+    <a href="#s20">10. 安全最佳实践</a>
+    <a href="#s21">11. 日志与监控</a>
+    <a href="#s22">12. 资源限制</a>
+    <a href="#s23">13. CI/CD 集成</a>
+    <a href="#s24">14. 实用技巧</a>
+    <a href="#s25">15. 常见问题</a>
+    <a href="#s26">16. 进阶生态</a>
+  </nav>
+</aside>
+
+<!-- ============ 主内容 ============ -->
+<main>
+
+<h1>Docker 完全教程</h1>
+<p style="color:var(--text-secondary)">从入门到精通，一份覆盖开发与运维的完整 Docker 指南</p>
+
+<!-- ==================== 1. 概述 ==================== -->
+<h2 id="s1">1. Docker 概述</h2>
+
+<h3>什么是 Docker？</h3>
+<p>Docker 是一个开源的<strong>容器化平台</strong>，它允许开发者将应用程序及其所有依赖打包到一个轻量级、可移植的容器中，然后在任何支持 Docker 的环境中运行。</p>
+
+<div class="callout tip">
+<strong>核心理念</strong>：Build Once, Run Anywhere（一次构建，处处运行）
+</div>
+
+<h3>Docker vs 虚拟机</h3>
+<table>
+<tr><th>特性</th><th>Docker 容器</th><th>虚拟机</th></tr>
+<tr><td>启动速度</td><td>秒级</td><td>分钟级</td></tr>
+<tr><td>资源占用</td><td>MB 级别</td><td>GB 级别</td></tr>
+<tr><td>隔离级别</td><td>进程级隔离</td><td>完全隔离</td></tr>
+<tr><td>OS 支持</td><td>共享宿主机内核</td><td>独立完整 OS</td></tr>
+<tr><td>磁盘占用</td><td>镜像层共享，极小</td><td>每个 VM 独立磁盘</td></tr>
+<tr><td>迁移性</td><td>镜像分发，极其轻量</td><td>需要迁移整个 VM</td></tr>
+</table>
+
+<h3>Docker 架构</h3>
+<p>Docker 使用 <strong>客户端-服务端（C/S）架构</strong>：</p>
+<ul>
+  <li><strong>Docker Client</strong>：用户通过 <code>docker</code> CLI 与 daemon 交互</li>
+  <li><strong>Docker Daemon（dockerd）</strong>：后台服务，管理镜像、容器、网络、存储</li>
+  <li><strong>Registry</strong>：镜像仓库，如 Docker Hub、Harbor、阿里云容器镜像服务</li>
+</ul>
+
+<pre><code>docker client  →  REST API  →  docker daemon  →  containerd  →  runc  →  容器进程</code></pre>
+
+<h3>核心组件</h3>
+<ul>
+  <li><strong>containerd</strong>：工业级容器运行时，管理容器生命周期</li>
+  <li><strong>runc</strong>：OCI 容器运行时规范的参考实现，实际创建容器</li>
+  <li><strong>BuildKit</strong>：新一代镜像构建引擎（Docker 18.09+）</li>
+  <li><strong>Docker Compose</strong>：多容器应用编排工具</li>
+  <li><strong>Docker Swarm</strong>：Docker 原生集群管理（已被 K8s 超越但仍可用）</li>
+</ul>
+
+<!-- ==================== 2. 安装 ==================== -->
+<h2 id="s2">2. 安装与配置</h2>
+
+<h3>Linux（以 Ubuntu 为例）</h3>
+<pre><code># 1. 卸载旧版本
+sudo apt-get remove docker docker-engine docker.io containerd runc
+
+# 2. 安装依赖
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+
+# 3. 添加官方 GPG Key
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# 4. 添加仓库
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 5. 安装 Docker Engine
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 6. 验证安装
+sudo docker run hello-world
+
+# 7. 将当前用户加入 docker 组（免 sudo）
+sudo usermod -aG docker $USER
+newgrp docker  # 或重新登录</code></pre>
+
+<h3>国内加速配置</h3>
+<pre><code># 编辑 /etc/docker/daemon.json
+{
+  "registry-mirrors": [
+    "https://mirror.ccs.tencentyun.com",
+    "https://docker.m.daocloud.io"
+  ],
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3" },
+  "storage-driver": "overlay2"
+}
+
+# 重启使配置生效
+sudo systemctl daemon-reload
+sudo systemctl restart docker</code></pre>
+
+<h3>macOS / Windows</h3>
+<p>推荐使用 <strong>Docker Desktop</strong>：下载安装包一键安装，内置 Docker Engine、Kubernetes、Docker Compose、GUI 管理界面。</p>
+
+<h3>rootless 模式（安全增强）</h3>
+<pre><code># 以非 root 用户运行 Docker 守护进程
+dockerd-rootless-setuptool.sh install
+# 设置环境变量
+export PATH=/usr/bin:$PATH
+export DOCKER_HOST=unix:///run/user/1000/docker.sock</code></pre>
+
+<!-- ==================== 3. 核心概念 ==================== -->
+<h2 id="s3">3. 核心概念</h2>
+
+<h3>镜像（Image）</h3>
+<p>镜像是容器的<strong>只读模板</strong>，包含运行应用所需的完整文件系统。镜像由多个只读层（layer）叠加组成，每层代表一条 Dockerfile 指令。</p>
+
+<h3>容器（Container）</h3>
+<p>容器是镜像的<strong>运行实例</strong>。它在镜像的只读层之上添加一个可写层（Container Layer），所有运行时变更（文件增删改）都写入这层。</p>
+
+<h3>仓库（Registry / Repository）</h3>
+<ul>
+  <li><strong>Registry</strong>：存储和分发镜像的服务，如 Docker Hub</li>
+  <li><strong>Repository</strong>：Registry 中一个镜像的集合，如 <code>library/nginx</code></li>
+  <li><strong>Tag</strong>：镜像版本标签，如 <code>nginx:1.25-alpine</code></li>
+</ul>
+
+<p>镜像完整路径格式：<code>[registry/][namespace/]repository[:tag]</code></p>
+<pre><code>docker.io/library/nginx:latest           # 完整写法
+nginx:latest                              # 简写（默认 docker.io/library）
+my-registry.com:5000/myapp:v1.0           # 私有仓库</code></pre>
+
+<h3>层（Layer）与写时复制（CoW）</h3>
+<ul>
+  <li>镜像由多个只读层堆叠，使用 UnionFS（Overlay2）合并为一个视图</li>
+  <li>容器可写层使用 <strong>Copy-on-Write</strong>：修改只读层的文件时，先将文件复制到可写层再修改</li>
+  <li>层共享机制：同一宿主机上的多个容器可共享相同的底层镜像层，极大节省磁盘</li>
+</ul>
+
+<!-- ==================== 4. 镜像管理 ==================== -->
+<h2 id="s4">4. 镜像管理</h2>
+
+<h3>查找镜像</h3>
+<pre><code>docker search nginx                    # 搜索 Docker Hub
+docker search --limit 10 alpine        # 限制结果数
+docker search --filter=stars=100 nginx # 按星数过滤</code></pre>
+
+<h3>拉取镜像</h3>
+<pre><code>docker pull nginx:1.25                 # 指定版本
+docker pull nginx:latest               # 最新版
+docker pull node:20-alpine             # Alpine 精简版
+docker pull --platform linux/arm64 nginx  # 指定架构</code></pre>
+
+<h3>查看镜像</h3>
+<pre><code>docker images                          # 列出本地镜像
+docker images -a                       # 包含中间层
+docker images -f dangling=true         # 显示悬空镜像（无 tag）
+docker image ls --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
+docker image history nginx:latest      # 查看镜像构建历史（层）
+docker image inspect nginx:latest      # 查看镜像详细信息（JSON）
+docker image inspect -f '{{.Config.Env}}' nginx  # 格式化提取字段</code></pre>
+
+<h3>删除镜像</h3>
+<pre><code>docker rmi nginx:latest                # 删除指定镜像
+docker rmi $(docker images -q)         # 删除所有镜像（危险！）
+docker image prune                     # 删除所有悬空镜像
+docker image prune -a                  # 删除所有未使用的镜像
+docker image prune -a --filter "until=24h"  # 删除24小时前的未用镜像</code></pre>
+
+<h3>导出与导入</h3>
+<pre><code>docker save -o nginx.tar nginx:latest  # 导出镜像为 tar 文件
+docker load -i nginx.tar               # 从 tar 导入镜像
+# 带压缩
+docker save nginx:latest | gzip > nginx.tar.gz
+gunzip -c nginx.tar.gz | docker load</code></pre>
+
+<h3>镜像标签</h3>
+<pre><code>docker tag nginx:latest myrepo/nginx:v1.0    # 创建新标签
+docker tag SOURCE_IMAGE[:TAG] TARGET[:TAG]   # 实际上是创建别名（引用）</code></pre>
+
+<h3>推送镜像</h3>
+<pre><code>docker login                           # 登录 Docker Hub
+docker login my-registry.com:5000      # 登录私有仓库
+docker push myrepo/nginx:v1.0          # 推送镜像
+docker logout                          # 登出</code></pre>
+
+<!-- ==================== 5. 容器管理 ==================== -->
+<h2 id="s5">5. 容器管理</h2>
+
+<h3>创建与运行</h3>
+<pre><code># 基础运行
+docker run nginx:latest
+
+# 常用组合
+docker run -d --name web -p 8080:80 nginx
+# -d: 后台运行  --name: 命名  -p 宿主机:容器端口映射
+
+# 完整示例
+docker run -d \
+  --name my-nginx \
+  --restart always \
+  -p 8080:80 \
+  -p 8443:443 \
+  -v /home/user/html:/usr/share/nginx/html:ro \
+  -v nginx-logs:/var/log/nginx \
+  -e NGINX_HOST=example.com \
+  --memory 256m \
+  --cpus 1.0 \
+  --network my-net \
+  nginx:1.25-alpine</code></pre>
+
+<h3>常用 run 参数速查</h3>
+<table>
+<tr><th>参数</th><th>说明</th><th>示例</th></tr>
+<tr><td><code>-d</code></td><td>后台运行（detached）</td><td><code>-d</code></td></tr>
+<tr><td><code>--name</code></td><td>容器名称</td><td><code>--name web</code></td></tr>
+<tr><td><code>-p, --publish</code></td><td>端口映射</td><td><code>-p 8080:80</code></td></tr>
+<tr><td><code>-P</code></td><td>随机端口映射 EXPOSE 端口</td><td><code>-P</code></td></tr>
+<tr><td><code>-v, --volume</code></td><td>挂载卷/目录</td><td><code>-v /host:/container</code></td></tr>
+<tr><td><code>-e, --env</code></td><td>设置环境变量</td><td><code>-e MYSQL_ROOT_PASSWORD=123</code></td></tr>
+<tr><td><code>--env-file</code></td><td>从文件读取环境变量</td><td><code>--env-file .env</code></td></tr>
+<tr><td><code>--network</code></td><td>指定网络</td><td><code>--network my-net</code></td></tr>
+<tr><td><code>--restart</code></td><td>重启策略</td><td><code>always/on-failure/unless-stopped</code></td></tr>
+<tr><td><code>--memory, -m</code></td><td>内存限制</td><td><code>-m 512m</code></td></tr>
+<tr><td><code>--cpus</code></td><td>CPU 限制</td><td><code>--cpus 2.0</code></td></tr>
+<tr><td><code>--rm</code></td><td>退出时自动删除容器</td><td><code>--rm</code></td></tr>
+<tr><td><code>--init</code></td><td>使用 init 进程（处理僵尸进程）</td><td><code>--init</code></td></tr>
+<tr><td><code>-it</code></td><td>交互模式 + TTY</td><td><code>-it</code></td></tr>
+<tr><td><code>--entrypoint</code></td><td>覆盖默认入口</td><td><code>--entrypoint /bin/sh</code></td></tr>
+<tr><td><code>--user, -u</code></td><td>运行用户</td><td><code>-u 1000:1000</code></td></tr>
+<tr><td><code>--add-host</code></td><td>添加 hosts 记录</td><td><code>--add-host api.local:192.168.1.100</code></td></tr>
+<tr><td><code>--dns</code></td><td>指定 DNS 服务器</td><td><code>--dns 8.8.8.8</code></td></tr>
+<tr><td><code>--shm-size</code></td><td>/dev/shm 大小</td><td><code>--shm-size 256m</code></td></tr>
+</table>
+
+<h3>重启策略</h3>
+<table>
+<tr><th>策略</th><th>行为</th></tr>
+<tr><td><code>no</code></td><td>默认，不自动重启</td></tr>
+<tr><td><code>always</code></td><td>总是重启（Docker 启动时也会重启）</td></tr>
+<tr><td><code>unless-stopped</code></td><td>除非手动停止，否则重启（推荐）</td></tr>
+<tr><td><code>on-failure[:N]</code></td><td>仅非零退出时重启，可限制次数</td></tr>
+</table>
+
+<h3>生命周期管理</h3>
+<pre><code>docker ps                              # 列出运行中的容器
+docker ps -a                           # 列出所有容器（含停止的）
+docker ps -q                           # 只显示容器 ID
+docker ps --format "{{.Names}}: {{.Status}}"
+
+docker start my-container              # 启动已停止的容器
+docker stop my-container               # 优雅停止（SIGTERM → SIGKILL）
+docker stop -t 30 my-container         # 等待30秒后强杀
+docker restart my-container            # 重启
+docker pause my-container              # 暂停进程（SIGSTOP）
+docker unpause my-container            # 恢复进程（SIGCONT）
+docker kill my-container               # 立即强杀（SIGKILL）
+docker rm my-container                 # 删除已停止的容器
+docker rm -f my-container              # 强制删除（运行中也删）
+docker rm $(docker ps -aq)             # 删除所有容器（危险）
+docker container prune                 # 删除所有已停止容器
+docker container prune --filter "until=24h"</code></pre>
+
+<h3>交互式操作</h3>
+<pre><code>docker exec -it my-container bash      # 进入运行中的容器
+docker exec my-container ls /app       # 执行单条命令
+docker attach my-container             # 附加到容器主进程（慎用）
+docker logs my-container               # 查看日志
+docker logs -f my-container            # 实时跟踪日志
+docker logs --tail 100 my-container    # 最后100行
+docker logs --since 1h my-container    # 最近1小时日志</code></pre>
+
+<h3>容器内文件操作</h3>
+<pre><code>docker cp my-container:/app/log.txt ./     # 从容器复制到宿主机
+docker cp ./config.yaml my-container:/app/  # 从宿主机复制到容器</code></pre>
+
+<h3>查看容器详情</h3>
+<pre><code>docker inspect my-container            # 完整配置（JSON）
+docker inspect -f '{{.NetworkSettings.IPAddress}}' my-container  # 提取IP
+docker top my-container                # 查看容器内进程
+docker stats                           # 实时查看所有容器资源使用
+docker stats my-container              # 指定容器
+docker port my-container               # 查看端口映射
+docker diff my-container               # 查看容器文件系统变更</code></pre>
+
+<h3>commit（不推荐但有用）</h3>
+<pre><code>docker commit my-container myimage:v2   # 将容器保存为新镜像
+docker commit -m "added config" -a "author" my-container myimage:v2</code></pre>
+<div class="callout warn"><strong>注意</strong>：<code>docker commit</code> 会导致镜像不可复现、层膨胀。推荐用 Dockerfile 构建。</div>
+
+<!-- ==================== 6. Dockerfile ==================== -->
+<h2 id="s6">6. Dockerfile 详解</h2>
+
+<p>Dockerfile 是构建镜像的<strong>声明式蓝图</strong>，每条指令创建一个新的镜像层。</p>
+
+<h3 id="s7">6.1 常用指令</h3>
+
+<h4>FROM</h4>
+<pre><code>FROM node:20-alpine                     # 基础镜像
+FROM node:20-alpine AS builder          # 多阶段构建，命名阶段
+FROM scratch                            # 空白镜像（极简/静态编译程序）</code></pre>
+
+<h4>RUN</h4>
+<pre><code># shell 形式（默认 /bin/sh -c）
+RUN apt-get update && apt-get install -y curl
+
+# exec 形式（不启动 shell，需要手动处理变量展开）
+RUN ["apt-get", "update"]
+
+# 多层合并减少层数和镜像体积
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        wget \
+        ca-certificates && \
+    rm -rf /var/lib/apt/lists/*</code></pre>
+
+<h4>COPY vs ADD</h4>
+<pre><code># COPY：简单复制（推荐）
+COPY package.json yarn.lock /app/
+COPY . /app/
+
+# ADD：额外支持 tar 自动解压和 URL 下载
+ADD archive.tar.gz /app/
+ADD https://example.com/file.txt /app/
+
+# COPY 的 --chown 选项
+COPY --chown=node:node . /app/</code></pre>
+<div class="callout"><strong>最佳实践</strong>：优先使用 <code>COPY</code>，只有需要自动解压才用 <code>ADD</code>。</div>
+
+<h4>WORKDIR</h4>
+<pre><code>WORKDIR /app                            # 后续指令的相对路径基准
+# 相当于 RUN mkdir -p /app && cd /app</code></pre>
+
+<h4>ENV</h4>
+<pre><code>ENV NODE_ENV=production \
+    APP_PORT=3000
+
+# 运行时还可被 -e 覆盖
+docker run -e NODE_ENV=development myapp</code></pre>
+
+<h4>ARG</h4>
+<pre><code>ARG VERSION=1.0.0                      # 构建时变量，默认值
+RUN echo "Building version $VERSION"
+# 构建时传参：docker build --build-arg VERSION=2.0.0 .</code></pre>
+
+<h4>EXPOSE</h4>
+<pre><code>EXPOSE 3000                             # 声明容器监听端口（文档性质）
+# 实际映射需要 run -p 或 compose ports</code></pre>
+
+<h4>CMD vs ENTRYPOINT</h4>
+
+<table>
+<tr><th>指令</th><th>用途</th><th>是否可被覆盖</th></tr>
+<tr><td><code>CMD</code></td><td>默认启动命令</td><td>可被 <code>docker run</code> 末尾参数完全覆盖</td></tr>
+<tr><td><code>ENTRYPOINT</code></td><td>固定入口程序</td><td>不会被覆盖，<code>docker run</code> 参数作为其参数</td></tr>
+</table>
+
+<pre><code># 仅 CMD（最常用）
+CMD ["node", "server.js"]
+
+# ENTRYPOINT + CMD 组合（CMD 作为默认参数）
+ENTRYPOINT ["python", "app.py"]
+CMD ["--port", "8080"]
+# docker run myapp --host 0.0.0.0  →  python app.py --host 0.0.0.0
+
+# shell form vs exec form
+CMD echo "hello"                        # shell form：启动 /bin/sh -c
+CMD ["echo", "hello"]                   # exec form：直接执行（推荐，信号传递正确）</code></pre>
+
+<h4>其他指令</h4>
+<pre><code># LABEL：元数据标签
+LABEL maintainer="user@example.com" \
+      version="1.0" \
+      description="My Docker application"
+
+# USER：切换运行用户
+RUN useradd -m -s /bin/bash appuser
+USER appuser
+
+# HEALTHCHECK：健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# STOPSIGNAL：停止信号
+STOPSIGNAL SIGTERM
+
+# SHELL：覆盖默认 shell
+SHELL ["/bin/bash", "-c"]</code></pre>
+
+<h3 id="s8">6.2 多阶段构建（Multi-stage Build）</h3>
+
+<p>在一个 Dockerfile 中使用多个 <code>FROM</code>，只将最终需要的产物复制到最终镜像，中间构建工具不进入最终镜像。</p>
+
+<pre><code># ============= 阶段1：构建 =============
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production=false
+COPY . .
+RUN yarn build
+
+# ============= 阶段2：运行 =============
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# 从构建阶段只复制产物
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+EXPOSE 3000
+USER node
+CMD ["node", "dist/server.js"]</code></pre>
+
+<pre><code># Go 静态编译：最终镜像可以是从 scratch
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server .
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/server /server
+ENTRYPOINT ["/server"]</code></pre>
+
+<h3 id="s9">6.3 Dockerfile 最佳实践</h3>
+<ol>
+  <li><strong>使用 .dockerignore</strong>——排除 <code>node_modules</code>、<code>.git</code>、构建产物</li>
+  <li><strong>一个容器一个进程</strong>——不要在一个容器里跑多个服务</li>
+  <li><strong>最小化层数</strong>——合并 <code>RUN</code> 指令，清理缓存</li>
+  <li><strong>利用构建缓存</strong>——把变化少的文件（package.json）放前面</li>
+  <li><strong>使用特定版本 Tag</strong>——不要用 <code>latest</code></li>
+  <li><strong>以非 root 用户运行</strong>——<code>USER</code> 指令</li>
+  <li><strong>镜像体积最小化</strong>——Alpine 基础镜像 + 多阶段构建</li>
+  <li><strong>标签与元数据</strong>——添加 <code>LABEL</code></li>
+</ol>
+
+<pre><code># .dockerignore 示例
+node_modules
+.git
+.gitignore
+*.md
+dist
+.env
+.env.local
+Dockerfile
+docker-compose.yml
+.vscode
+.idea
+coverage
+*.log</code></pre>
+
+<h3>BuildKit 高级构建</h3>
+<pre><code># 启用 BuildKit（推荐，Docker 23+ 默认启用）
+export DOCKER_BUILDKIT=1
+
+# --mount=type=cache：缓存依赖，跨构建复用
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
+
+# --mount=type=secret：安全传递构建密钥
+RUN --mount=type=secret,id=aws_credentials \
+    AWS_SHARED_CREDENTIALS_FILE=/run/secrets/aws_credentials \
+    aws s3 cp ...
+
+# --mount=type=ssh：传递 SSH 密钥
+RUN --mount=type=ssh \
+    git clone git@github.com:user/private-repo.git</code></pre>
+
+<!-- ==================== 7. 数据管理 ==================== -->
+<h2 id="s10">7. 数据管理</h2>
+<p>容器是无状态的——删除容器后容器可写层的数据丢失。持久化数据有3种方式：</p>
+
+<h3 id="s11">7.1 Volumes（推荐）</h3>
+<p>由 Docker 管理的宿主机目录（<code>/var/lib/docker/volumes/</code>），完全由 Docker 控制。</p>
+<pre><code># 创建卷
+docker volume create my-vol
+
+# 查看
+docker volume ls
+docker volume inspect my-vol
+
+# 使用
+docker run -v my-vol:/app/data nginx   # -v 卷名:容器路径
+docker run --mount source=my-vol,target=/app/data nginx  # --mount（更明确）
+
+# 删除
+docker volume rm my-vol
+docker volume prune                    # 删除所有未被使用的卷</code></pre>
+
+<h3 id="s12">7.2 Bind Mounts（绑定挂载）</h3>
+<p>将宿主机上的任意目录/文件挂载到容器中，用于开发热重载或共享配置文件。</p>
+<pre><code>docker run -v /host/path:/container/path nginx
+docker run -v /host/path:/container/path:ro nginx      # 只读挂载
+docker run --mount type=bind,source=/host/path,target=/container/path nginx</code></pre>
+
+<h3 id="s13">7.3 tmpfs</h3>
+<p>存储在宿主机<strong>内存</strong>中，不写入磁盘，容器停止即消失。适合临时敏感数据。</p>
+<pre><code>docker run --tmpfs /app/tmp nginx
+docker run --mount type=tmpfs,destination=/app/tmp,tmpfs-size=64m nginx</code></pre>
+
+<h3>三种方式对比</h3>
+<table>
+<tr><th>方式</th><th>位置</th><th>持久化</th><th>跨容器共享</th><th>性能</th></tr>
+<tr><td>Volume</td><td>/var/lib/docker/volumes/</td><td>是</td><td>是</td><td>好</td></tr>
+<tr><td>Bind Mount</td><td>任意宿主机路径</td><td>是</td><td>是</td><td>取决于底层FS</td></tr>
+<tr><td>tmpfs</td><td>内存</td><td>否</td><td>否</td><td>极快</td></tr>
+</table>
+
+<!-- ==================== 8. 网络 ==================== -->
+<h2 id="s14">8. 网络管理</h2>
+
+<h3 id="s15">8.1 网络驱动</h3>
+<table>
+<tr><th>驱动</th><th>说明</th><th>使用场景</th></tr>
+<tr><td><code>bridge</code></td><td>默认网络驱动，容器通过虚拟网桥通信</td><td>单机容器互联</td></tr>
+<tr><td><code>host</code></td><td>直接使用宿主机网络栈，无隔离</td><td>高性能需求或无需隔离</td></tr>
+<tr><td><code>overlay</code></td><td>跨多宿主机的容器通信（Swarm）</td><td>集群/分布式应用</td></tr>
+<tr><td><code>macvlan</code></td><td>容器拥有独立 MAC 地址，直接暴露在物理网络</td><td>需要容器在局域网可见</td></tr>
+<tr><td><code>none</code></td><td>禁用网络</td><td>无网络需求</td></tr>
+</table>
+
+<h3 id="s16">8.2 自定义网络</h3>
+<pre><code># 创建 bridge 网络
+docker network create my-net
+
+# 创建时指定参数
+docker network create \
+  --driver bridge \
+  --subnet 172.20.0.0/16 \
+  --gateway 172.20.0.1 \
+  --ip-range 172.20.0.0/24 \
+  my-net
+
+# 查看
+docker network ls
+docker network inspect my-net
+
+# 连接/断开容器
+docker network connect my-net my-container
+docker network disconnect my-net my-container
+
+# 删除
+docker network rm my-net
+docker network prune                    # 删除未使用的网络</code></pre>
+
+<div class="callout tip"><strong>关键特性</strong>：同一自定义 bridge 网络中的容器可通过<strong>容器名</strong>互相访问，Docker 内置 DNS 自动解析。</div>
+
+<pre><code># 示例：nginx + node 通过容器名通信
+docker network create app-net
+
+docker run -d --network app-net --name backend my-node-app
+docker run -d --network app-net --name frontend -p 80:80 nginx
+# frontend 可以通过 http://backend:3000 访问 backend</code></pre>
+
+<!-- ==================== 9. Docker Compose ==================== -->
+<h2 id="s17">9. Docker Compose</h2>
+
+<p>Docker Compose 用于定义和运行<strong>多容器</strong>应用。通过一个 <code>docker-compose.yml</code> 文件描述所有服务、网络、卷。</p>
+
+<h3 id="s18">9.1 Compose 文件示例</h3>
+
+<pre><code># docker-compose.yml
+version: "3.9"
+
+services:
+
+  # PostgreSQL 数据库
+  db:
+    image: postgres:16-alpine
+    container_name: app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-appuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: myapp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # 初始化脚本
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d myapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: app-redis
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+  # 后端 API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-1.0.0}
+    image: myapp-api:latest
+    container_name: app-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/myapp
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  # 前端 Nginx
+  frontend:
+    build: ./frontend
+    container_name: app-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - frontend
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge</code></pre>
+
+<h3 id="s19">9.2 Compose 命令</h3>
+<pre><code># 启动所有服务
+docker compose up -d                              # 后台启动
+docker compose up -d --build                      # 强制重新构建
+docker compose up -d --scale api=3                # 缩放服务
+
+# 停止与清理
+docker compose down                               # 停止并删除容器、网络
+docker compose down -v                            # 同时删除卷
+docker compose down --rmi all                     # 同时删除镜像
+docker compose stop                               # 仅停止，保留容器
+docker compose start                              # 重新启动
+docker compose restart                            # 重启
+docker compose restart api                        # 重启单个服务
+
+# 查看
+docker compose ps                                 # 服务状态
+docker compose ps -a                              # 包括停止的服务
+docker compose logs                                # 所有服务日志
+docker compose logs -f api                        # 跟踪指定服务
+docker compose logs --tail=50 api                # 最后50行
+docker compose top                                # 服务内进程
+docker compose port api 3000                      # 查看端口映射
+
+# 执行命令
+docker compose exec api sh                        # 进入容器
+docker compose exec db psql -U appuser myapp      # 执行命令
+
+# 构建/拉取
+docker compose build                              # 构建所有服务镜像
+docker compose build --no-cache api              # 无缓存构建指定服务
+docker compose pull                               # 拉取所有服务镜像
+
+# 其他
+docker compose config                              # 验证并查看完整配置
+docker compose config --services                  # 列出所有服务名
+docker compose events                              # 接收实时事件流
+docker compose images                              # 查看使用的镜像
+
+# 使用 profile 选择性启动
+docker compose --profile debug up                 # 启动 debug profile 下的服务</code></pre>
+
+<h3>Compose 文件高级特性</h3>
+<pre><code># 1. 扩展（extends）：从基础 Compose 文件继承
+# docker-compose.yml
+services:
+  web:
+    extends:
+      file: base.yml
+      service: base-app
+
+# 2. profiles：按需启动服务组
+services:
+  app:
+    build: .
+  debug-tools:
+    image: busybox
+    profiles:
+      - debug
+
+# 3. 环境变量与 .env 文件
+# docker-compose.yml 中 ${VAR} 自动读取同目录 .env 文件
+# .env 文件内容：
+DB_USER=admin
+DB_PASSWORD=secretpass
+
+# 4. 片段与 YAML 锚点
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    logging: *default-logging
+  db:
+    logging: *default-logging
+
+# 5. depends_on 条件（Compose 2.1+）
+depends_on:
+  db:
+    condition: service_healthy       # 等健康检查通过
+  redis:
+    condition: service_started       # 等启动即可</code></pre>
+
+<!-- ==================== 10. 安全 ==================== -->
+<h2 id="s20">10. 安全最佳实践</h2>
+
+<h3>镜像安全</h3>
+<ol>
+  <li><strong>使用可信基础镜像</strong>——优先官方镜像 + 固定 TAG（不要 latest）</li>
+  <li><strong>定期扫描漏洞</strong>——<code>docker scout quickview myimage</code> 或 Trivy</li>
+  <li><strong>最小化攻击面</strong>——Alpine/Distroless 基础镜像 + 多阶段构建</li>
+  <li><strong>使用特定版本号</strong>——可复现 + 可审计</li>
+</ol>
+
+<pre><code># Docker Scout 漏洞扫描
+docker scout quickview nginx:latest
+docker scout cves nginx:latest
+
+# Trivy 扫描（需安装）
+trivy image myapp:latest</code></pre>
+
+<h3>运行时安全</h3>
+<pre><code># 以非 root 用户运行
+docker run -u 1000:1000 myapp
+
+# 只读根文件系统
+docker run --read-only --tmpfs /tmp myapp
+
+# 限制内核能力（capabilities）
+docker run --cap-drop ALL --cap-add NET_BIND_SERVICE myapp
+
+# 禁止特权模式
+# 不要使用 --privileged（除非绝对必要）
+
+# 限制系统调用（seccomp）
+docker run --security-opt seccomp=my-seccomp.json myapp
+
+# AppArmor / SELinux
+docker run --security-opt apparmor=my-profile myapp
+
+# 禁用容器间通信
+docker network create --opt com.docker.network.bridge.enable_icc=false secure-net
+docker run --network secure-net myapp</code></pre>
+
+<h3>密钥管理</h3>
+<pre><code># Docker Secret（Swarm 模式）
+echo "mysecretpassword" | docker secret create db_password -
+docker service create --secret db_password myapp
+
+# BuildKit secret（构建时安全传递）
+RUN --mount=type=secret,id=github_token \
+    GITHUB_TOKEN=$(cat /run/secrets/github_token) \
+    npm install
+
+# 不要这样做！
+# ENV API_KEY=secret123          ← 密钥会留在镜像层中
+# COPY .env /app/.env            ← 密钥会留在镜像文件系统中</code></pre>
+
+<!-- ==================== 11. 日志与监控 ==================== -->
+<h2 id="s21">11. 日志与监控</h2>
+
+<h3>日志驱动</h3>
+<pre><code># docker run 时指定日志驱动
+docker run --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 nginx
+
+# daemon.json 全局配置
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3",
+    "labels": "production_status",
+    "env": "os"
+  }
+}
+
+# 支持的日志驱动：
+# json-file（默认）, syslog, journald, gelf, fluentd, awslogs, splunk, gcplogs</code></pre>
+
+<h3>监控命令</h3>
+<pre><code>docker stats                           # 实时资源监控
+docker stats --no-stream               # 一次性输出
+docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+
+docker events                          # 实时事件流
+docker events --filter type=container
+docker events --filter event=start --filter event=stop
+
+docker system df                       # Docker 磁盘使用情况
+docker system df -v                    # 详细磁盘使用（含各对象）
+
+# cAdvisor：Google 开源的容器监控工具
+docker run -d --name cadvisor \
+  -p 8080:8080 \
+  -v /:/rootfs:ro \
+  -v /var/run:/var/run:ro \
+  -v /sys:/sys:ro \
+  -v /var/lib/docker/:/var/lib/docker:ro \
+  gcr.io/cadvisor/cadvisor</code></pre>
+
+<!-- ==================== 12. 资源限制 ==================== -->
+<h2 id="s22">12. 资源限制</h2>
+
+<pre><code># CPU 限制
+docker run --cpus 1.5 myapp                      # 最多1.5个CPU核心
+docker run --cpuset-cpus 0-2 myapp               # 绑定到CPU 0,1,2
+docker run --cpu-shares 512 myapp                # 相对权重（默认1024）
+
+# 内存限制
+docker run -m 512m myapp                         # 最大512M内存
+docker run -m 512m --memory-swap 1g myapp        # 512M内存 + 512M交换
+docker run -m 512m --memory-swap 512m myapp      # 禁用交换（等于内存值）
+docker run --memory-reservation 256m myapp       # 软限制
+
+# 磁盘 I/O 限制
+docker run --blkio-weight 500 myapp              # 相对权重（10-1000）
+docker run --device-read-bps /dev/sda:1mb myapp  # 读速率限制
+docker run --device-write-bps /dev/sda:1mb myapp # 写速率限制
+docker run --device-read-iops /dev/sda:100 myapp # 读 IOPS 限制
+docker run --device-write-iops /dev/sda:100 myapp
+
+# PID 限制（防止 fork 炸弹）
+docker run --pids-limit 100 myapp
+
+# ulimit 限制
+docker run --ulimit nofile=65535:65535 myapp     # 最大打开文件数
+docker run --ulimit nproc=1024:2048 myapp        # 最大进程数</code></pre>
+
+<!-- ==================== 13. CI/CD ==================== -->
+<h2 id="s23">13. CI/CD 集成</h2>
+
+<h3>GitHub Actions 示例</h3>
+<pre><code># .github/workflows/docker.yml
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max</code></pre>
+
+<h3>GitLab CI 示例</h3>
+<pre><code># .gitlab-ci.yml
+build:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA</code></pre>
+
+<!-- ==================== 14. 实用技巧 ==================== -->
+<h2 id="s24">14. 实用技巧</h2>
+
+<h3>系统清理</h3>
+<pre><code>docker system prune                     # 清理停止容器 + 悬空镜像 + 未用网络
+docker system prune -a                  # 还包括未使用的镜像
+docker system prune -a --volumes        # 还包括未使用的卷
+# 一键核弹：docker system prune -a -f --volumes</code></pre>
+
+<h3>批量操作</h3>
+<pre><code># 停止所有运行中的容器
+docker stop $(docker ps -q)
+
+# 删除所有已停止的容器
+docker container prune -f
+
+# 删除所有 <none> 标签的悬空镜像
+docker image prune -f
+
+# 删除特定名称前缀的容器
+docker rm $(docker ps -a -q --filter "name=myapp-")
+
+# 强制删除所有容器（危险）
+docker rm -f $(docker ps -aq)</code></pre>
+
+<h3>调试技巧</h3>
+<pre><code># 启动临时调试容器
+docker run --rm -it --network my-net alpine sh
+
+# 覆盖 ENTRYPOINT 进入 shell
+docker run --rm -it --entrypoint /bin/sh myapp
+
+# 导出容器文件系统
+docker export my-container > container.tar
+
+# 查看容器变更
+docker diff my-container
+
+# 查看 Docker Daemon 日志
+sudo journalctl -u docker -f
+
+# 分析镜像层大小
+docker history nginx:latest --no-trunc
+docker history --human nginx:latest</code></pre>
+
+<h3>网络调试容器</h3>
+<pre><code># nicolaka/netshoot：瑞士军刀级网络调试容器
+docker run --rm -it --network container:my-container nicolaka/netshoot
+# 共享目标容器的网络栈，可直接用 tcpdump/ping/nslookup 调试</code></pre>
+
+<h3>Docker Context（多主机管理）</h3>
+<pre><code>docker context ls                        # 查看上下文
+docker context create remote \
+  --docker "host=ssh://user@remote-host" # 通过 SSH 管理远程 Docker
+docker context use remote                # 切换到远程
+docker ps                                # 现在显示远程的容器</code></pre>
+
+<h3>.dockerignore 完整示例</h3>
+<pre><code># 版本控制
+.git
+.gitignore
+.gitattributes
+
+# 依赖
+node_modules
+vendor
+.pnpm-store
+
+# 构建产物
+dist
+build
+*.tsbuildinfo
+
+# 环境与配置
+.env
+.env.*
+*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 文档
+*.md
+docs/
+
+# 测试
+coverage
+.nyc_output
+*.test.js
+__tests__
+
+# CI/CD
+.github
+.gitlab-ci.yml
+Dockerfile*
+docker-compose*
+
+# 日志
+*.log
+logs/</code></pre>
+
+<!-- ==================== 15. 常见问题 ==================== -->
+<h2 id="s25">15. 常见问题与排错</h2>
+
+<h3>容器启动后立即退出</h3>
+<pre><code># 原因：主进程（CMD）执行完就结束了
+# 检查日志
+docker logs my-container
+
+# 常见原因：
+# 1. 脚本报错退出
+# 2. 缺少前台进程（如 CMD ["bash"] 不带 -it 会退出）
+# 3. 端口冲突</code></pre>
+
+<h3>容器内无法访问网络</h3>
+<pre><code># DNS 问题
+docker run --dns 8.8.8.8 myapp
+# 或修改 /etc/docker/daemon.json 添加 dns 配置
+
+# 代理问题
+docker run -e HTTP_PROXY=http://proxy:8080 myapp</code></pre>
+
+<h3>权限拒绝（Permission Denied）</h3>
+<pre><code># 挂载目录的权限问题
+# 容器内的 UID 和宿主机不一致
+docker run -u $(id -u):$(id -g) -v /host/path:/data myapp
+
+# 或 Dockerfile 中创建对应 UID 的用户：
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app</code></pre>
+
+<h3>磁盘空间不足</h3>
+<pre><code># 检查占用
+docker system df
+docker system df -v
+
+# 清理
+docker system prune -a --volumes
+
+# 检查 overlay2 占用
+sudo du -sh /var/lib/docker/</code></pre>
+
+<h3>时区不正确</h3>
+<pre><code># 挂载宿主机时区
+docker run -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro myapp
+
+# 或在 Dockerfile 中设置
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone</code></pre>
+
+<h3>端口已被占用</h3>
+<pre><code># 查看端口占用
+sudo lsof -i :8080
+sudo ss -tlnp | grep 8080
+
+# 解决方法：
+# 1. 换个端口 -p 8081:80
+# 2. 停止占用进程
+# 3. 用 host 网络模式（不推荐）</code></pre>
+
+<!-- ==================== 16. 进阶生态 ==================== -->
+<h2 id="s26">16. 进阶生态</h2>
+
+<h3>容器编排</h3>
+<ul>
+  <li><strong>Kubernetes（K8s）</strong>：事实上的容器编排标准，大规模集群管理</li>
+  <li><strong>Docker Swarm</strong>：Docker 原生集群，简单易用（适合小规模）</li>
+  <li><strong>Nomad</strong>：HashiCorp 的编排工具，支持非容器工作负载</li>
+</ul>
+
+<h3>镜像仓库</h3>
+<ul>
+  <li><strong>Docker Hub</strong>：公共镜像仓库</li>
+  <li><strong>Harbor</strong>：企业级私有仓库，支持漏洞扫描、RBAC</li>
+  <li><strong>GitHub Container Registry（ghcr.io）</strong>：与 GitHub 生态集成</li>
+  <li><strong>阿里云容器镜像服务（ACR）</strong>：国内加速</li>
+</ul>
+
+<h3>CI/CD 与 DevOps 工具</h3>
+<ul>
+  <li><strong>Jenkins + Docker Pipeline</strong></li>
+  <li><strong>GitHub Actions / GitLab CI</strong></li>
+  <li><strong>ArgoCD / Flux</strong>：GitOps 持续部署</li>
+  <li><strong>Drone CI</strong>：轻量级 CI，原生容器支持</li>
+  <li><strong>Tekton</strong>：K8s 原生 CI/CD</li>
+</ul>
+
+<h3>监控与可观测性</h3>
+<ul>
+  <li><strong>Prometheus + Grafana</strong>：指标采集与可视化</li>
+  <li><strong>cAdvisor</strong>：容器资源监控</li>
+  <li><strong>ELK / Loki</strong>：日志聚合</li>
+  <li><strong>Jaeger / Zipkin</strong>：分布式追踪</li>
+  <li><strong>Datadog / New Relic</strong>：商业 APM 方案</li>
+</ul>
+
+<h3>安全工具</h3>
+<ul>
+  <li><strong>Trivy</strong>：全面的安全扫描工具（镜像、IaC、Git 仓库）</li>
+  <li><strong>Docker Scout</strong>：Docker 官方安全分析</li>
+  <li><strong>Falco</strong>：运行时威胁检测</li>
+  <li><strong>Clair</strong>：静态漏洞分析</li>
+  <li><strong>Snyk</strong>：依赖与容器安全</li>
+</ul>
+
+<h3>开发工具</h3>
+<ul>
+  <li><strong>Dev Containers（VS Code Remote）</strong>：容器内开发</li>
+  <li><strong>Tilt / Skaffold</strong>：本地 K8s 开发工作流</li>
+  <li><strong>Docker Compose Watch</strong>：文件变更自动同步（2.22+）</li>
+  <li><strong>Dive</strong>：分析镜像层的 TUI 工具</li>
+  <li><strong>Hadolint</strong>：Dockerfile 静态分析 Linter</li>
+  <li><strong>Podman</strong>：无守护进程的容器引擎（Docker 替代品）</li>
+</ul>
+
+<h3>一键常用服务部署</h3>
+<pre><code># MySQL
+docker run -d --name mysql \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root123 \
+  -v mysql-data:/var/lib/mysql \
+  mysql:8.0
+
+# PostgreSQL
+docker run -d --name postgres \
+  -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgres123 \
+  -v pg-data:/var/lib/postgresql/data \
+  postgres:16-alpine
+
+# Redis
+docker run -d --name redis \
+  -p 6379:6379 \
+  -v redis-data:/data \
+  redis:7-alpine redis-server --appendonly yes
+
+# MongoDB
+docker run -d --name mongo \
+  -p 27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=admin123 \
+  -v mongo-data:/data/db \
+  mongo:7
+
+# RabbitMQ（含管理界面）
+docker run -d --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=admin \
+  -e RABBITMQ_DEFAULT_PASS=admin123 \
+  rabbitmq:3-management
+
+# Nginx
+docker run -d --name nginx \
+  -p 80:80 \
+  -p 443:443 \
+  -v ./html:/usr/share/nginx/html:ro \
+  -v ./nginx.conf:/etc/nginx/nginx.conf:ro \
+  nginx:alpine
+
+# Portainer（Docker 可视化管理）
+docker run -d --name portainer \
+  -p 9443:9443 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer-data:/data \
+  portainer/portainer-ce:latest</code></pre>
+
+<h3>常用 Dockerfile 模板</h3>
+
+<h4>Node.js 应用</h4>
+<pre><code>FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+COPY . .
+RUN yarn build
+
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+USER node
+EXPOSE 3000
+CMD ["node", "dist/server.js"]</code></pre>
+
+<h4>Python 应用</h4>
+<pre><code>FROM python:3.12-alpine
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+RUN adduser -D appuser && chown -R appuser:appuser /app
+USER appuser
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code></pre>
+
+<h4>Go 应用</h4>
+<pre><code>FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server .
+
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates tzdata
+ENV TZ=Asia/Shanghai
+COPY --from=builder /app/server /server
+RUN adduser -D appuser
+USER appuser
+EXPOSE 8080
+ENTRYPOINT ["/server"]</code></pre>
+
+<h3>结语</h3>
+<div class="callout tip">
+<strong>学习路径建议</strong>：
+<ol>
+  <li>掌握 Docker 基础：镜像、容器、Dockerfile</li>
+  <li>理解数据管理与网络</li>
+  <li>熟练使用 Docker Compose 编排多服务应用</li>
+  <li>学习多阶段构建、BuildKit、安全最佳实践</li>
+  <li>根据需求深入：Kubernetes 编排 / CI-CD 集成 / 监控与日志</li>
+</ol>
+<p>持续实践是最好的学习方式。将你的项目容器化，在真实场景中使用本教程中的技巧。</p>
+</div>
+
+<hr style="margin:40px 0;border-color:var(--border)">
+<p style="color:var(--text-secondary);font-size:13px;text-align:center">
+  Docker 完全教程 — 涵盖从入门到进阶的全部核心知识
+</p>
+
+</main>
+</body>
+</html>

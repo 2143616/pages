@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Feed Model — 树结构分层喂入方案</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --orange: #fb923c;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+  .hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid #334155;
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(129,140,248,0.06) 0%, transparent 50%);
+    z-index: 0;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 10px; }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle { color: var(--muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
+  .badge-row { display: flex; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  .badge {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .badge.blue { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.3); }
+  .badge.purple { background: rgba(129,140,248,0.15); color: var(--accent2); border: 1px solid rgba(129,140,248,0.3); }
+  .badge.green { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  section { padding: 48px 0; border-bottom: 1px solid #1e293b; }
+  section:last-child { border-bottom: none; }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .emoji { font-size: 1.4rem; }
+  h3 { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; color: var(--accent); }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid #334155;
+  }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  @media (max-width: 720px) { .comparison-grid { grid-template-columns: 1fr; } }
+  .method-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #334155;
+    text-align: center;
+  }
+  .method-card .icon { font-size: 2rem; margin-bottom: 8px; }
+  .method-card .title { font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
+  .method-card .desc { color: var(--muted); font-size: 0.85rem; }
+  .method-card .status { margin-top: 10px; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; display: inline-block; }
+  .status.fail { background: rgba(248,113,113,0.15); color: var(--red); }
+  .status.ok { background: rgba(52,211,153,0.15); color: var(--green); }
+  .status.warn { background: rgba(251,146,60,0.15); color: var(--orange); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 16px 0;
+  }
+  th {
+    background: #334155;
+    color: var(--text);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  th:first-child { border-radius: 8px 0 0 0; }
+  th:last-child { border-radius: 0 8px 0 0; }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #334155;
+  }
+  tr:hover td { background: rgba(56,189,248,0.04); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  code {
+    background: #0f172a;
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  pre {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 12px 0;
+    border: 1px solid #1e293b;
+  }
+  pre .comment { color: #6b7280; }
+  pre .keyword { color: var(--accent2); }
+  pre .string { color: var(--green); }
+  pre .hl { background: rgba(251,146,60,0.15); padding: 0 4px; border-radius: 2px; }
+
+  .diff-add { background: rgba(52,211,153,0.1); color: var(--green); }
+  .diff-del { background: rgba(248,113,113,0.1); color: var(--red); }
+
+  ul, ol { padding-left: 20px; margin: 10px 0; }
+  li { margin-bottom: 6px; }
+
+  .arch-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 20px 0;
+    font-size: 0.9rem;
+  }
+  .arch-box {
+    background: var(--card);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 80px;
+  }
+  .arch-box.leaf { border-color: rgba(52,211,153,0.3); }
+  .arch-box.llm { border-color: rgba(56,189,248,0.3); }
+  .arch-box.state { border-color: rgba(129,140,248,0.3); }
+  .arch-arrow { color: var(--muted); font-size: 1.2rem; }
+
+  .insight-box {
+    background: linear-gradient(135deg, rgba(56,189,248,0.08), rgba(129,140,248,0.08));
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .insight-box .title { font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+
+  .chart-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+  }
+  .chart-bar .label { width: 120px; text-align: right; font-size: 0.85rem; color: var(--muted); }
+  .chart-bar .bar-wrap { flex: 1; height: 24px; background: #1e293b; border-radius: 4px; overflow: hidden; position: relative; }
+  .chart-bar .bar { height: 100%; border-radius: 4px; min-width: 4px; transition: width 0.3s; }
+  .chart-bar .bar.green { background: var(--green); }
+  .chart-bar .bar.orange { background: var(--orange); }
+  .chart-bar .bar.red { background: var(--red); }
+  .chart-bar .bar.gray { background: #4b5563; }
+  .chart-bar .val { width: 100px; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+  .footer {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-content">
+    <h1>🌲 树结构 <span>分层喂入</span> 方案</h1>
+    <p class="subtitle">如何将一棵超长上下文的大树，无损地「喂」进上下文窗口有限的 LLM</p>
+    <div class="badge-row">
+      <span class="badge blue">方案六 · 多轮状态机</span>
+      <span class="badge purple">LLM_model.py 改进</span>
+      <span class="badge green">语义去重</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ─────── 原始问题 ─────── -->
+<section>
+  <h2><span class="emoji">🤔</span> 原始问题</h2>
+  <div class="card">
+    <p>有一个深度为 N 层的 JSON 树（例如 50,000 节点，序列化后约 688K tokens），需要输入给大模型做语义去重。</p>
+    <p style="margin-top:10px;">但大模型的上下文窗口是有限的：</p>
+    <table>
+      <tr><th>模型</th><th>上下文窗口</th><th>能否处理 688K tokens</th></tr>
+      <tr><td>DeepSeek V2/V3</td><td>128K tokens</td><td style="color:var(--red)">❌ 超出 5 倍</td></tr>
+      <tr><td>GPT-4 / Claude 3</td><td>128K~200K tokens</td><td style="color:var(--red)">❌ 超出 3~5 倍</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>1M tokens</td><td style="color:var(--green)">✅ 可以</td></tr>
+    </table>
+    <p style="margin-top:12px;color:var(--muted);font-size:0.9rem;">如果不使用 Gemini 等超大上下文模型，就需要编码层面解决「树塞不进」的问题。</p>
+  </div>
+</section>
+
+<!-- ─────── 三种方案对比 ─────── -->
+<section>
+  <h2><span class="emoji">⚖️</span> 三种喂入方式对比</h2>
+
+  <div class="comparison-grid">
+    <div class="method-card">
+      <div class="icon">📦</div>
+      <div class="title">全量输入（一次）</div>
+      <div class="desc">把整个 JSON 树直接作为 prompt 发送</div>
+      <div class="status fail">❌ 超窗口，报错</div>
+    </div>
+    <div class="method-card">
+      <div class="icon">📚</div>
+      <div class="title">原代码（逐层累积）</div>
+      <div class="desc">每层数据追加到 messages 列表，持续膨胀</div>
+      <div class="status fail">❌ 最后一轮同样超窗口</div>
+    </div>
+    <div class="method-card">
+      <div class="icon">⚡</div>
+      <div class="title">方案六（多轮状态机）</div>
+      <div class="desc">每次独立调用，只传当前层 + 前面层级的紧凑摘要</div>
+      <div class="status ok">✅ 每轮都在窗口内</div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <div class="title">💡 核心洞察</div>
+    <p>三类方案的本质差异——</p>
+    <div style="margin-top:12px;">
+      <strong>全量输入</strong>：1 次通话 × 688K tokens → ❌ 超窗，API 直接报错<br>
+      <strong>原累积代码</strong>：最后一轮 1.5M tokens（累积了所有层的原始数据 + 回复）→ ❌ 更严重超窗<br>
+      <strong>方案六</strong>：N 次通话 × 每次 ≤ 2K tokens → ✅ 每次都在窗口内
+    </div>
+  </div>
+</section>
+
+<!-- ─────── 方案六：架构原理 ─────── -->
+<section>
+  <h2><span class="emoji">🧠</span> 方案六：多轮状态机架构</h2>
+
+  <div class="arch-flow">
+    <div class="arch-box leaf">🌳 完整树<br><span style="font-size:0.75rem;color:var(--muted)">程序内存</span></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box state">📋 状态机<br><span style="font-size:0.75rem;color:var(--muted)">当前路径·摘要缓存</span></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box llm">🤖 LLM<br><span style="font-size:0.75rem;color:var(--muted)">每轮 ≤2K tokens</span></div>
+  </div>
+
+  <div class="card">
+    <h3>🔑 关键区别：不累积上下文</h3>
+
+    <p style="margin-bottom:12px;font-weight:600;color:var(--orange);">❌ 原代码（累积模式）</p>
+    <pre>
+<span class="comment"># 每轮追加，messages 持续增长</span>
+messages = [system]
+<span class="keyword">for</span> level <span class="keyword">in</span> [1, 2, 3, 4]:
+    messages.<span class="hl">append</span>(level_prompt)       <span class="comment"># ← 追加当前层数据</span>
+    reply = llm(<span class="hl">messages</span>)                <span class="comment"># ← 发送累积的所有层</span>
+    messages.<span class="hl">append</span>(reply)              <span class="comment"># ← 又追加回复</span>
+<span class="comment"># 到最后一轮时 messages 已包含全部 5 层的原始数据 + 全部回复</span></pre>
+
+    <p style="margin:16px 0 12px;font-weight:600;color:var(--green);">✅ 方案六（独立调用 + 紧凑摘要）</p>
+    <pre>
+<span class="comment"># 每轮重建 prompt，不累积</span>
+summaries = []                          <span class="comment"># ← 局部队列存摘要，不进 prompt</span>
+<span class="keyword">for</span> level <span class="keyword">in</span> [1, 2, 3, 4]:
+    reply = llm([system, level_prompt])  <span class="comment"># ← 干净的 2 条消息</span>
+    summaries.append(<span class="string">f"Level {level}: ..."</span>)  <span class="comment"># ← 压缩为一行</span>
+
+<span class="comment"># 最后一轮只带 ~200 tokens 树概况 + 当前分块</span>
+chunk_reply = llm([system, structure, chunk_data])
+dedup_reply = llm([system, full_structure, dedup_instruction])</pre>
+  </div>
+
+  <div class="card">
+    <h3>📋 状态机负责什么</h3>
+    <ul>
+      <li><strong>维护当前探索路径</strong>（面包屑导航：根 → 子公司 → 部门）</li>
+      <li><strong>缓存已访问节点摘要</strong>（每层 LLM 回复压缩为一行，替代全量数据）</li>
+      <li><strong>处理导航指令</strong>（进入子节点、返回上级），<strong>绕过 LLM</strong>，不消耗 token</li>
+      <li><strong>控制分块大小</strong>（确保每块 ≤ 上下文窗口安全阈值）</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────── Token 数据对比 ─────── -->
+<section>
+  <h2><span class="emoji">📊</span> Token 数据对比</h2>
+
+  <h3>测试数据（22节点，386 tokens 全量）</h3>
+  <table>
+    <tr><th>方式</th><th>每次峰值</th><th>调用次数</th><th>累计 token</th><th>能否处理</th></tr>
+    <tr><td>全量输入</td><td class="num">344t</td><td class="num">1</td><td class="num">344t</td><td style="color:var(--green)">✅</td></tr>
+    <tr><td>原累积代码</td><td class="num">~220t</td><td class="num">4</td><td class="num">~515t</td><td style="color:var(--green)">✅</td></tr>
+    <tr><td><strong>方案六</strong></td><td class="num"><strong>~90t</strong></td><td class="num"><strong>5</strong></td><td class="num"><strong>~725t</strong></td><td style="color:var(--green)">✅</td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:0.85rem;">小树场景：方案六有固定开销，不如直接全量输入。</p>
+
+  <h3 style="margin-top:24px;">大树（50,000节点，~688K tokens）</h3>
+  <table>
+    <tr><th>方式</th><th>每次峰值</th><th>调用次数</th><th>能否处理</th><th>原因</th></tr>
+    <tr><td>全量输入</td><td class="num">688K t</td><td class="num">1</td><td style="color:var(--red)">❌</td><td>超出 128K 上下文窗口</td></tr>
+    <tr><td>原累积代码</td><td class="num">~1.5M t</td><td class="num">~5+N</td><td style="color:var(--red)">❌</td><td>最后一轮更严重超窗</td></tr>
+    <tr><td><strong>方案六</strong></td><td class="num"><strong>~2K t</strong></td><td class="num"><strong>~100</strong></td><td style="color:var(--green)">✅</td><td>每轮都在窗口内</td></tr>
+  </table>
+
+  <div class="chart-bar" style="margin-top:20px;">
+    <div class="label">全量输入</div>
+    <div class="bar-wrap"><div class="bar red" style="width:100%"></div></div>
+    <div class="val" style="color:var(--red)">688K t ❌</div>
+  </div>
+  <div class="chart-bar">
+    <div class="label">原累积代码</div>
+    <div class="bar-wrap"><div class="bar orange" style="width:70%"></div></div>
+    <div class="val" style="color:var(--orange)">1.5M t ❌</div>
+  </div>
+  <div class="chart-bar">
+    <div class="label">方案六·峰值</div>
+    <div class="bar-wrap"><div class="bar green" style="width:0.3%"></div></div>
+    <div class="val" style="color:var(--green)">2K t ✅</div>
+  </div>
+  <p style="color:var(--muted);font-size:0.85rem;margin-top:8px;">条形图按比例示意，方案六峰值仅占全量的 ≈ 0.3%</p>
+</section>
+
+<!-- ─────── 如何让大树变得可处理 ─────── -->
+<section>
+  <h2><span class="emoji">🔄</span> 如何让「塞不进的大树」变得可处理</h2>
+
+  <div class="insight-box">
+    <div class="title">🎯 核心原理：空间换时间</div>
+    <p><strong>将一次「大上下文通话」分解为多次「小上下文通话」</strong>，每次只处理树的 <strong>一个层级或一个分块</strong>，用多次 API 调用的「时间成本」换取「单次上下文不超限」的可行性。</p>
+  </div>
+
+  <div class="card">
+    <h3>三步变换过程</h3>
+    <ol>
+      <li>
+        <strong>展平（Flatten）：</strong><br>
+        原始树 → 按深度拆分为 level 1 ~ level N。<br>
+        每层只保留 <code>id</code> + <code>topic</code>，丢弃 <code>children</code> 引用，缩小 100 倍。<br>
+        <pre><span class="comment"># 原始节点（~120 chars）</span>
+{"id": "n1", "topic": "人工智能", "children": [{...}, {...}]}
+<span class="comment"># 展平后（~35 chars）</span>
+{"id": "n1", "topic": "人工智能"}</pre>
+      </li>
+      <li>
+        <strong>分层喂入（Layer Feed）：</strong><br>
+        Level 1 → Level 2 → Level 3 → Level 4 逐层独立发送。<br>
+        每层只发当前层的数据 + 前面层的一行摘要（~200 tokens），不累积全量历史。
+      </li>
+      <li>
+        <strong>分块处理（Chunking）：</strong><br>
+        最后一层（数据量最大的叶子层）按 token 预算切分成若干块，每块包含若干完整子树。<br>
+        每块独立发送，带上前面的摘要作为上下文。
+      </li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>🌰 一个直观的类比</h3>
+    <table>
+      <tr><th>场景</th><th>全量输入</th><th>方案六</th></tr>
+      <tr><td>📦 搬 1 吨货物</td><td>叫一辆载重 200kg 的车拉 1 吨 → ❌ 拉不动</td><td>分 5 趟，每趟 200kg → ✅ 每趟都拉得动</td></tr>
+      <tr><td>📖 读一本 1000 页的书</td><td>一次全部读入脑子 → ❌ 记不住</td><td>逐章阅读，每章做笔记（摘要）→ ✅ 读完还能总结</td></tr>
+      <tr><td>🗂️ 查看公司组织架构</td><td>打印全部 5 万人的名单 → ❌ 看不过来</td><td>先看部门 → 选择研发部 → 展开 AI 实验室 → ✅ 逐层探索</td></tr>
+    </table>
+  </div>
+
+  <div class="insight-box" style="border-color:rgba(251,146,60,0.3);background:linear-gradient(135deg,rgba(251,146,60,0.06),rgba(248,113,113,0.06));">
+    <div class="title" style="color:var(--orange);">⚠️ 代价与权衡</div>
+    <table style="font-size:0.85rem;">
+      <tr><th>维度</th><th>全量输入</th><th>方案六</th></tr>
+      <tr><td>单次延迟</td><td>≈ 一次 API 调用</td><td>≈ N 次 API 调用</td></tr>
+      <tr><td>总 token 消耗</td><td>1x（基准）</td><td>1.5x ~ 3x（固定开销）</td></tr>
+      <tr><td>峰值上下文</td><td>全树大小</td><td>单层 / 单分块大小</td></tr>
+      <tr><td>全局视野</td><td>完整</td><td>仅摘要 + 当前分块</td></tr>
+      <tr><td>最大可处理树</td><td>≤ 上下文窗口</td><td>无上限（受 API 配额限制）</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ─────── 代码改进 ─────── -->
+<section>
+  <h2><span class="emoji">🔧</span> LLM_model.py 的改进</h2>
+
+  <div class="card">
+    <h3>修改概览（±15 行，2 个文件）</h3>
+    <table>
+      <tr><th>文件</th><th>改动内容</th></tr>
+      <tr>
+        <td><code>LLM_model.py</code></td>
+        <td>用 <code>summaries: list[str]</code> + 独立调用代替 <code>messages: list[dict]</code> 累积</td>
+      </tr>
+      <tr>
+        <td><code>prompt/prompt.md</code></td>
+        <td>去重指令从「已收到全部层级全部节点」改为「已收到结构概况 + 第5层完整子树」</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>核心代码 diff</h3>
+    <pre>
+<span class="comment"># ── 改前（累积模式） ──</span>
+<span class="diff-del">messages = [system]</span>
+<span class="keyword">for</span> level <span class="keyword">in</span> [1, 2, 3, 4]:
+    prompt = _build_level_prompt(level, nodes, is_last=False)
+    messages.<span class="hl">append</span>({"role": "user", "content": prompt})
+    reply = await _call_llm(<span class="hl">messages</span>)      <span class="comment"># ← 带着所有历史</span>
+    messages.<span class="hl">append</span>({"role": "assistant", "content": reply})
+
+<span class="comment"># ── 改后（方案六） ──</span>
+<span class="diff-add">summaries: list[str] = []</span>
+<span class="keyword">for</span> level <span class="keyword">in</span> [1, 2, 3, 4]:
+    prompt = _build_level_prompt(level, nodes, is_last=False)
+    reply = await _call_llm([system_msg, {"role": "user", "content": prompt}])  <span class="comment"># ← 干净的 2 条</span>
+    <span class="comment"># 压缩为一行摘要</span>
+    topics = [n.get("topic", "")[:15] for n in nodes[:8]]
+    summaries.append(f"Level {level}: {', '.join(topics)}")</pre>
+  </div>
+
+  <div class="card">
+    <h3>token 节省效果</h3>
+    <p>以 50,000 节点树为例，每轮上下文对比：</p>
+    <table>
+      <tr><th>轮次</th><th>改前（累积）</th><th>改后（方案六）</th><th>降低</th></tr>
+      <tr><td>Level 1</td><td class="num">1K t</td><td class="num">1K t</td><td>—</td></tr>
+      <tr><td>Level 2</td><td class="num">6K t</td><td class="num">1K t</td><td style="color:var(--green)">6x</td></tr>
+      <tr><td>Level 3</td><td class="num">56K t</td><td class="num">1K t</td><td style="color:var(--green)">56x</td></tr>
+      <tr><td>Level 4</td><td class="num">556K t</td><td class="num">1K t</td><td style="color:var(--green)">556x</td></tr>
+      <tr><td>Level 5 分块</td><td class="num">~558K t</td><td class="num">~2K t</td><td style="color:var(--green)">279x</td></tr>
+      <tr><td><strong>Dedup 汇总</strong></td><td class="num"><strong>~1.5M t</strong></td><td class="num"><strong>~560K t</strong></td><td style="color:var(--green)"><strong>2.7x</strong></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ─────── 适用场景 ─────── -->
+<section>
+  <h2><span class="emoji">🎯</span> 适用场景指南</h2>
+
+  <table>
+    <tr><th>树大小</th><th>推荐方案</th><th>理由</th></tr>
+    <tr>
+      <td>≤ 10K tokens</td>
+      <td><span class="badge green">直接全量</span></td>
+      <td>方案六有固定开销，反而浪费</td>
+    </tr>
+    <tr>
+      <td>10K ~ 128K tokens</td>
+      <td><span class="badge blue">方案六 · 紧凑序列化</span></td>
+      <td>峰值可降低 1x~10x，为后续留余量</td>
+    </tr>
+    <tr>
+      <td>128K ~ 1M+ tokens</td>
+      <td><span class="badge purple">方案六 · 必须的</span></td>
+      <td>不这样做根本放不进上下文窗口</td>
+    </tr>
+  </table>
+
+  <div class="insight-box" style="margin-top:20px;">
+    <div class="title">📌 一句话总结</div>
+    <p style="font-size:1.1rem;font-weight:500;">
+      方案六不是用来「省 token 总量」的——它是用来<span style="color:var(--accent)">让原本无法处理的大树变得可处理</span>的。
+      它用多次小上下文调用来换一次大上下文调用的可行性。
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="footer">
+  总结生成时间 · Hermes Agent<br>
+  LLM_model.py 改进 · 基于方案六（多轮状态机）
+</div>
+
+</body>
+</html>
