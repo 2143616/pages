@@ -142,9 +142,22 @@ td { color: var(--fg2); }
 }
 .highlight strong { color: var(--accent); }
 
+/* mermaid diagram */
+.mermaid {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid svg { max-width: 100%; height: auto; }
+
 /* footnote */
 .footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -211,17 +224,86 @@ pid = os.fork()
 <p><strong>进程（Process）</strong> 是程序的一次执行实例，是操作系统进行资源分配的最小单位。每个进程拥有独立的内存空间（代码段、数据段、堆、栈）和系统资源（文件描述符等）。</p>
 
 <h3>进程状态转换</h3>
-<pre><span class="lang-label">状态机</span>
-    ┌─────────┐   调度选中    ┌──────────┐
-    │  就绪态  │───────────→ │  运行态  │
-    │ (Ready)  │             │ (Running)│
-    └────┬─────┘             └────┬─────┘
-         ↑                        │ 时间片耗尽
-         │  事件/资源就绪         ↓
-    ┌────┴─────┐             ┌──────────┐
-    │  阻塞态  │←─────────── │  运行态  │
-    │ (Blocked)│   等待 I/O  │          │
-    └──────────┘   或事件    └──────────┘</pre>
+<p>进程在生命周期中会经历不同的状态，经典<strong>五状态模型</strong>如下：</p>
+<span class="lang-label">五状态模型</span>
+
+<div class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> New : 进程创建
+    New --> Ready : 创建完成
+    Ready --> Running : 调度选中
+    Running --> Ready : 时间片耗尽 / 被抢占
+    Running --> Blocked : 等待 I/O / 事件
+    Blocked --> Ready : 唤醒 / I/O 完成
+    Running --> [*] : 运行结束
+
+    state New {
+        [*] --> 分配PCB
+    }
+    state Ready {
+        [*] --> 就绪队列
+    }
+
+    classDef green fill:#1a4d2e,stroke:#3fb950,color:#e6edf3
+    classDef blue fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef purple fill:#362b5c,stroke:#bc8cff,color:#e6edf3
+    classDef orange fill:#4d3b1a,stroke:#d29922,color:#e6edf3
+    class New green
+    class Ready blue
+    class Running purple
+    class Blocked orange
+</div>
+<div class="highlight">
+  <strong>🗺 五状态说明：</strong><br>
+  • <strong>创建态 (New)</strong> — 进程正在被创建：分配 PCB、初始化资源、载入代码。完成后进入就绪队列。<br>
+  • <strong>就绪态 (Ready)</strong> — 进程已具备运行条件，只等 CPU 调度。可以同时有多个就绪进程排在就绪队列中。<br>
+  • <strong>运行态 (Running)</strong> — 进程正在 CPU 上执行。单核 CPU 上同一时刻最多只有一个进程处于运行态。<br>
+  • <strong>阻塞态 (Blocked / Waiting)</strong> — 进程因等待某事件（I/O 完成、信号到达、资源可用等）而暂停，即使有空闲 CPU 也无法继续执行。<br>
+  • <strong>终止态 (Terminated / Zombie)</strong> — 进程已结束执行或被迫退出，释放大部分资源，只保留 PCB 供父进程读取退出码。
+</div>
+
+<h3>补充：挂起态（Suspend）</h3>
+<p>在虚拟内存管理中，操作系统还可以将进程换出到磁盘，引入<strong>挂起态</strong>：</p>
+<span class="lang-label">七状态模型</span>
+
+<div class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> New : 进程创建
+    New --> Ready : 创建完成
+    Ready --> Running : 调度选中
+    Running --> Ready : 时间片耗尽
+    Running --> Blocked : 等待 I/O
+    Blocked --> Ready : I/O 完成
+    Running --> [*] : 运行结束
+
+    Ready --> ReadyS : 挂起 (换出)
+    Blocked --> BlockedS : 挂起 (换出)
+    ReadyS --> Ready : 激活 (换入)
+    BlockedS --> Blocked : 激活 (换入)
+
+    state ReadyS {
+        [*] --> 就绪挂起
+    }
+    state BlockedS {
+        [*] --> 阻塞挂起
+    }
+
+    classDef green fill:#1a4d2e,stroke:#3fb950,color:#e6edf3
+    classDef blue fill:#1b3a5c,stroke:#58a6ff,color:#e6edf3
+    classDef purple fill:#362b5c,stroke:#bc8cff,color:#e6edf3
+    classDef orange fill:#4d3b1a,stroke:#d29922,color:#e6edf3
+    classDef dimBlue fill:#112d4a,stroke:#58a6ff,color:#8b949e
+    classDef dimOrange fill:#3d2e14,stroke:#d29922,color:#8b949e
+    class New green
+    class Ready blue
+    class Running purple
+    class Blocked orange
+    class ReadyS dimBlue
+    class BlockedS dimOrange
+</div>
+<p>挂起态主要用于操作系统在内存紧张时，将暂时不运行的进程换出到磁盘的交换区（Swap），腾出内存给活跃进程。</p>
 
 <h3>进程控制块（PCB）</h3>
 <p>每个进程对应一个 PCB，记录进程的所有信息。Linux 中对应 <code>task_struct</code> 结构体。</p>
@@ -1026,6 +1108,21 @@ asyncio.run(main())</pre>
   <span style="color: var(--green);">🟢 持续更新</span>
 </div>
 
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1c2128',
+    primaryTextColor: '#e6edf3',
+    primaryBorderColor: '#58a6ff',
+    lineColor: '#58a6ff',
+    secondaryColor: '#161b22',
+    tertiaryColor: '#21262d',
+    fontSize: '14px'
+  }
+});
+</script>
 </div>
 </body>
 </html>
