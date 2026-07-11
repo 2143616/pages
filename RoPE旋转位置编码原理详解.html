@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE 旋转位置编码原理详解 — 从正弦编码到复数旋转的完整推导</title>
+<style>
+  :root {
+    --bg:#f8fafc; --card:#fff; --text:#1e293b; --sub:#475569; --muted:#94a3b8;
+    --accent:#2563eb; --accent2:#7c3aed; --accent3:#059669; --accent4:#d97706;
+    --accent-light:#eff6ff; --accent2-light:#f5f3ff; --accent3-light:#ecfdf5;
+    --border:#e2e8f0; --code-bg:#f1f5f9; --radius:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.85;padding-bottom:100px;font-size:16px}
+  .container{max-width:1000px;margin:0 auto;padding:0 24px}
+
+  header{background:linear-gradient(135deg,#1e40af 0%,#7c3aed 50%,#db2777 100%);color:#fff;padding:50px 36px;border-radius:var(--radius);margin:36px 0 28px;position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;top:-30%;right:-10%;width:350px;height:350px;background:rgba(255,255,255,.04);border-radius:50%}
+  header h1{font-size:1.9rem;margin-bottom:10px;position:relative;z-index:1}
+  header p{opacity:.85;font-size:1rem;position:relative;z-index:1;max-width:700px}
+
+  .toc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin:0 0 32px}
+  .toc h3{font-size:1.05rem;margin-bottom:14px;color:var(--accent)}
+  .toc ol{margin-left:22px;line-height:2.3}
+  .toc a{color:var(--accent);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+
+  h2{font-size:1.4rem;margin:52px 0 16px;padding-bottom:8px;border-bottom:3px solid var(--accent);color:var(--accent)}
+  h3{font-size:1.12rem;margin:30px 0 10px;color:#334155}
+  h4{font-size:1rem;margin:20px 0 6px;color:var(--accent2)}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 26px;margin:16px 0}
+  .card-accent2{border-left:4px solid var(--accent2)}
+  .card-accent3{border-left:4px solid var(--accent3)}
+  .card-highlight{background:linear-gradient(135deg,#eff6ff 0%,#f5f3ff 100%);border:2px solid var(--accent);padding:24px 28px;margin:20px 0}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.92rem}
+  th,td{border:1px solid var(--border);padding:10px 14px;text-align:left}
+  th{background:var(--accent-light);font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+
+  pre{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px 20px;overflow-x:auto;font-size:.84rem;line-height:1.7;margin:14px 0;tab-size:2}
+  code{font-family:"SF Mono","Fira Code","Cascadia Code",Consolas,monospace;font-size:.88em}
+  .formula{background:linear-gradient(135deg,#fef3c7 0%,#fef9c3 100%);border:2px solid #fbbf24;border-radius:8px;padding:14px 20px;margin:14px 0;text-align:center;font-size:1.05rem;font-weight:600;overflow-x:auto}
+  .formula-purple{background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);border-color:#a78bfa}
+
+  ul,ol{margin-left:24px}
+  li{margin:7px 0}
+
+  .tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600;margin-right:4px}
+  .tag-blue{background:var(--accent-light);color:var(--accent)}
+  .tag-purple{background:var(--accent2-light);color:var(--accent2)}
+  .tag-green{background:var(--accent3-light);color:var(--accent3)}
+
+  .comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+  @media(max-width:700px){.comparison{grid-template-columns:1fr}}
+
+  .callout{background:var(--accent-light);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;margin:14px 0;font-size:.92rem}
+  .callout-warn{background:#fef2f2;border-left-color:#dc2626}
+  .callout-tip{background:#ecfdf5;border-left-color:var(--accent3)}
+  .callout-key{background:linear-gradient(135deg,#eff6ff,#f5f3ff);border-left:4px solid var(--accent2);padding:14px 18px;border-radius:0 6px 6px 0;margin:16px 0}
+
+  .step-box{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+  .step-num{background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px}
+  .step-text{flex:1}
+
+  footer{text-align:center;margin-top:60px;padding:20px 0;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>RoPE 旋转位置编码原理详解</h1>
+  <p>从"为什么需要位置编码"到"复数旋转背后的线性代数"，完整推导 RoPE（Rotary Position Embedding）的数学原理、实现细节及与正弦编码的深度对比</p>
+</header>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>📑 目录</h3>
+  <ol>
+    <li><a href="#s0">前置知识：为什么 Transformer 需要位置编码</a></li>
+    <li><a href="#s1">位置编码演进史：从 Sinusoidal 到 RoPE</a></li>
+    <li><a href="#s2">RoPE 核心思想：用旋转给向量"打位置标签"</a></li>
+    <li><a href="#s3">数学推导第一步：二维旋转矩阵</a></li>
+    <li><a href="#s4">数学推导第二步：推广到高维（分块对角旋转）</a></li>
+    <li><a href="#s5">数学推导第三步：复数视角下的优雅表达</a></li>
+    <li><a href="#s6">RoPE 的核心性质：相对位置自然编码</a></li>
+    <li><a href="#s7">实现细节：预计算频率表 + 旋转变换</a></li>
+    <li><a href="#s8">完整 PyTorch 实现</a></li>
+    <li><a href="#s9">与 Sinusoidal / Learned / ALiBi 对比</a></li>
+    <li><a href="#s10">RoPE 的扩展：线性插值 / NTK / YaRN</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 0 ==================== -->
+<h2 id="s0">0. 前置知识：为什么 Transformer 需要位置编码</h2>
+
+<div class="card card-accent3">
+<p>先看一个残酷的事实——<strong>不带位置编码的 Self-Attention 完全无法区分词序</strong>：</p>
+
+<div class="formula">Attention(Q, K, V) = Softmax( QK<sup>T</sup> / √d<sub>k</sub> ) · V</div>
+
+<p>这个公式里，Q 和 K 的内积只关心两个向量"在语义上多相似"，完全不关心它们分别在序列的第几个位置。"我爱你"和"你爱我"的 Attention 矩阵<strong>一模一样</strong>——因为参与运算的 token 集合相同，只是顺序不同。</p>
+
+<p><strong>位置编码要解决的问题</strong>：在不破坏 Attention 机制的并行性和灵活性的前提下，让模型知道每个 token 在序列中的位置。基本思路是——<strong>在输入向量上叠加（或融入）位置信息</strong>。</p>
+</div>
+
+<!-- ==================== 1 ==================== -->
+<h2 id="s1">1. 位置编码演进史</h2>
+
+<div class="card">
+<table>
+  <tr><th>方案</th><th>提出时间 / 论文</th><th>核心方式</th><th>代表模型</th><th>主要缺陷</th></tr>
+  <tr>
+    <td><strong>Sinusoidal（正弦）</strong></td>
+    <td>Vaswani et al., 2017<br>Attention Is All You Need</td>
+    <td>用 sin/cos 函数生成固定编码，加到 Embedding 上</td>
+    <td>原始 Transformer</td>
+    <td>外推能力差（训 512 推到 1024 效果骤降）</td>
+  </tr>
+  <tr>
+    <td><strong>Learned（可学习）</strong></td>
+    <td>Devlin et al., 2019<br>BERT</td>
+    <td>将位置当作可训练的 Embedding 参数</td>
+    <td>BERT、GPT-1/2</td>
+    <td>不支持超过训练长度的序列</td>
+  </tr>
+  <tr>
+    <td><strong>Relative（相对）</strong></td>
+    <td>Shaw et al., 2018<br>Dai et al., 2019</td>
+    <td>在 Attention 计算中注入相对距离偏差</td>
+    <td>Transformer-XL</td>
+    <td>计算开销大、实现复杂</td>
+  </tr>
+  <tr>
+    <td><strong style="color:var(--accent2)">RoPE ★</strong></td>
+    <td>Su et al., 2021<br>RoFormer</td>
+    <td>用旋转矩阵编码绝对位置，点积自然蕴含相对位置</td>
+    <td>LLaMA、Qwen、ChatGLM<br>Mistral、DeepSeek</td>
+    <td>长序列需插值扩展</td>
+  </tr>
+  <tr>
+    <td><strong>ALiBi</strong></td>
+    <td>Press et al., 2022</td>
+    <td>在 Attention 分数上加一个随距离线性衰减的偏置</td>
+    <td>BLOOM</td>
+    <td>表达能力弱于 RoPE</td>
+  </tr>
+</table>
+
+<div class="callout callout-key">
+  <strong>RoPE 为什么胜出</strong>：RoPE 是目前几乎所有主流开源 LLM 的标配（LLaMA 1/2/3、Qwen 1/2、ChatGLM 2/3、Mistral、DeepSeek、Yi 等无一例外）。它兼具绝对位置编码的简洁和相对位置编码的外推能力——这是它取代其他所有方案的核心原因。
+</div>
+</div>
+
+<!-- ==================== 2 ==================== -->
+<h2 id="s2">2. RoPE 核心思想：用旋转给向量"打位置标签"</h2>
+
+<div class="card card-highlight">
+<h3>一句话概括</h3>
+<div class="formula-purple" style="font-size:1.2rem">
+  RoPE = 用位置 m 决定一个旋转角度 θ = m · ω ，<br>将第 m 个 token 的 Query 和 Key 向量各自旋转 θ 度。<br>两个向量的点积结果只依赖它们的<strong>相对位置差 m − n</strong>。
+</div>
+</div>
+
+<div class="card">
+<h3>类比理解：时钟指针</h3>
+<p>想象每个 token 向量是一根指针。位置编码就是把这根指针<strong>旋转一个角度</strong>——位置 0 的指针不转，位置 1 的转 30°，位置 2 的转 60°……</p>
+<p>当你计算两个指针之间的夹角时，这个夹角只取决于它们的<strong>角度差</strong>（即位置差），而不是各自的绝对角度。这就是 RoPE 能天然编码相对位置的根本原因。</p>
+</div>
+
+<!-- ==================== 3 ==================== -->
+<h2 id="s3">3. 数学推导第一步：二维旋转矩阵</h2>
+
+<div class="card">
+<h3>3.1 二维平面上的旋转</h3>
+<p>在二维平面上，将一个向量 (x, y) 逆时针旋转 θ 角度的变换矩阵是：</p>
+
+<div class="formula">
+  R(θ) = <span style="font-size:1.3em">[</span> cos θ &nbsp; −sin θ <span style="font-size:1.3em">]</span><br>
+  <span style="padding-left:2.4em"></span><span style="font-size:1.3em">[</span> sin θ &nbsp;&nbsp;  cos θ <span style="font-size:1.3em">]</span>
+</div>
+
+<p>将向量 q = (q₀, q₁) 旋转 θ 后：</p>
+
+<div class="formula">
+  R(θ) · q = [ q₀·cos θ − q₁·sin θ , q₀·sin θ + q₁·cos θ ]
+</div>
+
+<p><strong>关键性质</strong>：旋转矩阵是正交矩阵，满足 <strong>R(θ₁) · R(θ₂) = R(θ₁ + θ₂)</strong>。这意味着"先转 θ₁ 再转 θ₂"等价于"一次转 θ₁+θ₂"——这个可加性是 RoPE 最精妙的地方。</p>
+</div>
+
+<div class="card card-accent2">
+<h3>3.2 用"位置 m"来决定旋转角度</h3>
+
+<p>设第 m 个 token 的旋转角为 <strong>m · θ</strong>，其中 θ 是基础角频率。则：</p>
+
+<div class="formula">
+  q<sub>m</sub> = R(m·θ) · q &nbsp;&nbsp;&nbsp;&nbsp; k<sub>n</sub> = R(n·θ) · k
+</div>
+
+<p>现在计算注意力分数——即旋转后的 Query 与旋转后的 Key 的点积：</p>
+
+<div class="formula-purple">
+  q<sub>m</sub><sup>T</sup> k<sub>n</sub> = (R(m·θ)q)<sup>T</sup> (R(n·θ)k)<br>
+  = q<sup>T</sup> R(m·θ)<sup>T</sup> R(n·θ) k<br>
+  = q<sup>T</sup> R(−m·θ) R(n·θ) k &nbsp;&nbsp;&nbsp;<span style="font-weight:400;color:#64748b">← R 正交，转置 = 逆 = R(−θ)</span><br>
+  = q<sup>T</sup> R( (n−m)·θ ) k &nbsp;&nbsp;&nbsp;<span style="font-weight:400;color:#64748b">← R(θ₁)·R(θ₂) = R(θ₁+θ₂)</span><br>
+  = q<sup>T</sup> R( (n−m)·θ ) k
+</div>
+
+<div class="callout callout-key" style="font-size:1.05rem">
+  <strong>🎯 奇迹发生了！</strong>最终结果只依赖 <strong>(n−m)</strong>，即 Key 位置减去 Query 位置——这就是 <strong>相对位置差</strong>。RoPE 用绝对位置编码（旋转各自的向量），天然得到了相对位置的效果。
+</div>
+</div>
+
+<!-- ==================== 4 ==================== -->
+<h2 id="s4">4. 数学推导第二步：推广到高维（分块对角旋转）</h2>
+
+<div class="card">
+<h3>4.1 问题：d 维向量不能整体旋转</h3>
+<p>上面推导只适用于 2 维。真实的 Transformer 中 Q/K 向量维度 d = 64 或 128。RoPE 的策略是——<strong>将 d 维向量拆成 d/2 个"2 维对"，每对独立旋转</strong>。</p>
+
+<div class="formula">
+  R<sup>d</sup><sub>Θ,m</sub> = <span style="font-size:1.3em">[</span> R(m·θ₀)  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;<span style="font-size:1.3em">]</span><br>
+  <span style="padding-left:1.2em"></span><span style="font-size:1.3em">[</span> &nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R(m·θ₁) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;<span style="font-size:1.3em">]</span><br>
+  <span style="padding-left:1.2em"></span><span style="font-size:1.3em">[</span> &nbsp;&nbsp;&nbsp;... &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⋱ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... &nbsp;<span style="font-size:1.3em">]</span><br>
+  <span style="padding-left:1.2em"></span><span style="font-size:1.3em">[</span> &nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... &nbsp;&nbsp;R(m·θ<sub>d/2−1</sub>) <span style="font-size:1.3em">]</span>
+</div>
+
+<p>这是一个 <strong>分块对角矩阵</strong>（block-diagonal）。每一块是一个 2×2 的旋转矩阵，对应向量中的一个"维度对"（dimension pair）。</p>
+</div>
+
+<div class="card card-accent3">
+<h3>4.2 各维度对的旋转角频率如何设定</h3>
+<p>不同维度对使用<strong>不同的旋转速度</strong>（频率），这是 RoPE 的关键设计：</p>
+
+<div class="formula">
+  θ<sub>i</sub> = base<sup>−2i/d</sup> &nbsp;&nbsp;&nbsp;&nbsp;其中 i = 0, 1, 2, ..., d/2 − 1
+</div>
+
+<table>
+  <tr><th>参数</th><th>含义</th><th>典型值</th></tr>
+  <tr><td><code>base</code></td><td>基础频率（theta_base）</td><td>10000（原始 RoPE）、500000（LLaMA 3）、1000000（Qwen2）</td></tr>
+  <tr><td><code>d</code></td><td>每个注意力头的维度</td><td>64（LLaMA-7B）、128（LLaMA-70B）</td></tr>
+  <tr><td><code>i</code></td><td>维度对的索引</td><td>0 ~ d/2−1</td></tr>
+  <tr><td><code>θᵢ</code></td><td>第 i 对的旋转角频率</td><td>从 base⁻⁰ = 1.0 到 base⁻² ≈ 0.0001，几何递减</td></tr>
+</table>
+
+<p><strong>直观理解</strong>：</p>
+<ul>
+  <li><strong>低维对（i 小）→ θ 大</strong> → 旋转快 → 捕捉近距离的位置差异</li>
+  <li><strong>高维对（i 大）→ θ 小</strong> → 旋转慢 → 捕捉远距离的位置关系</li>
+</ul>
+<p>这类似于傅里叶变换中低频分量捕捉全局结构、高频分量捕捉局部细节的原理。</p>
+
+<p><strong>base=10000, d=128 时各维度的 θ 值</strong>：</p>
+<pre>
+i=0:  θ₀ = 10000^(−0/128)     = 1.0000   ← 转最快，位置 1 转 57°
+i=1:  θ₁ = 10000^(−2/128)     ≈ 0.8659
+i=2:  θ₂ = 10000^(−4/128)     ≈ 0.7499
+...
+i=30: θ₃₀ = 10000^(−60/128)   ≈ 0.0133
+i=60: θ₆₀ = 10000^(−120/128)  ≈ 0.00018  ← 转极慢
+i=63: θ₆₃ = 10000^(−126/128)  ≈ 0.00011
+</pre>
+</div>
+
+<!-- ==================== 5 ==================== -->
+<h2 id="s5">5. 数学推导第三步：复数视角下的优雅表达</h2>
+
+<div class="card">
+<h3>5.1 旋转的复数表示</h3>
+<p>二维旋转有一个极其优雅的复数形式。将向量 q = (q₀, q₁) 写成复数 <strong>q₀ + i·q₁</strong>，旋转 θ 等价于乘以 <strong>e<sup>iθ</sup> = cos θ + i·sin θ</strong>：</p>
+
+<div class="formula">
+  (q₀ + i·q₁) · e<sup>iθ</sup> = (q₀·cos θ − q₁·sin θ) + i·(q₀·sin θ + q₁·cos θ)
+</div>
+
+<p>右边展开后实部和虚部分别恰好等于旋转矩阵乘法的两个分量。所以对于高维向量，RoPE 等价于——<strong>把每对相邻维度看作一个复数，乘以 e<sup>i·m·θᵢ</sup></strong>。</p>
+</div>
+
+<div class="card card-accent2">
+<h3>5.2 RoPE 的复数形式定义（论文原版）</h3>
+
+<div class="formula-purple">
+  RoPE(x<sub>m</sub>, m) = x<sub>m</sub> ⊙ e<sup>i m Θ</sup>
+</div>
+
+<p>其中：</p>
+<ul>
+  <li><strong>x<sub>m</sub></strong> 是位置 m 的 d 维向量，按相邻维度配对解释为 d/2 个复数</li>
+  <li><strong>Θ = (θ₀, θ₁, ..., θ<sub>d/2−1</sub>)</strong>，其中 θᵢ = base<sup>−2i/d</sup></li>
+  <li><strong>⊙</strong> 表示逐元素复数乘法</li>
+  <li><strong>e<sup>i m Θ</sup></strong> = (cos mθ₀ + i sin mθ₀, cos mθ₁ + i sin mθ₁, ...)</li>
+</ul>
+</div>
+
+<div class="card card-accent3">
+<h3>5.3 复数形式下的相对位置推导</h3>
+<p>在复数视角下，注意力分数（点积）的实部为：</p>
+
+<div class="formula-purple">
+  ⟨ RoPE(q, m), RoPE(k, n) ⟩<br>
+  = Re[ (q ⊙ e<sup>i m Θ</sup>)<sup>∗</sup> · (k ⊙ e<sup>i n Θ</sup>) ]<br>
+  = Re[ q̄ · k · e<sup>i (n−m) Θ</sup> ]
+</div>
+
+<p>和二维版本完全一致的结论：结果只依赖 <strong>n−m</strong>（相对位置差），与具体的绝对位置 m 和 n 无关。</p>
+</div>
+
+<!-- ==================== 6 ==================== -->
+<h2 id="s6">6. RoPE 的核心性质：相对位置自然编码</h2>
+
+<div class="card card-highlight">
+<h3>性质一：点积只依赖相对位置</h3>
+<p>从上节的推导可知：</p>
+<div class="formula-purple">
+  q<sub>m</sub><sup>T</sup> k<sub>n</sub> = g(q, k, n−m)
+</div>
+<p>这意味着——无论两个 token 在序列中的绝对位置是多少，只要它们的<strong>相对距离 (n−m) 相同</strong>，它们之间的注意力权重就应该相同。这是自然语言中"邻近的词语相关性更强"这一直觉的数学实现。</p>
+
+<h3 style="margin-top:20px">性质二：随距离增大，注意力自然衰减</h3>
+<p>由于不同维度的旋转角度不同，当 (n−m) 很大时，各个维度对的旋转累积到不同方向，向量在高维空间中的"对齐度"自然下降。这种<strong>远程衰减</strong>（Long-term Decay）不需要任何显式设计——完全由旋转矩阵的数学性质自动产生。</p>
+
+<h3 style="margin-top:20px">性质三：训练长度可外推（有限度）</h3>
+<p>由于 RoPE 编码的是相对位置，原则上训练时只见过位置 0-2048 的模型，在推理时可以理解 2048-4096 的相对位置。不过纯 RoPE 的外推能力有限——通常训 2K 推到 3K 还行，推到 10K 就需要插值扩展（见第 10 节）。</p>
+</div>
+
+<!-- ==================== 7 ==================== -->
+<h2 id="s7">7. 实现细节</h2>
+
+<div class="card">
+<h3>7.1 三步走流程</h3>
+
+<div class="step-box"><div class="step-num">1</div><div class="step-text"><strong>预计算频率表</strong>：对所有位置 m = 0, 1, ..., max_seq_len−1 和所有维度对 i，提前算好 cos(m·θᵢ) 和 sin(m·θᵢ)。这是两组形状为 [max_seq_len, d/2] 的矩阵。</div></div>
+
+<div class="step-box"><div class="step-num">2</div><div class="step-text"><strong>将 Q/K 向量 reshape 为"维度对"格式</strong>：将 [..., d] 的向量 reshape 为 [..., d/2, 2]，分离出每对的 (x₀, x₁)。</div></div>
+
+<div class="step-box"><div class="step-num">3</div><div class="step-text"><strong>施加旋转</strong>：对每对维度，x₀' = x₀·cos θ − x₁·sin θ，x₁' = x₀·sin θ + x₁·cos θ。然后 flatten 回 d 维。</div></div>
+</div>
+
+<div class="card card-accent3">
+<h3>7.2 关键优化：不要真的做矩阵乘法</h3>
+<p>虽然理论上"分块对角旋转矩阵"，但实际代码中<strong>不需要构造 d×d 的矩阵</strong>。绝大多数元素是 0，构造稠密矩阵再做乘法会浪费 d² 的计算和存储。</p>
+<p>实际做法是<strong>逐元素旋转</strong>——利用旋转矩阵在每对 (2i, 2i+1) 维度上只有 4 个非零元素的特点：</p>
+
+<pre>
+# 伪代码：对位置 m 的向量 x 施加 RoPE
+x_rotated = x.clone()
+for i in range(d // 2):
+    cos_val = cos_table[m, i]    # cos(m * θᵢ)
+    sin_val = sin_table[m, i]    # sin(m * θᵢ)
+    x_rotated[2*i]     = x[2*i] * cos_val - x[2*i+1] * sin_val
+    x_rotated[2*i+1]   = x[2*i] * sin_val + x[2*i+1] * cos_val
+</pre>
+
+<p>时间复杂度：O(d)，仅与向量维度线性相关——比 O(d²) 的稠密矩阵乘法快得多。</p>
+</div>
+
+<!-- ==================== 8 ==================== -->
+<h2 id="s8">8. 完整 PyTorch 实现</h2>
+
+<div class="card">
+<h3>8.1 核心函数：apply_rotary_pos_emb</h3>
+<pre>
+import torch
+import torch.nn as nn
+import math
+
+class RotaryEmbedding(nn.Module):
+    """RoPE 旋转位置编码"""
+    def __init__(self, dim: int, max_seq_len: int = 2048, base: float = 10000.0):
+        """
+        Args:
+            dim:     每个注意力头的维度（d_k），必须是偶数
+            max_seq_len: 最大序列长度
+            base:    基础频率 theta_base
+        """
+        super().__init__()
+        self.dim = dim
+        self.max_seq_len = max_seq_len
+        self.base = base
+
+        # 1. 计算每个维度对的频率 θᵢ = base^(−2i/d)
+        #    i 取 0, 1, 2, ..., d/2−1
+        inv_freq = 1.0 / (
+            base ** (torch.arange(0, dim, 2).float() / dim)
+        )  # shape: [d/2]
+
+        # 2. 计算所有位置 m 与所有频率的外积
+        #    freqs[m, i] = m * θᵢ
+        t = torch.arange(max_seq_len).float()  # [max_seq_len]
+        freqs = torch.outer(t, inv_freq)       # [max_seq_len, d/2]
+
+        # 3. 预计算 cos 和 sin 表
+        self.register_buffer("cos_cached", freqs.cos())  # [max_seq_len, d/2]
+        self.register_buffer("sin_cached", freqs.sin())
+
+    def forward(self, x: torch.Tensor, seq_len: int):
+        """返回对应位置的 cos 和 sin"""
+        return (
+            self.cos_cached[:seq_len, :],  # [seq_len, d/2]
+            self.sin_cached[:seq_len, :],
+        )
+
+
+def rotate_half(x: torch.Tensor):
+    """
+    将输入的相邻维度两两分组并执行 [x0, x1] → [−x1, x0]
+    这是旋转公式中"另一半"的快捷计算。
+    
+    输入:  [x₀, x₁, x₂, x₃, ...]
+    输出:  [−x₁, x₀, −x₃, x₂, ...]
+    """
+    x1 = x[..., : x.shape[-1] // 2]   # 前半
+    x2 = x[..., x.shape[-1] // 2 :]   # 后半
+    return torch.cat((-x2, x1), dim=-1)
+
+
+def apply_rotary_pos_emb(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    cos: torch.Tensor,
+    sin: torch.Tensor,
+):
+    """
+    对 Query 和 Key 施加 RoPE 旋转。
+
+    Args:
+        q:   Query tensor, shape [batch, num_heads, seq_len, d_k]
+        k:   Key tensor,   shape [batch, num_heads, seq_len, d_k]
+        cos: cos 表,      shape [seq_len, d_k/2] — 重复到 d_k 维
+        sin: sin 表,      shape [seq_len, d_k/2]
+
+    Returns:
+        q_rotated, k_rotated
+    """
+    # cos/sin 表是 [seq_len, d/2]，
+    # 用 repeat_interleave 将每项重复一次 → [seq_len, d]
+    cos = cos.repeat_interleave(2, dim=-1)  # [seq, d]
+    sin = sin.repeat_interleave(2, dim=-1)  # [seq, d]
+
+    # 核心旋转公式:
+    #   x_rotated = x * cos + rotate_half(x) * sin
+    #
+    # 推导（对每对维度）:
+    #   x₀' = x₀·cos θ − x₁·sin θ   ← 第 1 项
+    #   x₁' = x₀·sin θ + x₁·cos θ   ← 第 2 项
+    #
+    # rotate_half 把 [x₀, x₁] 变成 [−x₁, x₀]，
+    # 所以 x*cos + rotate_half(x)*sin =
+    #   [x₀·cos − x₁·sin, x₁·cos + x₀·sin] ✓
+    q_embed = (q * cos) + (rotate_half(q) * sin)
+    k_embed = (k * cos) + (rotate_half(k) * sin)
+
+    return q_embed, k_embed
+
+
+# ===== 使用示例 =====
+batch, n_heads, seq_len, d_k = 2, 32, 512, 128
+
+rope = RotaryEmbedding(dim=d_k, max_seq_len=2048, base=10000.0)
+cos, sin = rope(None, seq_len)  # 取前 seq_len 个位置
+
+q = torch.randn(batch, n_heads, seq_len, d_k)
+k = torch.randn(batch, n_heads, seq_len, d_k)
+
+q_rope, k_rope = apply_rotary_pos_emb(q, k, cos, sin)
+# q_rope 和 k_rope 已经带上了位置信息
+</pre>
+</div>
+
+<div class="card card-accent2">
+<h3>8.2 代码核心技巧解析</h3>
+<ul>
+  <li><strong>repeat_interleave</strong>：cos/sin 表是 [seq, d/2]，因为每对维度 (2i, 2i+1) 共享同一个 θᵢ，所以每个值重复一次变成 [seq, d]。</li>
+  <li><strong>rotate_half</strong>：巧妙地将 [x₀, x₁, x₂, x₃, ...] 变成 [−x₁, x₀, −x₃, x₂, ...]，配合向量化的乘法和加法，一行完成所有维度对的旋转。</li>
+  <li><strong>register_buffer</strong>：cos/sin 表不是可训练参数（不需要梯度），用 buffer 存储确保随模型保存/加载。</li>
+</ul>
+</div>
+
+<!-- ==================== 9 ==================== -->
+<h2 id="s9">9. 与其他位置编码方案深度对比</h2>
+
+<div class="card">
+<table>
+  <tr><th>特性</th><th>Sinusoidal</th><th>Learned</th><th>ALiBi</th><th style="color:var(--accent2)">RoPE ★</th></tr>
+  <tr><td>编码方式</td><td>sin/cos 固定函数</td><td>可训练参数</td><td>偏置加到 Attention</td><td>旋转 Q/K 向量</td></tr>
+  <tr><td>相对位置</td><td>❌ 绝对位置</td><td>❌ 绝对位置</td><td>✅ 线性距离偏置</td><td>✅ 旋转角度差</td></tr>
+  <tr><td>外推能力</td><td>差（512→1024 就崩）</td><td>无（训多长用多长）</td><td>较好</td><td>好（配合插值优秀）</td></tr>
+  <tr><td>额外参数</td><td>0</td><td>d×max_len 个</td><td>0</td><td>0（cos/sin 表不算参数）</td></tr>
+  <tr><td>计算开销</td><td>O(d) 加法</td><td>O(d) 查表</td><td>O(n²) 加法</td><td>O(d) 乘法+加法</td></tr>
+  <tr><td>适配长序列</td><td>需重新训练</td><td>需重新训练</td><td>天然支持</td><td>插值即可</td></tr>
+  <tr><td>代表模型</td><td>原始 Transformer</td><td>BERT, GPT-2</td><td>BLOOM</td><td>LLaMA, Qwen, Mistral</td></tr>
+</table>
+
+<div class="callout callout-tip">
+  <strong>💡 为什么 RoPE 比 ALiBi 更受欢迎</strong>：ALiBi 的线性偏置过于简单，对复杂的位置关系建模能力不足。RoPE 通过不同维度的多频率旋转提供了更丰富的位置特征空间——既有高频（近距离敏感）也有低频（远距离敏感），能更精细地捕捉不同距离上的依赖模式。这也是为什么几乎所有顶级开源模型选 RoPE 而弃 ALiBi。
+</div>
+</div>
+
+<!-- ==================== 10 ==================== -->
+<h2 id="s10">10. RoPE 的扩展：突破训练长度限制</h2>
+
+<div class="card">
+<h3>10.1 问题：训练 2K 长度，推理 10K 会怎样？</h3>
+<p>虽然 RoPE 理论上有外推能力，但实践中——训 2048 推到 4096 还行，推到 10000 以上 PPL 会急剧上升。原因是训练数据中从未出现过很大的 m·θ 值，模型没有学会如何处理大旋转角度对应的位置关系。</p>
+<p>解决方案：<strong>把"没见过的大位置"映射到"见过的小位置"上</strong>。这称为位置插值（Position Interpolation）。</p>
+</div>
+
+<div class="card card-accent2">
+<h3>10.2 三种主流扩展方法</h3>
+<table>
+  <tr><th>方法</th><th>提出</th><th>核心思想</th><th>公式</th><th>代表模型</th></tr>
+  <tr>
+    <td><strong>线性插值<br>（Linear PI）</strong></td>
+    <td>Chen et al., 2023<br>Meta</td>
+    <td>将所有位置等比例"压缩"</td>
+    <td>m' = m · (L_train / L_target)<br>如训 2K 推 8K：m' = m / 4</td>
+    <td>LLaMA 2 Long<br>（早期方案）</td>
+  </tr>
+  <tr>
+    <td><strong>NTK-Aware<br>Scaling</strong></td>
+    <td>bloc97, 2023<br>Reddit / 社区发现</td>
+    <td>调大 base 值，不对位置做插值</td>
+    <td>base' = base · α<sup>d/(d−2)</sup><br>α = L_target / L_train</td>
+    <td>CodeLLaMA</td>
+  </tr>
+  <tr>
+    <td><strong>YaRN<br>（NTK + 温度）</strong></td>
+    <td>Peng et al., 2023</td>
+    <td>NTK + 对不同频率的维度做不同程度插值 + 温度调节</td>
+    <td>低频维度不插值（外推好）<br>高频维度多插值（保持局部性）</td>
+    <td>LLaMA 3、Qwen2、<br>Mistral</td>
+  </tr>
+</table>
+
+<div class="callout callout-key">
+  <strong>YaRN 的精妙之处</strong>：RoPE 的低频维度（i 大，θ 小）天然适合外推——因为它们旋转极慢，即使位置很大角度变化也小；高频维度（i 小，θ 大）旋转快，大位置下角度变化剧烈，需要插值"压缩"。YaRN 对不同维度做<strong>差异化处理</strong>，而不是一刀切——这就是它比线性插值和纯 NTK 都更好的原因。
+</div>
+</div>
+
+<div class="card card-accent3">
+<h3>10.3 RoPE base 值的影响</h3>
+<p><strong>base 越大 → 低频成分越多 → 长距离外推越好，但近距离分辨力下降</strong>。</p>
+<table>
+  <tr><th>模型</th><th>base 值</th><th>训练长度</th><th>设计思路</th></tr>
+  <tr><td>原始 RoPE / RoFormer</td><td>10,000</td><td>-</td><td>基准值</td></tr>
+  <tr><td>LLaMA 1/2</td><td>10,000</td><td>2K / 4K</td><td>传统配置</td></tr>
+  <tr><td>LLaMA 3</td><td>500,000</td><td>8K</td><td>大 base → 天然支持更长上下文</td></tr>
+  <tr><td>Qwen2</td><td>1,000,000</td><td>32K / 128K</td><td>超大 base → 极长上下文外推</td></tr>
+</table>
+</div>
+
+<footer>
+  <p>参考论文：Su et al. (2021) <em>RoFormer: Enhanced Transformer with Rotary Position Embedding</em> · Chen et al. (2023) <em>Extending Context Window of Large Language Models via Position Interpolation</em> · Peng et al. (2023) <em>YaRN: Efficient Context Window Extension of Large Language Models</em></p>
+  <p>2026-07</p>
+</footer>
+
+</div>
+</body>
+</html>

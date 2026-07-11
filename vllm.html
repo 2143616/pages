@@ -159,12 +159,14 @@ td { color: var(--fg2); }
     <li><a href="#sec10">10. OpenAI 兼容 API 调用</a></li>
     <li><a href="#sec11">11. 性能调优</a></li>
     <li><a href="#sec12">12. Docker 部署</a></li>
+    <li><a href="#sec12-4">12.4 DGX Spark 实战</a></li>
     <li><a href="#sec13">13. 生产环境配置</a></li>
     <li><a href="#sec14">14. 常见问题与排错</a></li>
     <li><a href="#sec15">15. 综合实战：完整部署脚本</a></li>
     <li><a href="#case-rtx2060">📋 附录: RTX 2060 部署</a></li>
     <li><a href="#case-4bit">🔢 附录2: 4-bit 量化</a></li>
     <li><a href="#case-accel">🚀 附录3: 加速优化与测速</a></li>
+    <li><a href="#docker-tutorial">🐳 附录4: Docker 部署步骤</a></li>
   </ul>
 </div>
 
@@ -1106,7 +1108,228 @@ CMD [<span class="str">"--model"</span>, <span class="str">"Qwen/Qwen2.5-7B-Inst
 <pre><span class="lang-label">bash</span>
 docker build -t my-vllm:latest .
 docker run --gpus all -p 8000:8000 my-vllm:latest</pre>
-</section>
+
+<h3 id="sec12-4">12.4 DGX Spark / GB10 实战：Docker 部署 NVFP4 大模型</h3>
+
+<p>下面以 <strong>NVIDIA DGX Spark（GB10，128GB 统一内存）</strong> 为例，给出从零开始的 Docker 容器化部署完整步骤。核心模型使用 <code>nvidia/Qwen3.6-35B-A3B-NVFP4</code>（35B MoE，NVFP4 原生 4-bit 量化）。</p>
+
+<h4>Step 1：安装 NVIDIA Container Toolkit</h4>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 确保 Docker 已安装</span>
+sudo docker info | grep "Server Version"
+
+<span class="cm"># 安装 nvidia-container-toolkit</span>
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+<span class="cm"># 配置 Docker 运行时</span>
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+<span class="cm"># 验证 GPU 透传</span>
+sudo docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu22.04 nvidia-smi</pre>
+
+<h4>Step 2：拉取 vLLM 镜像并准备模型文件</h4>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 国内镜像加速（中国大陆）</span>
+<span class="kw">export</span> HF_ENDPOINT=https://hf-mirror.com
+
+<span class="cm"># 拉取官方 vLLM 镜像（推荐指定版本）</span>
+docker pull vllm/vllm-openai:v0.8.3
+
+<span class="cm"># 将模型下载到本地目录（避免容器启动时在线下载）</span>
+pip install huggingface-hub
+huggingface-cli download nvidia/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir ./models/Qwen3.6-35B-A3B-NVFP4 --local-dir-use-symlinks False
+
+<span class="cm"># 确认模型文件结构</span>
+ls -lh ./models/Qwen3.6-35B-A3B-NVFP4/</pre>
+
+<div class="highlight-warn">
+  <strong>⚠️ 统一内存注意事项：</strong>
+  <br>DGX Spark 的 128GB 是 CPU 与 GPU 共享的统一内存。Docker 容器内看到的 GPU 显存实际上是统一内存的一部分。<code>nvidia-smi</code> 显示的显存容量等于已分配给 GPU 的部分，不代表完整可用内存。实际可用内存以 <code>free -h</code> 为准。
+</div>
+
+<h4>Step 3：启动 Docker 容器</h4>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 单容器启动 vLLM 服务（NVFP4 量化）
+# ═══════════════════════════════════════════════════════════</span>
+
+docker run --gpus all \
+  --name vllm-nvfp4 \
+  -p 8000:8000 \
+  -v $(pwd)/models:/models \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  --shm-size=32g \
+  --memory=100g \
+  --memory-reservation=80g \
+  vllm/vllm-openai:v0.8.3 \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --quantization modelopt \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --port 8000 \
+  --host 0.0.0.0 \
+  --enable-prefix-caching</pre>
+
+<table>
+  <tr><th>参数</th><th>值</th><th>说明</th></tr>
+  <tr><td><code>--shm-size=32g</code></td><td>32 GB</td><td>共享内存大小，vLLM 的 Ray 分布式后端依赖 /dev/shm，DGX Spark 建议 32GB+</td></tr>
+  <tr><td><code>--memory=100g</code></td><td>100 GB</td><td>容器内存硬限制，避免 OOM 拖垮宿主机</td></tr>
+  <tr><td><code>--memory-reservation=80g</code></td><td>80 GB</td><td>内存软限制，Docker 在内存压力时尽力保留</td></tr>
+  <tr><td><code>-v $(pwd)/models:/models</code></td><td>本地挂载</td><td>提前下载的模型目录，避免每次启动重新下载</td></tr>
+  <tr><td><code>--quantization modelopt</code></td><td>ModelOpt</td><td>NVFP4 量化标识，必须指定</td></tr>
+  <tr><td><code>--max-model-len 8192</code></td><td>8192 tokens</td><td>限制上下文长度，控制 KV Cache 内存占用</td></tr>
+  <tr><td><code>--trust-remote-code</code></td><td>—</td><td>Qwen 系列自定义架构需要此参数</td></tr>
+</table>
+
+<h4>Step 4：Docker Compose 编排</h4>
+
+<pre><span class="lang-label">yaml</span>
+<span class="cm"># docker-compose.yml — DGX Spark / GB10 专属配置</span>
+version: <span class="str">"3.9"</span>
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.8.3
+    container_name: vllm-nvfp4
+    restart: unless-stopped
+    ports:
+      - <span class="str">"8000:8000"</span>
+    volumes:
+      - <span class="str">"./models:/models"</span>
+      - <span class="str">"~/.cache/huggingface:/root/.cache/huggingface"</span>
+    environment:
+      - <span class="str">HF_ENDPOINT=https://hf-mirror.com</span>
+      - <span class="str">CUDA_VISIBLE_DEVICES=0</span>
+    shm_size: <span class="str">"32gb"</span>
+    deploy:
+      resources:
+        limits:
+          memory: 100g
+        reservations:
+          memory: 80g
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: [
+      <span class="str">"--model"</span>, <span class="str">"/models/Qwen3.6-35B-A3B-NVFP4"</span>,
+      <span class="str">"--quantization"</span>, <span class="str">"modelopt"</span>,
+      <span class="str">"--max-model-len"</span>, <span class="str">"8192"</span>,
+      <span class="str">"--gpu-memory-utilization"</span>, <span class="str">"0.9"</span>,
+      <span class="str">"--trust-remote-code"</span>,
+      <span class="str">"--port"</span>, <span class="str">"8000"</span>,
+      <span class="str">"--host"</span>, <span class="str">"0.0.0.0"</span>,
+      <span class="str">"--enable-prefix-caching"</span>,
+    ]</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 启动</span>
+docker compose up -d
+
+<span class="cm"># 查看日志</span>
+docker compose logs -f
+
+<span class="cm"># 停止</span>
+docker compose down</pre>
+
+<div class="highlight">
+  <strong>💡 DGX Spark Docker 部署要点：</strong>
+  <br>• <strong>统一内存</strong>：<code>nvidia-smi</code> 可能只显示部分内存（如 64GB），实际可用的是全部 128GB，以 <code>free -h</code> 为准
+  <br>• <strong>模型下载</strong>：建议提前用 <code>huggingface-cli download</code> 下载到本地，避免容器启动时的网络超时
+  <br>• <strong>内存限制</strong>：务必设置 <code>--memory</code> 限制，防止容器内存泄漏拖垮整个系统
+  <br>• <strong>PyTorch JIT 编译</strong>：首次启动时 torch.compile 会导致容器卡顿 7~10 秒（GIL 阻塞），这是正常现象
+  <br>• <strong>模型热更新</strong>：覆盖 <code>./models/</code> 下的模型文件后 <code>docker compose restart</code> 即可
+</div>
+
+<h4>Step 5：验证服务</h4>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 健康检查</span>
+curl http://localhost:8000/health
+
+<span class="cm"># 查看模型列表</span>
+curl http://localhost:8000/v1/models
+
+<span class="cm"># 对话测试（非流式）</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "/models/Qwen3.6-35B-A3B-NVFP4",
+    "messages": [{"role": "user", "content": "介绍 Docker 容器化部署 vLLM 的优势"}],
+    "max_tokens": 256
+  }'</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 客户端测试脚本
+# ═══════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="str">"http://localhost:8000/v1"</span>,
+    api_key=<span class="str">"EMPTY"</span>,
+)
+
+<span class="cm"># 流式对话</span>
+stream = client.chat.completions.create(
+    model=<span class="str">"/models/Qwen3.6-35B-A3B-NVFP4"</span>,
+    messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用 Python 实现一个 LRU Cache"</span>}],
+    stream=<span class="kw">True</span>,
+    max_tokens=<span class="num">512</span>,
+)
+<span class="kw">for</span> chunk <span class="kw">in</span> stream:
+    <span class="builtin">print</span>(chunk.choices[<span class="num">0</span>].delta.content <span class="kw">or</span> <span class="str">""</span>, end=<span class="str">""</span>)</pre>
+
+<div class="highlight-warn">
+  <strong>⚠️ Docker 部署常见问题：</strong>
+  <br><strong>Q：docker: Error response from daemon: could not select device driver "nvidia"</strong>
+  <br><strong>A：</strong>未安装 nvidia-container-toolkit，请按 Step 1 安装配置。
+  <br>
+  <br><strong>Q：容器启动后 nvidia-smi 显示显存为 0？</strong>
+  <br><strong>A：</strong>DGX Spark 的统一内存架构下，显存是动态分配的。vLLM 启动后会按 <code>--gpu-memory-utilization</code> 参数分配，使用 <code>free -h</code> 观察实际内存占用。
+  <br>
+  <br><strong>Q：容器启动慢（首次启动 2~3 分钟）？</strong>
+  <br><strong>A：</strong>首次启动包含 CUDA Graph 录制和 JIT 编译，后续启动会快很多（~30 秒）。
+  <br>
+  <br><strong>Q：37B 模型加载后内存超过 100GB？</strong>
+  <br><strong>A：</strong>降低 <code>--max-model-len</code>（如 4096）或 <code>--gpu-memory-utilization</code>（如 0.8）。
+</div>
+
+<h4>Step 6：性能基准测试（容器内）</h4>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 进入容器</span>
+docker exec -it vllm-nvfp4 bash
+
+<span class="cm"># 安装压测工具</span>
+pip install aiohttp numpy
+
+<span class="cm"># 运行吞吐量测试</span>
+python /workspace/vllm/benchmarks/benchmark_throughput.py \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --num-prompts 30 \
+  --input-len 256 \
+  --output-len 128
+
+<span class="cm"># 监控容器内存</span>
+<span class="cm"># 宿主机上执行：</span>
+docker stats vllm-nvfp4
+
+<span class="cm"># 查看容器内进程内存</span>
+docker exec vllm-nvfp4 free -h</pre>
 
 <!-- ═══════════════════ 13 ═══════════════════ -->
 <section id="sec13">
@@ -2280,6 +2503,709 @@ vllm serve meta-llama/Meta-Llama-3.1-70B-Instruct \
 <div class="case-err-box">
 <strong>Q：8GB VRAM 上 4-bit 量化值得吗？</strong><br>
 <strong>A：</strong>对于 1.5B 模型不值得（FP16 更快）。但对于 7B 模型<strong>非常值得</strong>——FP16 需要 14GB 放不下，4-bit 仅 3.5GB 就能跑。这个场景下速度降一半但能跑才是关键。
+</div>
+
+<hr>
+<p style="text-align:center;color:#8b92a5;font-size:.78rem;">
+  基于实际操作流程编写 · 最后更新：2026 年 7 月
+</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- Docker 部署步骤详解 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<section id="docker-tutorial">
+<h2><span class="emoji">🐳</span> 附录 4：Docker 部署 vLLM 完整步骤教程</h2>
+<p class="subtitle">从环境准备到生产运维，12 步详解 Docker 容器化部署 vLLM · 2026-07</p>
+
+<style>
+.case-badge { display:inline-block; padding:.2rem .6rem; border-radius:999px; font-size:.7rem; font-weight:600; margin:.3rem; }
+.case-badge-blue { background:rgba(108,140,255,.15); color:#6c8cff; border:1px solid rgba(108,140,255,.25); }
+.case-badge-green { background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.2); }
+.case-badge-orange { background:rgba(251,146,60,.12); color:#fb923c; border:1px solid rgba(251,146,60,.2); }
+.case-info-box, .case-tip-box, .case-warn-box, .case-err-box { padding:.85rem 1.1rem; border-radius:10px; margin:1.2rem 0; border-left:3px solid; }
+.case-info-box { background:rgba(108,140,255,.08); border-color:#6c8cff; }
+.case-tip-box  { background:rgba(74,222,128,.06); border-color:#4ade80; }
+.case-warn-box { background:rgba(251,146,60,.08); border-color:#fb923c; }
+.case-err-box  { background:rgba(248,113,113,.06); border-color:#f87171; }
+</style>
+
+<h3>概述</h3>
+<p>Docker 容器化是生产部署 vLLM 的<strong>推荐方式</strong>。容器化部署的好处：</p>
+<ul>
+  <li><strong>环境隔离</strong>：vLLM 依赖的 CUDA、PyTorch 版本与宿主机解耦</li>
+  <li><strong>快速迁移</strong>：镜像打包后可在任意 NVIDIA GPU 机器上运行</li>
+  <li><strong>资源管控</strong>：精确限制内存、CPU、GPU 使用量，防止 OOM</li>
+  <li><strong>一键部署</strong>：Docker Compose 编排后，一条命令拉起全部服务</li>
+</ul>
+
+<table>
+  <tr><th>部署方式</th><th>隔离性</th><th>可迁移性</th><th>资源管控</th><th>推荐场景</th></tr>
+  <tr><td>裸机 pip install</td><td>❌ 低</td><td>❌ 差</td><td>❌ 无</td><td>开发调试、快速验证</td></tr>
+  <tr><td>conda 环境</td><td>⚠️ 中</td><td>❌ 差</td><td>❌ 无</td><td>个人开发</td></tr>
+  <tr><td>Docker 容器</td><td>✅ 高</td><td>✅ 好</td><td>✅ 精细</td><td><strong>生产部署</strong></td></tr>
+  <tr><td>Kubernetes</td><td>✅ 高</td><td>✅ 最好</td><td>✅ 精细</td><td>集群、微服务</td></tr>
+</table>
+
+<h3>Step 1：检查硬件与驱动</h3>
+<p>在开始之前，确保宿主机满足以下前提条件：</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 1. 检查 Docker 是否安装</span>
+docker --version
+docker info | grep "Server Version"
+
+<span class="cm"># 2. 检查 NVIDIA 驱动（必须 >= 535）</span>
+nvidia-smi
+<span class="cm"># 输出中需看到 CUDA Version: 12.x</span>
+
+<span class="cm"># 3. 检查 GPU 架构（SM 版本）</span>
+python3 -c <span class="str">"import torch; print(f'SM: {torch.cuda.get_device_capability()}')"</span>
+<span class="cm"># SM 7.0+ 支持 FP16, SM 7.5+ 支持 NVFP4, SM 8.9+ 支持 FP8</span>
+
+<span class="cm"># 4. 检查磁盘空间（模型文件 + Docker 镜像）</span>
+df -h /</pre>
+
+<table>
+  <tr><th>GPU 架构</th><th>SM 版本</th><th>代表显卡</th><th>vLLM 建议</th></tr>
+  <tr><td>Turing</td><td>SM 7.5</td><td>RTX 2060 SUPER, T4</td><td>FP16 / AWQ</td></tr>
+  <tr><td>Ampere</td><td>SM 8.0 / 8.6</td><td>A100, RTX 3090, RTX 4090</td><td>FP16 / AWQ / GPTQ</td></tr>
+  <tr><td>Hopper</td><td>SM 9.0</td><td>H100, H200</td><td>FP8 (原生支持)</td></tr>
+  <tr><td>Blackwell</td><td>SM 10.0</td><td>GB10 (DGX Spark), B200</td><td>NVFP4 / FP16</td></tr>
+</table>
+
+<h3>Step 2：安装 NVIDIA Container Toolkit</h3>
+<p>容器内使用 GPU 需要此工具链，它负责将宿主机 GPU 驱动透传到容器中。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式一：apt 安装（推荐 Ubuntu/Debian）
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 添加 NVIDIA 官方 GPG 密钥</span>
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+<span class="cm"># 添加 apt 源</span>
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+<span class="cm"># 安装</span>
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+<span class="cm"># 配置 Docker 运行时</span>
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式二：yum 安装（CentOS/RHEL）
+# ═══════════════════════════════════════════════════════════</span>
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+sudo yum install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 验证安装
+# ═══════════════════════════════════════════════════════════</span>
+sudo docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu22.04 nvidia-smi
+<span class="cm"># 成功输出应看到 GPU 信息列表</span></pre>
+
+<div class="case-tip-box">
+<strong>💡 </strong>如果上述 nvidia/cuda 镜像拉取慢，可改用 <code>nvidia/cuda:12.6.2-base-ubuntu22.04</code> 的中国镜像，或在 Docker 配置中设置 registry mirror。
+</div>
+
+<div class="case-warn-box">
+<strong>⚠️ 常见错误：</strong><br>
+<code>docker: Error response from daemon: could not select device driver "nvidia"</code><br>
+→ 未安装 / 未配置 nvidia-container-toolkit，重新执行配置步骤后 <code>sudo systemctl restart docker</code>
+</div>
+
+<h3>Step 3：拉取 vLLM 镜像</h3>
+
+<p>vLLM 官方提供预构建的 Docker 镜像，托管在 <a href="https://hub.docker.com/r/vllm/vllm-openai" style="color:var(--accent)">Docker Hub</a>。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 拉取最新稳定版（推荐）
+# ═══════════════════════════════════════════════════════════</span>
+docker pull vllm/vllm-openai:latest
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 拉取指定版本（生产环境推荐固定版本）
+# ═══════════════════════════════════════════════════════════</span>
+docker pull vllm/vllm-openai:v0.8.3
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 查看已拉取的镜像</span>
+docker images | grep vllm
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 查看镜像内部的 vLLM 版本</span>
+docker run --rm --gpus all --entrypoint python vllm/vllm-openai:v0.8.3 \
+  -c <span class="str">"import vllm; print(vllm.__version__)"</span></pre>
+
+<table>
+  <tr><th>镜像标签</th><th>说明</th><th>适用场景</th></tr>
+  <tr><td><code>latest</code></td><td>最新发布版</td><td>开发测试</td></tr>
+  <tr><td><code>v0.8.3</code></td><td>固定版本</td><td><strong>生产推荐</strong></td></tr>
+  <tr><td><code>v0.6.6.post1</code></td><td>旧版本（CUDA 11.8 兼容）</td><td>老旧驱动环境</td></tr>
+  <tr><td><code>nightly</code></td><td>每日构建（可能不稳定）</td><td>尝鲜新功能</td></tr>
+</table>
+
+<h3>Step 4：准备模型文件</h3>
+
+<p>容器启动时在线下载模型可能因网络问题超时，<strong>强烈建议提前下载到本地</strong>。</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 创建模型存放目录</span>
+mkdir -p ./models
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式一：huggingface-cli 下载（推荐）</span>
+pip install huggingface-hub
+huggingface-cli download nvidia/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir ./models/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir-use-symlinks False
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式二：国内镜像加速</span>
+<span class="kw">export</span> HF_ENDPOINT=https://hf-mirror.com
+huggingface-cli download nvidia/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir ./models/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir-use-symlinks False
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 方式三：从 ModelScope 下载（中国大陆备用）</span>
+pip install modelscope
+python3 -c <span class="str">"from modelscope import snapshot_download; snapshot_download('nvidia/Qwen3.6-35B-A3B-NVFP4', cache_dir='./models')"</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 确认下载完成</span>
+ls -lh ./models/Qwen3.6-35B-A3B-NVFP4/
+<span class="cm"># 应看到: config.json, tokenizer.json, model-00001-of-XXXXX.safetensors 等文件</span></pre>
+
+<div class="case-info-box">
+<strong>📌 模型文件结构说明：</strong><br>
+一个完整模型目录通常包含：<br>
+<ul>
+  <li><code>config.json</code> — 模型架构配置</li>
+  <li><code>tokenizer.json</code> / <code>tokenizer_config.json</code> — 分词器</li>
+  <li><code>model-0000X-of-XXXXX.safetensors</code> — 分片权重文件（safetensors 格式）</li>
+  <li><code>*.safetensors.index.json</code> — 分片索引</li>
+  <li><code>generation_config.json</code> — 生成参数默认配置</li>
+</ul>
+</div>
+
+<h3>Step 5：最简单的容器启动</h3>
+
+<p>基础命令，适合快速验证：</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 最小化启动命令
+# ═══════════════════════════════════════════════════════════</span>
+docker run --gpus all \
+  -p 8000:8000 \
+  -v ./models:/models \
+  vllm/vllm-openai:v0.8.3 \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --quantization modelopt \
+  --max-model-len 8192 \
+  --trust-remote-code
+<span class="cm"># 等看到 "Uvicorn running on http://0.0.0.0:8000" 说明启动成功</span></pre>
+
+<div class="case-tip-box">
+<strong>💡 命令解读：</strong><br>
+<ul>
+  <li><code>--gpus all</code> — 让容器访问所有 GPU</li>
+  <li><code>-p 8000:8000</code> — 宿主机 8000 端口映射到容器 8000</li>
+  <li><code>-v ./models:/models</code> — 挂载本地模型目录到容器内 <code>/models</code></li>
+  <li><code>--model /models/...</code> — vLLM 使用容器内路径加载模型</li>
+</ul>
+</div>
+
+<h3>Step 6：完整参数启动（生产推荐）</h3>
+
+<p>生产环境需要更细致的参数控制：</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════
+# 生产级启动命令
+# ═══════════════════════════════════════════════════════════</span>
+docker run --gpus all \
+  --name vllm-server \
+  -p 8000:8000 \
+  -v ./models:/models \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  --shm-size=32g \
+  --memory=100g \
+  --memory-reservation=80g \
+  --restart=unless-stopped \
+  -d \
+  vllm/vllm-openai:v0.8.3 \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --quantization modelopt \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --port 8000 \
+  --host 0.0.0.0 \
+  --enable-prefix-caching \
+  --max-num-seqs 256 \
+  --max-num-batched-tokens 8192</pre>
+
+<h4>参数详解</h4>
+
+<table>
+  <tr><th>类别</th><th>参数</th><th>说明</th></tr>
+  <tr><td rowspan="5"><strong>Docker 参数</strong></td><td><code>--gpus all</code></td><td>透传全部 GPU 给容器</td></tr>
+  <tr><td><code>--shm-size=32g</code></td><td>共享内存大小。vLLM 的 Ray 后端、PyTorch DataLoader 依赖 <code>/dev/shm</code>，不足会导致 <code>Bus error</code></td></tr>
+  <tr><td><code>--memory=100g</code></td><td>容器硬限制。超过此限制的请求会被 OOM Kill</td></tr>
+  <tr><td><code>--memory-reservation=80g</code></td><td>软限制。Docker 尽力保留此内存</td></tr>
+  <tr><td><code>--restart=unless-stopped</code></td><td>崩溃或宿主机重启时自动拉起容器</td></tr>
+  <tr><td rowspan="6"><strong>vLLM 参数</strong></td><td><code>--model</code></td><td>模型路径，支持 HF 模型名或本地路径</td></tr>
+  <tr><td><code>--quantization modelopt</code></td><td>NVFP4 量化格式（ModelOpt 工具链）</td></tr>
+  <tr><td><code>--max-model-len 8192</code></td><td>最大上下文长度，控制 KV Cache 内存</td></tr>
+  <tr><td><code>--gpu-memory-utilization 0.9</code></td><td>GPU 显存利用率，剩余给 CUDA 内核和临时空间</td></tr>
+  <tr><td><code>--enable-prefix-caching</code></td><td>启用前缀缓存，相同 prompt 前缀复用 KV Cache</td></tr>
+  <tr><td><code>--trust-remote-code</code></td><td>信任模型的自定义 Python 代码（Qwen 等需要）</td></tr>
+</table>
+
+<h3>Step 7：Docker Compose 编排</h3>
+
+<p>Compose 将配置固化到 YAML 文件中，方便版本管理和团队协作：</p>
+
+<pre><span class="lang-label">yaml</span>
+<span class="cm"># docker-compose.yml</span>
+version: <span class="str">"3.9"</span>
+
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.8.3
+    container_name: vllm-server
+    restart: unless-stopped
+    ports:
+      - <span class="str">"8000:8000"</span>
+    volumes:
+      - <span class="str">"./models:/models"</span>
+      - <span class="str">"~/.cache/huggingface:/root/.cache/huggingface"</span>
+    environment:
+      - <span class="str">HF_ENDPOINT=https://hf-mirror.com</span>  <span class="cm"># 国内镜像</span>
+      - <span class="str">CUDA_VISIBLE_DEVICES=0</span>               <span class="cm"># 指定 GPU</span>
+      - <span class="str">VLLM_LOGGING_LEVEL=INFO</span>              <span class="cm"># 日志级别</span>
+    shm_size: <span class="str">"32gb"</span>
+    deploy:
+      resources:
+        limits:
+          memory: 100g
+        reservations:
+          memory: 80g
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: [
+      <span class="str">"--model"</span>, <span class="str">"/models/Qwen3.6-35B-A3B-NVFP4"</span>,
+      <span class="str">"--quantization"</span>, <span class="str">"modelopt"</span>,
+      <span class="str">"--max-model-len"</span>, <span class="str">"8192"</span>,
+      <span class="str">"--gpu-memory-utilization"</span>, <span class="str">"0.9"</span>,
+      <span class="str">"--trust-remote-code"</span>,
+      <span class="str">"--port"</span>, <span class="str">"8000"</span>,
+      <span class="str">"--host"</span>, <span class="str">"0.0.0.0"</span>,
+      <span class="str">"--enable-prefix-caching"</span>,
+      <span class="str">"--max-num-seqs"</span>, <span class="str">"256"</span>,
+    ]
+
+  <span class="cm"># 可选：监控面板</span>
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vllm-monitor
+    restart: unless-stopped
+    ports:
+      - <span class="str">"9090:9090"</span>
+    volumes:
+      - <span class="str">"./prometheus.yml:/etc/prometheus/prometheus.yml"</span>
+    command:
+      - <span class="str">"--config.file=/etc/prometheus/prometheus.yml"</span>
+      - <span class="str">"--storage.tsdb.path=/prometheus"</span></pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 启动所有服务</span>
+docker compose up -d
+
+<span class="cm"># 查看实时日志</span>
+docker compose logs -f vllm
+
+<span class="cm"># 查看容器状态</span>
+docker compose ps
+
+<span class="cm"># 停止服务（保留数据）</span>
+docker compose down
+
+<span class="cm"># 完全清理（删除 volume）</span>
+docker compose down -v</pre>
+
+<h3>Step 8：验证服务</h3>
+
+<p>服务启动后，执行以下验证：</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 1. 健康检查</span>
+curl http://localhost:8000/health
+<span class="cm"># 返回: {"status": "ok"}</span>
+
+<span class="cm"># 2. 查看可用模型</span>
+curl http://localhost:8000/v1/models
+<span class="cm"># 返回模型列表，确认 model ID 正确</span>
+
+<span class="cm"># 3. 简单对话测试</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "model": "/models/Qwen3.6-35B-A3B-NVFP4",
+    "messages": [{"role": "user", "content": "Hello! 用中文回答"}],
+    "max_tokens": 100
+  }'</pre>
+
+<pre><span class="lang-label">Python</span>
+<span class="cm"># test_vllm_docker.py — 完整验证脚本</span>
+<span class="kw">import</span> <span class="builtin">requests</span>, <span class="builtin">json</span>, <span class="builtin">time</span>
+
+BASE_URL = <span class="str">"http://localhost:8000"</span>
+MODEL = <span class="str">"/models/Qwen3.6-35B-A3B-NVFP4"</span>
+
+<span class="kw">def</span> <span class="fn">test_health</span>():
+    r = requests.get(f<span class="str">"{BASE_URL}/health"</span>)
+    <span class="builtin">print</span>(f<span class="str">"健康检查: {r.status_code}"</span>)
+    <span class="kw">assert</span> r.status_code == <span class="num">200</span>
+
+<span class="kw">def</span> <span class="fn">test_chat</span>():
+    payload = {
+        <span class="str">"model"</span>: MODEL,
+        <span class="str">"messages"</span>: [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用 Python 写一个快速排序"</span>}],
+        <span class="str">"temperature"</span>: <span class="num">0.3</span>,
+        <span class="str">"max_tokens"</span>: <span class="num">256</span>,
+        <span class="str">"stream"</span>: <span class="kw">True</span>,
+    }
+    start = time.time()
+    resp = requests.post(f<span class="str">"{BASE_URL}/v1/chat/completions"</span>, json=payload, stream=<span class="kw">True</span>)
+    tokens = <span class="num">0</span>
+    <span class="kw">for</span> line <span class="kw">in</span> resp.iter_lines():
+        <span class="kw">if</span> line:
+            line = line.decode()
+            <span class="kw">if</span> <span class="str">"data: [DONE]"</span> <span class="kw">in</span> line:
+                <span class="kw">break</span>
+            <span class="kw">if</span> line.startswith(<span class="str">"data: "</span>):
+                data = json.loads(line[<span class="num">6</span>:])
+                token = data[<span class="str">"choices"</span>][<span class="num">0</span>][<span class="str">"delta"</span>].get(<span class="str">"content"</span>, <span class="str">""</span>)
+                <span class="kw">if</span> token:
+                    <span class="builtin">print</span>(token, end=<span class="str">""</span>, flush=<span class="kw">True</span>)
+                    tokens += <span class="num">1</span>
+    elapsed = time.time() - start
+    <span class="builtin">print</span>(f<span class="str">"\n⏱ {tokens} tokens, {elapsed:.2f}s, {tokens/elapsed:.1f} tok/s"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    test_health()
+    test_chat()</pre>
+
+<h3>Step 9：性能基准测试</h3>
+
+<p>在容器内运行 vLLM 自带的 benchmark 脚本：</p>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 进入容器</span>
+docker exec -it vllm-server bash
+
+<span class="cm"># 安装压测依赖</span>
+pip install aiohttp numpy
+
+<span class="cm"># 吞吐量测试</span>
+python /workspace/vllm/benchmarks/benchmark_throughput.py \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --num-prompts 30 \
+  --input-len 256 \
+  --output-len 128
+
+<span class="cm"># 延迟测试</span>
+python /workspace/vllm/benchmarks/benchmark_latency.py \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --input-len 128 \
+  --output-len 128
+
+<span class="cm"># 退出容器</span>
+exit</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 宿主机上监控容器资源</span>
+docker stats vllm-server --no-stream
+<span class="cm"># 持续监控</span>
+docker stats vllm-server
+
+<span class="cm"># 查看容器内内存</span>
+docker exec vllm-server free -h
+
+<span class="cm"># 查看容器内 GPU</span>
+docker exec vllm-server nvidia-smi</pre>
+
+<div class="case-tip-box">
+<strong>💡 性能指标解读：</strong><br>
+<ul>
+  <li><strong>吞吐量（tok/s）</strong>：每秒生成的 token 数，越高越好</li>
+  <li><strong>TTFT（首 token 延迟）</strong>：从请求发出到收到第一个 token 的时间，越低用户体验越好</li>
+  <li><strong>TPOT（每 token 耗时）</strong>：生成每个后续 token 的平均时间</li>
+  <li><strong>P99 延迟</strong>：99% 的请求在此时间内完成，衡量尾延迟</li>
+</ul>
+</div>
+
+<h3>Step 10：构建自定义镜像</h3>
+
+<p>将模型打包进镜像，实现<strong>完全离线部署</strong>：</p>
+
+<pre><span class="lang-label">dockerfile</span>
+<span class="cm"># Dockerfile — 将模型打包到 vLLM 镜像</span>
+FROM vllm/vllm-openai:v0.8.3
+
+<span class="cm"># 安装 huggingface-hub（用于下载模型）</span>
+RUN pip install huggingface-hub
+
+<span class="cm"># 从国内镜像提前下载模型到镜像</span>
+ENV HF_ENDPOINT=https://hf-mirror.com
+RUN huggingface-cli download nvidia/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir /models/Qwen3.6-35B-A3B-NVFP4 \
+  --local-dir-use-symlinks False
+
+<span class="cm"># 设置默认启动参数</span>
+ENTRYPOINT [<span class="str">"python"</span>, <span class="str">"-m"</span>, <span class="str">"vllm.entrypoints.openai.api_server"</span>]
+CMD [<span class="str">"--model"</span>, <span class="str">"/models/Qwen3.6-35B-A3B-NVFP4"</span>, \
+     <span class="str">"--quantization"</span>, <span class="str">"modelopt"</span>, \
+     <span class="str">"--max-model-len"</span>, <span class="str">"8192"</span>, \
+     <span class="str">"--gpu-memory-utilization"</span>, <span class="str">"0.9"</span>, \
+     <span class="str">"--trust-remote-code"</span>, \
+     <span class="str">"--port"</span>, <span class="str">"8000"</span>, \
+     <span class="str">"--host"</span>, <span class="str">"0.0.0.0"</span>]</pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 构建镜像（模型已内置，无需挂载）</span>
+docker build -t my-vllm-nvfp4:latest .
+
+<span class="cm"># 运行（无需挂载模型目录）</span>
+docker run --gpus all \
+  -p 8000:8000 \
+  --shm-size=32g \
+  --memory=100g \
+  -d \
+  my-vllm-nvfp4:latest
+
+<span class="cm"># 查看镜像大小</span>
+docker images | grep my-vllm-nvfp4</pre>
+
+<div class="case-warn-box">
+<strong>⚠️ 注意：</strong><br>
+构建镜像时模型会被包含在镜像层中，<strong>镜像体积会很大</strong>（~10GB+）。这适合：
+<ul>
+  <li>✅ 离线环境部署（无法访问外网）</li>
+  <li>✅ 多机部署（只需分发一个镜像）</li>
+  <li>✅ CI/CD 流水线</li>
+  <li>❌ 开发调试（每次改模型都要重构建）</li>
+</ul>
+如果模型经常切换，用 <code>-v ./models:/models</code> 挂载方式更灵活。
+</div>
+
+<h3>Step 11：生产运维</h3>
+
+<h4>日志管理</h4>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 查看实时日志</span>
+docker logs -f vllm-server
+
+<span class="cm"># 查看最近 100 行</span>
+docker logs --tail 100 vllm-server
+
+<span class="cm"># 将日志导出到文件</span>
+docker logs vllm-server &gt; vllm-$(date +%Y%m%d).log
+
+<span class="cm"># 限制日志大小（在 docker-compose.yml 中添加）</span>
+<span class="cm"># logging:</span>
+<span class="cm">#   driver: json-file</span>
+<span class="cm">#   options:</span>
+<span class="cm">#     max-size: "100m"</span>
+<span class="cm">#     max-file: "3"</span></pre>
+
+<h4>健康检查与监控</h4>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 编写健康检查脚本 check.sh</span>
+<span class="cm">#!/bin/bash</span>
+<span class="kw">if</span> curl -sf http://localhost:8000/health &gt; /dev/null; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"vLLM healthy"</span>
+    <span class="kw">exit</span> <span class="num">0</span>
+<span class="kw">else</span>
+    <span class="builtin">echo</span> <span class="str">"vLLM unhealthy"</span>
+    <span class="kw">exit</span> <span class="num">1</span>
+<span class="kw">fi</span>
+
+<span class="cm"># crontab 定时检查（每 5 分钟）</span>
+<span class="cm"># */5 * * * * /path/to/check.sh || docker restart vllm-server</span>
+
+<span class="cm"># 查看 vLLM Prometheus 指标</span>
+curl http://localhost:8000/metrics | grep vllm</pre>
+
+<h4>模型热更新</h4>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 步骤：替换模型文件 → 重启容器</span>
+<span class="cm"># 1. 下载新模型</span>
+huggingface-cli download Qwen/Qwen2.5-32B-Instruct-AWQ \
+  --local-dir ./models/Qwen2.5-32B-AWQ \
+  --local-dir-use-symlinks False
+
+<span class="cm"># 2. 修改 docker-compose.yml 中的 model 路径</span>
+
+<span class="cm"># 3. 重启</span>
+docker compose restart vllm</pre>
+
+<h4>API Key 安全</h4>
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 在启动命令中加入 --api-key</span>
+  --api-key sk-your-secret-key
+
+<span class="cm"># 或在 docker-compose.yml 中通过环境变量</span>
+<span class="cm"># environment:</span>
+<span class="cm">#   - VLLM_API_KEY=sk-your-secret-key</span>
+
+<span class="cm"># 客户端访问时需要携带</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H <span class="str">"Authorization: Bearer sk-your-secret-key"</span> \
+  -d <span class="str">'{"model":"...", "messages":[{"role":"user","content":"hi"}]}'</span></pre>
+
+<h3>Step 12：常见问题排错</h3>
+
+<div class="case-err-box">
+<strong>Q：容器启动后立即退出，日志显示 "CUDA out of memory"</strong><br>
+<strong>A：</strong>模型太大超过显存/内存上限。<br>
+  解决方案：① 降低 <code>--max-model-len</code>（8192 → 4096）<br>
+  ② 降低 <code>--gpu-memory-utilization</code>（0.9 → 0.8）<br>
+  ③ 换用更小模型或更大量化（FP16 → AWQ → NVFP4）<br>
+  ④ 检查 Docker 内存限制是否足够（<code>--memory</code> 是否设太小）
+</div>
+
+<div class="case-err-box">
+<strong>Q：docker: Error response from daemon: could not select device driver "nvidia"</strong><br>
+<strong>A：</strong>未安装或未配置 NVIDIA Container Toolkit。<br>
+  解决方案：<code>sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker</code>
+</div>
+
+<div class="case-err-box">
+<strong>Q：容器启动成功，但 curl 超时连接不上</strong><br>
+<strong>A：</strong>vLLM 加载模型需要时间（尤其首次启动含 CUDA Graph 编译）。<br>
+  解决方案：① 检查日志 <code>docker logs -f vllm-server</code> 确认是否还在加载<br>
+  ② DGX Spark 上首次加载约 2~3 分钟，后续 ~30 秒<br>
+  ③ 确认 <code>--host 0.0.0.0</code> 参数已设置（默认只监听 localhost）
+</div>
+
+<div class="case-err-box">
+<strong>Q：模型加载成功，但回答质量差</strong><br>
+<strong>A：</strong>可能原因：① 量化精度损失（尤其 NF4 对比 FP16）<br>
+  ② temperature 太高 → 设 0.1~0.3（代码/数学任务）<br>
+  ③ 用错模型版本（如 base 版而非 instruct 版）
+</div>
+
+<div class="case-err-box">
+<strong>Q：容器内 nvidia-smi 显示显存为 0</strong><br>
+<strong>A：</strong>统一内存架构（如 DGX Spark）下显存动态分配。<br>
+  用 <code>free -h</code> 观察实际内存占用，不必关注 <code>nvidia-smi</code> 显存数值。
+</div>
+
+<div class="case-err-box">
+<strong>Q：docker compose up -d 报 "version" 已废弃</strong><br>
+<strong>A：</strong>Docker Compose V2 不再需要 <code>version: "3.9"</code> 字段，删除该行即可。
+</div>
+
+<div class="case-err-box">
+<strong>Q：镜像拉取极慢或超时</strong><br>
+<strong>A：</strong>中国大陆访问 Docker Hub 不稳定。<br>
+  解决方案：配置 Docker 镜像加速器（如 <code>https://docker.mirrors.ustc.edu.cn</code>）<br>
+  或在 <code>/etc/docker/daemon.json</code> 中添加：
+  <pre><code>{
+  "registry-mirrors": ["https://docker.mirrors.ustc.edu.cn"]
+}</code></pre>
+  然后 <code>sudo systemctl restart docker</code>
+</div>
+
+<h3>快速参考：一键启动脚本</h3>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm">#!/bin/bash
+# run_vllm_docker.sh — 一键启动 vLLM Docker 服务
+set -euo pipefail
+
+MODEL_DIR=<span class="str">"./models/Qwen3.6-35B-A3B-NVFP4"</span>
+PORT=${1:-8000}
+
+<span class="cm"># 检查模型文件</span>
+<span class="kw">if</span> [ ! -f <span class="str">"$MODEL_DIR/config.json"</span> ]; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"❌ 模型文件未找到, 请先下载到 $MODEL_DIR"</span>
+    <span class="builtin">echo</span> <span class="str">"   huggingface-cli download ... --local-dir $MODEL_DIR"</span>
+    <span class="kw">exit</span> 1
+<span class="kw">fi</span>
+
+<span class="cm"># 检查 Docker</span>
+<span class="kw">if</span> ! docker info &gt;/dev/null 2&gt;&amp;1; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"❌ Docker 未运行"</span>
+    <span class="kw">exit</span> 1
+<span class="kw">fi</span>
+
+<span class="cm"># 检查 nvidia-container-toolkit</span>
+<span class="kw">if</span> ! docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu22.04 nvidia-smi &gt;/dev/null 2&gt;&amp;1; <span class="kw">then</span>
+    <span class="builtin">echo</span> <span class="str">"❌ NVIDIA Container Toolkit 未正确配置"</span>
+    <span class="kw">exit</span> 1
+<span class="kw">fi</span>
+
+<span class="cm"># 启动容器</span>
+docker run --gpus all \
+  --name vllm-server \
+  -p ${PORT}:8000 \
+  -v $(pwd)/models:/models \
+  --shm-size=32g \
+  --memory=100g \
+  --restart=unless-stopped \
+  -d \
+  vllm/vllm-openai:v0.8.3 \
+  --model /models/Qwen3.6-35B-A3B-NVFP4 \
+  --quantization modelopt \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.9 \
+  --trust-remote-code \
+  --port 8000 \
+  --host 0.0.0.0 \
+  --enable-prefix-caching
+
+<span class="builtin">echo</span> <span class="str">"✅ vLLM 服务已启动 (端口 $PORT)"</span>
+<span class="builtin">echo</span> <span class="str">"   查看日志: docker logs -f vllm-server"</span>
+<span class="builtin">echo</span> <span class="str">"   测试 API: curl http://localhost:$PORT/v1/models"</span></pre>
+
+<pre><span class="lang-label">bash</span>
+<span class="cm"># 使用方式</span>
+chmod +x run_vllm_docker.sh
+./run_vllm_docker.sh          <span class="cm"># 默认 8000 端口</span>
+./run_vllm_docker.sh 8080     <span class="cm"># 自定义端口</span></pre>
+
+<div class="case-info-box">
+<strong>📌 总结：Docker 部署 vLLM 的最佳实践</strong>
+<ol>
+  <li><strong>固定版本</strong>：使用 <code>vllm/vllm-openai:v0.8.3</code> 而非 <code>latest</code></li>
+  <li><strong>提前下载模型</strong>：容器启动前用 huggingface-cli 下载到本地</li>
+  <li><strong>设置内存限制</strong>：<code>--memory</code> 和 <code>--shm-size</code> 必须配置</li>
+  <li><strong>使用 Compose</strong>：将配置固化到 YAML 文件，便于版本管理</li>
+  <li><strong>启用 prefix caching</strong>：固定 system prompt 场景显著加速</li>
+  <li><strong>限制上下文长度</strong>：<code>--max-model-len</code> 按需设置，不要无脑用默认值</li>
+  <li><strong>配置日志轮转</strong>：避免日志撑爆磁盘</li>
+  <li><strong>健康检查</strong>：定期 curl /health 并设置自动重启</li>
+</ol>
 </div>
 
 <hr>

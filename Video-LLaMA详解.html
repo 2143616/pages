@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video-LLaMA 详解 — 让大模型看懂视频的多模态架构全解析</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --card:#fff; --text:#1e293b; --sub:#475569; --muted:#94a3b8;
+    --accent:#2563eb; --accent2:#7c3aed; --accent3:#059669; --accent4:#d97706;
+    --accent-light:#eff6ff; --accent2-light:#f5f3ff; --accent3-light:#ecfdf5; --accent4-light:#fffbeb;
+    --border:#e2e8f0; --code-bg:#f1f5f9; --radius:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.85;padding-bottom:120px;font-size:16px}
+  .container{max-width:1020px;margin:0 auto;padding:0 24px}
+
+  header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 30%,#7c3aed 60%,#ec4899 100%);color:#fff;padding:56px 40px;border-radius:var(--radius);margin:36px 0 28px;position:relative;overflow:hidden}
+  header::before{content:"";position:absolute;top:-60px;right:-40px;width:280px;height:280px;background:rgba(255,255,255,.04);border-radius:50%}
+  header::after{content:"";position:absolute;bottom:-30px;left:-30px;width:180px;height:180px;background:rgba(255,255,255,.03);border-radius:50%}
+  header h1{font-size:2rem;margin-bottom:12px;position:relative;z-index:1}
+  header p{opacity:.82;font-size:1rem;position:relative;z-index:1;max-width:700px}
+
+  .toc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px 30px;margin:0 0 32px}
+  .toc h3{font-size:1.05rem;margin-bottom:14px;color:var(--accent)}
+  .toc ol{columns:2;column-gap:40px;margin-left:22px;line-height:2.3}
+  @media(max-width:700px){.toc ol{columns:1}}
+  .toc a{color:var(--accent);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+
+  h2{font-size:1.4rem;margin:54px 0 16px;padding-bottom:8px;border-bottom:3px solid var(--accent);color:var(--accent)}
+  h3{font-size:1.12rem;margin:30px 0 10px;color:#1e293b}
+  h4{font-size:1rem;margin:20px 0 6px;color:var(--accent2)}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 26px;margin:16px 0}
+  .card-blue{border-left:4px solid var(--accent)}
+  .card-purple{border-left:4px solid var(--accent2)}
+  .card-green{border-left:4px solid var(--accent3)}
+  .card-highlight{background:linear-gradient(135deg,#eff6ff 0%,#f5f3ff 100%);border:2px solid var(--accent2);padding:24px 28px;margin:20px 0}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+  th,td{border:1px solid var(--border);padding:10px 14px;text-align:left;vertical-align:top}
+  th{background:var(--accent-light);font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+
+  pre{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:16px 20px;overflow-x:auto;font-size:.82rem;line-height:1.68;margin:14px 0;tab-size:2}
+  code{font-family:"SF Mono","Fira Code","Cascadia Code",Consolas,monospace;font-size:.88em}
+  .formula{background:#fef3c7;border:2px solid #fbbf24;border-radius:8px;padding:12px 18px;margin:14px 0;text-align:center;font-size:.98rem;font-weight:600;overflow-x:auto}
+
+  ul,ol{margin-left:24px}
+  li{margin:6px 0}
+
+  .tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.76rem;font-weight:600;margin-right:4px;margin-bottom:3px}
+  .tag-blue{background:var(--accent-light);color:var(--accent)}
+  .tag-purple{background:var(--accent2-light);color:var(--accent2)}
+  .tag-green{background:var(--accent3-light);color:var(--accent3)}
+  .tag-orange{background:var(--accent4-light);color:var(--accent4)}
+
+  .comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+  @media(max-width:700px){.comparison{grid-template-columns:1fr}}
+
+  .callout{padding:14px 18px;border-radius:0 6px 6px 0;margin:14px 0;font-size:.92rem}
+  .callout-info{background:var(--accent-light);border-left:4px solid var(--accent)}
+  .callout-tip{background:var(--accent3-light);border-left:4px solid var(--accent3)}
+  .callout-key{background:linear-gradient(135deg,#eff6ff,#f5f3ff);border-left:4px solid var(--accent2);padding:14px 18px;margin:16px 0}
+  .callout-warn{background:#fef2f2;border-left:4px solid #dc2626}
+
+  .pipe{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:16px 0;font-family:monospace;font-size:.85rem}
+  .pipe-box{border:2px solid var(--accent);border-radius:6px;padding:8px 14px;background:var(--accent-light);font-weight:600;white-space:nowrap}
+  .pipe-arrow{color:var(--accent);font-weight:700;font-size:1.2rem}
+
+  .arch-box{display:inline-block;border:2px solid;border-radius:8px;padding:10px 16px;margin:4px;text-align:center;font-size:.84rem;font-weight:600}
+  .arch-vis{background:#dbeafe;border-color:var(--accent);color:var(--accent)}
+  .arch-aud{background:#fce7f3;border-color:#ec4899;color:#be185d}
+  .arch-llm{background:#ede9fe;border-color:var(--accent2);color:var(--accent2)}
+  .arch-align{background:#fef3c7;border-color:#f59e0b;color:#92400e}
+
+  footer{text-align:center;margin-top:80px;padding:24px 0;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);line-height:2}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🎬 Video-LLaMA 详解</h1>
+  <p>让大语言模型"看懂"视频——从帧采样到跨模态对齐，完整拆解 Video-LLaMA 的双分支架构、Q-Former 桥接机制与两阶段训练策略</p>
+</header>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>📑 目录</h3>
+  <ol>
+    <li><a href="#s1">背景：为什么需要视频 LLM？</a></li>
+    <li><a href="#s2">Video-LLaMA 整体架构</a></li>
+    <li><a href="#s3">视觉分支：从视频帧到视觉 Token</a></li>
+    <li><a href="#s4">音频分支：从音频波形到听觉 Token</a></li>
+    <li><a href="#s5">Q-Former：跨模态对齐的桥梁</a></li>
+    <li><a href="#s6">两阶段训练策略</a></li>
+    <li><a href="#s7">数据流：一段视频的完整旅程</a></li>
+    <li><a href="#s8">与其他视频 LLM 的对比</a></li>
+    <li><a href="#s9">能力与局限</a></li>
+    <li><a href="#s10">面试高频考点</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1 ==================== -->
+<h2 id="s1">一、背景：为什么需要视频 LLM？</h2>
+
+<div class="card card-blue">
+<h3>1.1 从"看懂图片"到"看懂视频"的鸿沟</h3>
+<p>2023 年，多模态大模型在图像理解上取得了巨大突破——LLaVA 能用自然语言描述图片、回答关于图片的问题、甚至根据图片讲故事。但视频比图片复杂得多：</p>
+
+<table>
+  <tr><th>维度</th><th>图片</th><th>视频</th></tr>
+  <tr><td><strong>信息载体</strong></td><td>单个静态画面</td><td>连续帧序列（时间维度）+ 音频轨道</td></tr>
+  <tr><td><strong>关键挑战</strong></td><td>空间理解（物体在哪、是什么）</td><td>时空理解（谁做了什么、先后顺序、因果关系）</td></tr>
+  <tr><td><strong>典型问题</strong></td><td>"这张照片里有什么？"</td><td>"视频中的人物在第三秒做了什么？为什么后来改变了方向？"</td></tr>
+  <tr><td><strong>数据量</strong></td><td>1 张图 ≈ 几十 KB ~ 几 MB</td><td>10 秒视频 ≈ 250 帧 × 每帧 ≈ 几十 MB，还需处理音频</td></tr>
+</table>
+
+<div class="callout callout-key">
+  <strong>核心矛盾</strong>：LLM 的上下文窗口有限（早期 LLaMA 仅 2048 token），但一段 10 秒的视频如果每帧都转成 token，轻松超出 100K token。如何用有限的 token 预算"压缩"视频信息，同时保留足够的时间细节——这是所有视频 LLM 必须解决的核心问题。
+</div>
+</div>
+
+<div class="card card-purple">
+<h3>1.2 Video-LLaMA 诞生的背景</h3>
+<p>Video-LLaMA 由 DAMO Academy（阿里巴巴达摩院）和 NTU 联合提出，论文《Video-LLaMA: An Instruction-tuned Audio-Visual Language Model for Video Understanding》于 2023 年 6 月发布。它是<strong>首批同时处理视频画面和音频的开源多模态 LLM 之一</strong>。</p>
+<table>
+  <tr><th>时间线</th><th>模型</th><th>机构</th><th>特点</th></tr>
+  <tr><td>2023.04</td><td>MiniGPT-4</td><td>KAUST</td><td>图像 LLM，单张图 → 文字</td></tr>
+  <tr><td>2023.05</td><td>LLaVA</td><td>UW-Madison, Microsoft</td><td>图像 LLM，MLP 投影对齐</td></tr>
+  <tr><td style="color:var(--accent2);font-weight:700">2023.06</td><td style="color:var(--accent2);font-weight:700">Video-LLaMA ★</td><td style="color:var(--accent2);font-weight:700">DAMO, NTU</td><td style="color:var(--accent2);font-weight:700">视频+音频 → 文字，双分支+Q-Former</td></tr>
+  <tr><td>2023.06</td><td>VideoChat</td><td>Tencent</td><td>视频 LLM</td></tr>
+  <tr><td>2023.07</td><td>Video-LLaVA</td><td>PKU</td><td>统一视觉表示（图像+视频共享）</td></tr>
+  <tr><td>2024+</td><td>LLaVA-NeXT-Video<br>Video-LLaMA 2</td><td>各机构</td><td>更长的视频、更高的分辨率</td></tr>
+</table>
+</div>
+
+<!-- ==================== 2 ==================== -->
+<h2 id="s2">二、Video-LLaMA 整体架构</h2>
+
+<div class="card card-highlight">
+<h3>2.1 一句话架构概览</h3>
+<div style="font-size:1.1rem;text-align:center;padding:10px 0">
+  <strong>Video-LLaMA = 视频编码器 + 音频编码器 + 两个 Q-Former + 一个冻结的 LLM</strong>
+</div>
+
+<div style="text-align:center;margin:20px 0">
+  <div class="arch-box arch-vis">视觉分支<br>ViT + Q-Former</div>
+  <span style="font-size:1.3rem;margin:0 8px">↘</span>
+  <div class="arch-box arch-llm">LLaMA<br>（冻结）</div>
+  <span style="font-size:1.3rem;margin:0 8px">→</span>
+  <span style="font-weight:700">文本回答</span>
+  <br><br>
+  <div class="arch-box arch-aud">音频分支<br>ImageBind + Q-Former</div>
+  <span style="font-size:1.3rem;margin:0 8px">↗</span>
+</div>
+
+<p><strong>两个独立的分支</strong>：视觉分支处理视频帧序列，音频分支处理伴音轨道。两者各自通过一个 <strong>Q-Former</strong> 将模态信息"翻译"成 LLM 能理解的 token，最后拼接在一起送入 LLaMA 生成回答。</p>
+</div>
+
+<div class="card card-blue">
+<h3>2.2 逐组件拆解</h3>
+<table>
+  <tr><th>组件</th><th>作用</th><th>输入</th><th>输出</th><th>是否训练</th></tr>
+  <tr>
+    <td><strong>ViT (Vision Transformer)</strong></td>
+    <td>从视频帧中提取视觉特征</td>
+    <td>8 帧 × 224×224 的 RGB 图像</td>
+    <td>8 × 257 个 patch embedding（每帧 257 token）</td>
+    <td>❌ 冻结</td>
+  </tr>
+  <tr>
+    <td><strong>ImageBind</strong></td>
+    <td>从音频波形提取听觉特征</td>
+    <td>音频波形（16kHz, ~10s）</td>
+    <td>音频 embedding 序列</td>
+    <td>❌ 冻结</td>
+  </tr>
+  <tr>
+    <td><strong>Vision Q-Former</strong></td>
+    <td>将视觉特征压缩为少量 query token</td>
+    <td>8 × 257 个 ViT 特征</td>
+    <td>32 个视觉 query token</td>
+    <td>✅ 训练</td>
+  </tr>
+  <tr>
+    <td><strong>Audio Q-Former</strong></td>
+    <td>将音频特征压缩为少量 query token</td>
+    <td>ImageBind 音频特征</td>
+    <td>8 个音频 query token</td>
+    <td>✅ 训练</td>
+  </tr>
+  <tr>
+    <td><strong>LLaMA</strong></td>
+    <td>综合视觉+音频信息生成文本回答</td>
+    <td>32+8=40 个多模态 token + 文本 prompt token</td>
+    <td>逐 token 生成的文本回答</td>
+    <td>❌ 冻结<br>（仅 LoRA 微调）</td>
+  </tr>
+</table>
+</div>
+
+<!-- ==================== 3 ==================== -->
+<h2 id="s3">三、视觉分支：从视频帧到视觉 Token</h2>
+
+<div class="card card-blue">
+<h3>3.1 第一步：帧采样（Frame Sampling）</h3>
+<p>10 秒的视频有 300 帧（30fps），全部处理计算量太大，且相邻帧几乎一样。Video-LLaMA 的采样策略：</p>
+<ul>
+  <li><strong>均匀采样 8 帧</strong>：将视频等分为 8 段，每段取 1 帧</li>
+  <li>每帧缩放到 <strong>224×224</strong> 分辨率</li>
+  <li>8 帧可以覆盖视频的起承转合，同时 token 量可控</li>
+</ul>
+<div class="callout callout-info">
+  <strong>为什么是 8 帧？</strong> 这是一个工程 trade-off。越多帧 → 越细腻的时间信息，但 token 数线性增长。8 帧是实验验证的"甜点"——能区分动作变化（如"拿起来→放下"），又不会超出 LLM 的上下文窗口。后续 Video-LLaMA 2 扩展到 32 帧。
+</div>
+</div>
+
+<div class="card card-purple">
+<h3>3.2 第二步：ViT 编码</h3>
+<p>每帧（224×224 RGB 图像）通过一个<strong>冻结的 ViT-G/14</strong>（Vision Transformer, Giant, patch_size=14）编码：</p>
+<ul>
+  <li>将图像切成 16×16 = <strong>256 个 patch</strong>（每个 14×14 像素）</li>
+  <li>加上 1 个 <strong>[CLS] token</strong> → 共 <strong>257 个 token</strong></li>
+  <li>输出：每帧 257 个 1024 维的视觉特征向量</li>
+</ul>
+<div class="callout callout-warn">
+  <strong>⚠ 问题</strong>：8 帧 × 257 token/帧 = <strong>2056 个视觉 token</strong>。直接塞进 LLM 会吃掉一半的上下文窗口。必须压缩。
+</div>
+</div>
+
+<div class="card card-green">
+<h3>3.3 第三步：Q-Former 压缩（最精妙的部分）</h3>
+<p>Q-Former 的核心思想来自 BLIP-2 论文。它用一个<strong>可训练的轻量级 Transformer</strong> 来"提问"冻结的视觉编码器，将冗余的 2056 个视觉 token 压缩为 <strong>32 个高信息密度的 query token</strong>。</p>
+
+<p><strong>工作原理类比</strong>：</p>
+<ul>
+  <li>ViT 输出 = 一本详细说明书（2056 页），内容极其冗余</li>
+  <li>Q-Former = 一个聪明的"读者"，带着 32 个问题去读这本书</li>
+  <li>32 个 query token = 32 个问题的答案摘要，保留了关键信息，丢了冗余</li>
+</ul>
+
+<p><strong>Q-Former 内部结构</strong>：</p>
+<pre>
+Q-Former = Cross-Attention Transformer
+
+输入:
+  - 32 个可学习的 Query Token [32, 768]
+  - ViT 视觉特征作为 Key/Value [2056, 1024]
+  
+结构:
+  Query → Self-Attention（32 个 Q 互相关注）
+       → Cross-Attention（Q 去 attend 视觉特征）
+       → FFN
+       → 输出 32 个精炼后的 token
+
+输出: [32, 768]  ← 从 2056 压缩到 32，压缩比 64:1
+</pre>
+
+<p><strong>Q-Former 的训练目标</strong>（第一阶段）：</p>
+<ul>
+  <li><strong>图文匹配（ITM）</strong>：判断 query token 和视觉特征是否描述同一内容</li>
+  <li><strong>图文对比学习（ITC）</strong>：拉近匹配的图文对，推远不匹配的</li>
+  <li><strong>文本生成（LM）</strong>：根据视觉特征生成描述文字</li>
+</ul>
+<p>这三个 loss 共同训练，确保 query token 既包含视觉信息，又能被 LLM 理解。</p>
+</div>
+
+<!-- ==================== 4 ==================== -->
+<h2 id="s4">四、音频分支：从音频波形到听觉 Token</h2>
+
+<div class="card card-blue">
+<h3>4.1 为什么需要音频？</h3>
+<p>无声的视频丢失了大量信息：说话声、环境音、背景音乐、事件音效（如关门声、爆炸声）。Video-LLaMA 是首批意识到"理解视频需要同时理解声音"的模型。</p>
+</div>
+
+<div class="card card-purple">
+<h3>4.2 ImageBind：六模态对齐的"万能编码器"</h3>
+<p>Video-LLaMA 使用 Meta 提出的 <strong>ImageBind</strong>（Girdhar et al., 2023）作为音频编码器。ImageBind 的独特之处——它把六种模态（图像、文本、音频、深度、热力、IMU）对齐到了<strong>同一个向量空间</strong>。</p>
+
+<div class="callout callout-key">
+  <strong>为什么选 ImageBind 而不是专门的音频模型（如 Whisper）？</strong><br>
+  ImageBind 的音频 embedding 和图像 embedding 在同一个空间——这意味着一个音频 token（"狗叫声"）和一张图片 token（"狗的照片"）的向量接近。这种<strong>跨模态对齐</strong>让 LLM 更容易将声音和画面关联起来（"视频里有狗叫 → 画面里应该有一条狗"）。
+</div>
+
+<p>处理流程：</p>
+<pre>
+音频波形（16kHz, ~10s）
+  ↓ 转为 128 通道的梅尔频谱图（Mel-Spectrogram）
+  ↓ ImageBind Audio Encoder
+  ↓ 输出音频特征序列
+  ↓ Audio Q-Former（与 Vision Q-Former 结构相同）
+  ↓ 8 个音频 query token [8, 768]
+</pre>
+</div>
+
+<!-- ==================== 5 ==================== -->
+<h2 id="s5">五、Q-Former：跨模态对齐的桥梁</h2>
+
+<div class="card card-highlight">
+<h3>5.1 为什么不用简单的 MLP 投影？</h3>
+<p>LLaVA 的做法是用一个 MLP 把视觉 token 直接映射到 LLM 的 embedding 空间。这对于图片足够——1 张图 257 token，MLP 映射后直接喂给 LLM。</p>
+<p>但 Video-LLaMA 面临两个挑战：① 视频有 8 帧 ×256 = 2048 token，MLP 不压缩，token 数不变；② 视频帧之间有时间关系，MLP 无法建模"第 2 帧和第 7 帧之间的因果联系"。</p>
+<p>Q-Former 一举两得：<strong>压缩 token 数 + 通过 Self-Attention 建模帧间关系</strong>。</p>
+</div>
+
+<div class="card card-purple">
+<h3>5.2 Q-Former 内部 Forward 流程（逐步）</h3>
+
+<pre>
+# 伪代码：Vision Q-Former 的一次前向传播
+
+# 输入:
+#   query_tokens: [32, 768]       — 32 个可学习的查询向量
+#   video_features: [2056, 1024]  — ViT 输出的视觉特征
+
+# Step 1: 投影维度对齐
+video_features = Linear(1024 → 768)(video_features)   # [2056, 768]
+
+# Step 2: Self-Attention — 32 个 query token 互相交流
+# "第 3 个 query 可能关注全景，第 7 个关注运动"
+query_tokens = SelfAttention(Q=query_tokens, K=query_tokens, V=query_tokens)
+
+# Step 3: Cross-Attention — query 去"读取"视觉特征
+# 每个 query 选择性地关注它感兴趣的视觉区域/帧
+query_tokens = CrossAttention(Q=query_tokens, K=video_features, V=video_features)
+
+# Step 4: FFN 非线性变换
+query_tokens = FFN(query_tokens)
+
+# 输出: 32 个 query token，每个都融合了全局视觉信息
+</pre>
+
+<table>
+  <tr><th>层</th><th>作用</th><th>输入</th><th>输出</th></tr>
+  <tr><td>维度投影</td><td>将 ViT 的 1024 维对齐到 768 维（LLaMA embedding 维度）</td><td>[2056, 1024]</td><td>[2056, 768]</td></tr>
+  <tr><td>Self-Attention</td><td>让 32 个 query 分工协作（"你关注前景，我关注背景"）</td><td>[32, 768]</td><td>[32, 768]</td></tr>
+  <tr><td>Cross-Attention</td><td>query 从视觉特征中抽取信息</td><td>Q:[32,768] KV:[2056,768]</td><td>[32, 768]</td></tr>
+  <tr><td>FFN</td><td>增加非线性表达能力</td><td>[32, 768]</td><td>[32, 768]</td></tr>
+</table>
+</div>
+
+<!-- ==================== 6 ==================== -->
+<h2 id="s6">六、两阶段训练策略</h2>
+
+<div class="card card-blue">
+<h3>6.1 阶段 1：多模态对齐预训练（Vision-Language Alignment）</h3>
+<table>
+  <tr><th>项目</th><th>详情</th></tr>
+  <tr><td><strong>目的</strong></td><td>让 Q-Former 学会从视觉/音频特征中提取 LLM"能懂"的信息</td></tr>
+  <tr><td><strong>训练数据</strong></td><td>大规模图文对（WebVid-2M：250 万视频-文本对 + CC3M 图像-文本对）</td></tr>
+  <tr><td><strong>冻结</strong></td><td>ViT、ImageBind、LLaMA 全部冻结</td></tr>
+  <tr><td><strong>训练</strong></td><td>仅 Q-Former + 维度投影层</td></tr>
+  <tr><td><strong>Loss</strong></td><td>ITM + ITC + LM 三合一</td></tr>
+  <tr><td><strong>类比</strong></td><td>教一个翻译官（Q-Former）把"视觉语言"翻译成"LLM 语言"，翻译官的参考词典就是图文对</td></tr>
+</table>
+
+<div class="callout callout-tip">
+  <strong>💡 为什么用 250 万视频+CC3M 而不是纯视频数据？</strong> 视频数据标注质量差（"一个人在海边散步"这种描述太模糊），静态图像的标注通常更精准。图文数据帮 Q-Former 建立扎实的视觉-语言映射基础，视频数据负责加上时间维度。
+</div>
+</div>
+
+<div class="card card-purple">
+<h3>6.2 阶段 2：指令微调（Instruction Tuning）</h3>
+<table>
+  <tr><th>项目</th><th>详情</th></tr>
+  <tr><td><strong>目的</strong></td><td>让模型学会"问答格式"——根据视频回答各种类型的问题</td></tr>
+  <tr><td><strong>训练数据</strong></td><td>高质量视频问答数据集（VideoChat 指令数据、MiniGPT-4 图像指令数据混合）</td></tr>
+  <tr><td><strong>冻结</strong></td><td>ViT、ImageBind 继续冻结</td></tr>
+  <tr><td><strong>训练</strong></td><td>Q-Former + LLaMA 的 LoRA 适配器</td></tr>
+  <tr><td><strong>Loss</strong></td><td>标准自回归 LM Loss（Next Token Prediction）</td></tr>
+  <tr><td><strong>类比</strong></td><td>翻译官已经会翻译了，现在教它"别人问问题你要怎么回答"——看很多 QA 范例来学格式</td></tr>
+</table>
+
+<div class="callout callout-key">
+  <strong>🔥 关键设计：LLM 用 LoRA 微调而非全参训练</strong><br>
+  全参微调 7B 模型需要巨量显存和数据，且容易过拟合小数据集导致灾难性遗忘。LoRA 只在 Attention 的 Q/K/V 权重旁加低秩分解矩阵（参数量仅原来的 ~0.1%），既保留了预训练知识，又学到了"看视频回答问题"的能力。
+</div>
+</div>
+
+<!-- ==================== 7 ==================== -->
+<h2 id="s7">七、数据流：一段视频的完整旅程</h2>
+
+<div class="card card-highlight">
+<h3>7.1 从视频到回答——端到端追踪</h3>
+
+<div style="text-align:center;margin:20px 0">
+  <div style="font-weight:700;color:var(--accent2);margin-bottom:12px">输入视频：一个 10 秒的短视频，内容为"一只猫从桌上跳下来，发出咚的一声"</div>
+
+  <div class="comparison">
+    <div style="border:2px solid var(--accent);border-radius:10px;padding:16px;text-align:center">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:8px">👁️ 视觉分支</div>
+      <div style="font-size:.85rem;line-height:1.6">
+        均匀采样 8 帧<br>
+        ↓<br>
+        ViT-G/14 编码<br>
+        → 8×257=2056 个视觉 token<br>
+        ↓<br>
+        Vision Q-Former 压缩<br>
+        → <strong>32 个视觉 query token</strong>
+      </div>
+    </div>
+    <div style="border:2px solid #ec4899;border-radius:10px;padding:16px;text-align:center">
+      <div style="font-weight:700;color:#be185d;margin-bottom:8px">🔊 音频分支</div>
+      <div style="font-size:.85rem;line-height:1.6">
+        提取梅尔频谱图<br>
+        ↓<br>
+        ImageBind 编码<br>
+        → 音频特征序列<br>
+        ↓<br>
+        Audio Q-Former 压缩<br>
+        → <strong>8 个音频 query token</strong>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin:16px 0;font-size:.9rem">
+    <span style="font-weight:700;color:var(--accent2)">→ 拼接</span>：
+    <code>[32 vision tokens] + [8 audio tokens] + [text prompt tokens]</code>
+  </div>
+
+  <div style="border:2px solid var(--accent2);border-radius:10px;padding:16px;background:#ede9fe;margin-bottom:16px">
+    <div style="font-weight:700;color:var(--accent2);margin-bottom:8px">🧠 LLaMA（冻结 + LoRA）</div>
+    <div style="font-size:.85rem;line-height:1.6">
+      接收组合后的 token 序列 → 逐 token 生成文本回答
+    </div>
+  </div>
+
+  <div style="font-weight:700;color:var(--accent3);font-size:1.05rem">
+    💬 输出："视频中一只橘猫从木桌上跳下来，落地时发出沉闷的'咚'声，随后猫跑出了画面。"
+  </div>
+</div>
+</div>
+
+<div class="card card-blue">
+<h3>7.2 Token 预算分析</h3>
+<table>
+  <tr><th>Token 来源</th><th>数量</th><th>占比</th></tr>
+  <tr><td>Vision Q-Former 输出</td><td>32</td><td>~3%（最关键的压缩）</td></tr>
+  <tr><td>Audio Q-Former 输出</td><td>8</td><td>~1%</td></tr>
+  <tr><td>用户文本 prompt</td><td>~20-50</td><td>~5%</td></tr>
+  <tr><td>LLM 生成回答</td><td>~100-512</td><td>~50%</td></tr>
+  <tr><td style="color:var(--accent)"><strong>总消耗</strong></td><td style="color:var(--accent)"><strong>~160-600</strong></td><td style="color:var(--accent)"><strong>远低于 2048 上限</strong></td></tr>
+</table>
+<p>如果没有 Q-Former 压缩，仅视觉 token 就 2056 个，直接爆掉上下文窗口。Video-LLaMA 的设计让一段视频仅占约<strong>40 个多模态 token</strong>——比一张图片的 token 数（LLaVA 用 ~256 token）还少。</p>
+</div>
+
+<!-- ==================== 8 ==================== -->
+<h2 id="s8">八、与其他视频 LLM 的对比</h2>
+
+<div class="card">
+<table>
+  <tr><th>模型</th><th>视觉编码器</th><th>对齐方式</th><th>音频</th><th>LLM</th><th>开源</th></tr>
+  <tr style="background:#f5f3ff">
+    <td><strong>Video-LLaMA</strong></td>
+    <td>ViT-G/14</td>
+    <td>Q-Former</td>
+    <td>✅ ImageBind</td>
+    <td>LLaMA-7B</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td><strong>VideoChat</strong></td>
+    <td>ViT-G/14</td>
+    <td>Q-Former</td>
+    <td>❌ 无</td>
+    <td>Vicuna-7B</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td><strong>Video-LLaVA</strong></td>
+    <td>LanguageBind ViT</td>
+    <td>MLP 投影</td>
+    <td>❌ 无</td>
+    <td>Vicuna-7B</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td><strong>LLaVA-NeXT-Video</strong></td>
+    <td>CLIP ViT-L</td>
+    <td>MLP 投影</td>
+    <td>❌ 无</td>
+    <td>LLaMA 3-8B</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td><strong>Gemini 1.5 Pro</strong></td>
+    <td>自研</td>
+    <td>原生多模态</td>
+    <td>✅</td>
+    <td>自研</td>
+    <td>❌ 闭源</td>
+  </tr>
+</table>
+
+<div class="callout callout-tip">
+  <strong>💡 Video-LLaMA 的独特优势</strong>：① 是少数同时处理视频和音频的开源模型；② Q-Former 压缩比极高（64:1），长视频友好；③ 基于 LLaMA 生态，LoRA 微调门槛低。主要不足：8 帧采样对快速动作理解不够精细；依赖 ImageBind 的音频质量。
+</div>
+</div>
+
+<!-- ==================== 9 ==================== -->
+<h2 id="s9">九、能力与局限</h2>
+
+<div class="comparison">
+  <div class="card card-green">
+    <h3>✅ 擅长什么</h3>
+    <ul>
+      <li><strong>视频内容描述</strong>：能概括视频中发生了什么</li>
+      <li><strong>视听关联</strong>：能将画面和声音联系起来（"这个声音对应画面中的哪个动作"）</li>
+      <li><strong>时序问答</strong>："视频开头发生了什么？"</li>
+      <li><strong>多轮对话</strong>：能连续追问关于同一视频的问题</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <h3>❌ 不擅长什么</h3>
+    <ul>
+      <li><strong>精细时序定位</strong>："第 3.5 秒到第 4.2 秒之间发生了什么"——8 帧采样不够</li>
+      <li><strong>长视频理解</strong>：>2 分钟的视频信息丢失严重</li>
+      <li><strong>复杂空间推理</strong>："画面中有几个红色物体？它们的位置关系？"</li>
+      <li><strong>多人物追踪</strong>：人物换装/遮挡后再出现时容易混淆</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 10 ==================== -->
+<h2 id="s10">十、面试高频考点</h2>
+
+<div class="card card-highlight">
+<h3>10.1 必会 5 问</h3>
+
+<div class="qa" style="margin:12px 0">
+  <p style="font-weight:700;color:var(--accent2)">Q1: Video-LLaMA 用了几个 Q-Former？为什么？</p>
+  <p style="color:var(--sub)">两个独立的 Q-Former——一个处理视觉、一个处理音频。视觉和音频是不同模态，特征分布差异大，各自有专门的 query token 效果更好。共享 Q-Former 会导致两种特征互相干扰。</p>
+</div>
+
+<div class="qa" style="margin:12px 0">
+  <p style="font-weight:700;color:var(--accent2)">Q2: Q-Former 和 MLP 投影的核心区别？什么时候该用哪个？</p>
+  <p style="color:var(--sub)">MLP 只做维度映射，不改变 token 数。Q-Former 通过 Cross-Attention 压缩 token 数，适合 token 数多的场景。规则：图片（<500 token）→ MLP 够用；视频（>2000 token）→ 必须 Q-Former 压缩。</p>
+</div>
+
+<div class="qa" style="margin:12px 0">
+  <p style="font-weight:700;color:var(--accent2)">Q3: 为什么要冻结 LLM 只用 LoRA？</p>
+  <p style="color:var(--sub)">① 全参微调 7B 需要 >56GB 显存，LoRA 可在单卡完成；② 视频 QA 数据量小（数万条），全参容易过拟合；③ 冻结 LLM 保留预训练知识，LoRA 只学"看视频"这一增量能力。</p>
+</div>
+
+<div class="qa" style="margin:12px 0">
+  <p style="font-weight:700;color:var(--accent2)">Q4: 为什么要分两阶段训练？</p>
+  <p style="color:var(--sub)">阶段 1（对齐）：数据量大但质量低（250 万视频-文本对），用来让 Q-Former 学会基础的视觉→语言映射。阶段 2（指令微调）：数据量小但质量高（数万条精细 QA），用来学会问答格式。<strong>先粗后精，避免高质量数据被低质量数据淹没</strong>。</p>
+</div>
+
+<div class="qa" style="margin:12px 0">
+  <p style="font-weight:700;color:var(--accent2)">Q5: Video-LLaMA 2 相比第一代改进了什么？</p>
+  <p style="color:var(--sub)">① 帧数从 8 → 最多 32 帧；② 用更强的 ViT（SigLIP）替换 ViT-G；③ 引入 STC（Spatial-Temporal Convolution）模块更好地融合时空信息；④ 支持更长的视频（数分钟级别）；⑤ 训练数据规模大幅增加。</p>
+</div>
+</div>
+
+<footer>
+  <p>参考论文：Zhang et al. (2023) <em>Video-LLaMA: An Instruction-tuned Audio-Visual Language Model for Video Understanding</em> · Li et al. (2023) <em>BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models</em> · Girdhar et al. (2023) <em>ImageBind: One Embedding Space To Bind Them All</em></p>
+  <p>2026-07</p>
+</footer>
+
+</div>
+</body>
+</html>
