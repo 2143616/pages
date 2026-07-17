@@ -133,6 +133,7 @@ tbody tr:hover { background: var(--bg2); }
     <li><a href="#sec1">1. 什么是 VLA？</a></li>
     <li><a href="#sec2">2. 为什么需要 VLA？传统方法的局限</a></li>
     <li><a href="#sec3">3. VLA 的核心架构</a></li>
+      <li style="padding-left:16px;"><a href="#sec3-2-1" style="font-size:12px;color:var(--fg2);">↳ 3.2.1 为什么 Action Head 用 Diffusion？</a></li>
     <li><a href="#sec4">4. 主流 VLA 模型盘点</a></li>
     <li><a href="#sec5">5. VLA 的训练范式</a></li>
     <li><a href="#sec6">6. 实战：VLA 工作流全链路</a></li>
@@ -286,6 +287,156 @@ tbody tr:hover { background: var(--bg2); }
 
   <div class="highlight">
     <strong>关键趋势：</strong>业界正在向<strong>混合方案</strong>收敛——用 VLM backbone 做感知与理解（粗粒度），用 diffusion/flow-matching head 做精确动作生成（细粒度）。Pi0 就是这种混合架构的代表。
+  </div>
+
+  <h3 id="sec3-2-1">3.2.1 深入理解：为什么 Action Head 要用 Diffusion？</h3>
+
+  <p>这是理解现代 VLA 架构设计的关键问题。答案在于<strong>动作预测本质上是一个"一对多"的问题</strong>——同一个任务往往有多个正确答案，而传统的回归无法处理这种情况。</p>
+
+  <h4 style="font-size:1.1em;color:var(--orange);margin:24px 0 10px;">🎯 核心矛盾：抓一个苹果可以有 N 种方式</h4>
+
+  <p>你对机器人说<strong>"把桌上的苹果拿起来"</strong>。这个任务至少有三种完全合理的抓取方式：</p>
+
+  <div class="arch-box">
+    <span class="label">方式 A: 正上方垂直抓取</span> — 机械手从天而降，直直下去<br>
+    <span class="label">方式 B: 右侧横移抓取</span> — 从右边滑过去，从侧面夹住<br>
+    <span class="label">方式 C: 绕后抓取</span> — 避开前面的杯子，绕到苹果背后再抓<br><br>
+    三种方式<strong>都是正确的</strong>，但它们的关节角度序列完全不同。<br>
+    如果你用 L1/L2 回归训练，模型会学到什么？
+  </div>
+
+  <p><strong>回归的致命缺陷：</strong>L1/L2 Loss 的本质是预测<strong>"平均值"</strong>。看这个例子：</p>
+
+  <pre><span class="lang-label">为什么回归在 VLA 中会失败</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 训练数据中有 3 条演示，都是"拿起苹果"这个任务：</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+data_A = [<span class="num">30</span>, -<span class="num">10</span>,  <span class="num">5</span>,  <span class="num">45</span>,  <span class="num">20</span>, -<span class="num">15</span>]   <span class="cm"># 演示 A: 从上方抓 — 6 个关节角度</span>
+data_B = [-<span class="num">15</span>,  <span class="num">45</span>,  <span class="num">0</span>,  <span class="num">60</span>, -<span class="num">10</span>,  <span class="num">30</span>]   <span class="cm"># 演示 B: 从侧面抓 — 关节角度完全不同</span>
+data_C = [<span class="num">60</span>,  <span class="num">20</span>, -<span class="num">20</span>,  <span class="num">10</span>,  <span class="num">50</span>,  <span class="num">5</span>]   <span class="cm"># 演示 C: 绕后抓 — 又是不同的轨迹</span>
+
+<span class="cm"># MSE Loss = (预测 - 真实值)² 的最小化会把模型拉向均值</span>
+mean_action = [(<span class="num">30</span>-<span class="num">15</span>+<span class="num">60</span>)/<span class="num">3</span>, (-<span class="num">10</span>+<span class="num">45</span>+<span class="num">20</span>)/<span class="num">3</span>, ...]
+<span class="cm">#              = [25, 18, -5, 38, 20, 7]</span>
+<span class="cm"># 这个"平均动作"现实中不存在！执行它可能导致：</span>
+<span class="cm">#   - 机械臂停在半空（不上不下，离苹果还差 5cm）</span>
+<span class="cm">#   - 撞到桌子（平均值穿过了桌面）</span>
+<span class="cm">#   - 夹爪在错误时机闭合（三个演示的夹取时机被平均了）</span></pre>
+
+  <div class="highlight">
+    <strong>回归的数学本质：</strong>L1/L2 回归假设输出服从<strong>单峰分布</strong>（只有一个正确答案，数据围绕这个正确答案正态分布）。但机器人动作天然是<strong>多峰分布</strong>（多个正确的"峰"），预测"平均值"等于预测一个现实中<strong>不可行的中间态</strong>——不上不下、不左不右、刚好撞到障碍物。
+  </div>
+
+  <h4 style="font-size:1.1em;color:var(--green);margin:24px 0 10px;">💡 Diffusion 如何解决？—— 从"预测"变成"采样"</h4>
+
+  <p>Diffusion 的核心思想转换：<strong>不直接预测输出值，而是学习输出的"分布"，然后从分布中采样</strong>。</p>
+
+  <table>
+    <thead><tr><th></th><th>回归模型</th><th>扩散模型 (Diffusion)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>训练目标</strong></td><td>学习 f(x) → 一个确定的值</td><td>学习 p(action | image, text) → 一个概率分布</td></tr>
+      <tr><td><strong>推理过程</strong></td><td>输入 → [网络] → 输出</td><td>随机噪声 → [K 步去噪] → 采样一个可行解</td></tr>
+      <tr><td><strong>多次推理</strong></td><td>每次结果完全相同（确定性）</td><td>每次采样结果不同，但都合理（随机性）</td></tr>
+      <tr><td><strong>面对 3 种抓取方式</strong></td><td>学出"平均值" = 不可行的中间态</td><td>学出"分布" = 可以从 3 个峰中各采样出一个</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>一个具体的采样演示：</strong></p>
+
+  <pre><span class="lang-label">Diffusion Action Head 的推理过程</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># VLA 的 Diffusion Action Head 每一步都在做什么</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># Step 1: 初始化 — 纯随机噪声作为"动作雏形"</span>
+action_noise = [<span class="num">0.03</span>, -<span class="num">0.12</span>, <span class="num">0.08</span>, -<span class="num">0.05</span>, <span class="num">0.01</span>, -<span class="num">0.09</span>]  <span class="cm"># 无意义的随机数</span>
+
+<span class="cm"># Step 2: 条件注入 — VLM 的输出作为"导航地图"</span>
+condition = VLM_output  <span class="cm"># 融合了"苹果在(x,y,z)"和"拿起来"的语义</span>
+
+<span class="cm"># Step 3: 迭代去噪 (K 步)，每一步都参考 condition</span>
+<span class="kw">for</span> t <span class="kw">in</span> [K, K-<span class="num">1</span>, ..., <span class="num">2</span>, <span class="num">1</span>]:
+    <span class="cm"># 网络预测：给定当前噪声动作 + 场景条件，"应该减去多少噪声"</span>
+    predicted_noise = denoise_net(action_noise, condition, t)
+
+    <span class="cm"># 从当前动作中减去预测的噪声 → 向"干净动作"靠近一步</span>
+    action_noise = action_noise - predicted_noise
+
+    <span class="cm"># 直观感受每一步的变化：</span>
+    <span class="cm"># t=50:  噪声很大，动作还很模糊  → 只知道"大概往苹果方向走"</span>
+    <span class="cm"># t=30:  方向明确了              → "从上方还是侧面？初步确定"</span>
+    <span class="cm"># t=10:  轨迹成形了              → "最后一小段是向上提"</span>
+    <span class="cm"># t=5:   精细微调                → "夹爪打开 0.5mm 以确保夹住"</span>
+    <span class="cm"># t=1:   输出干净的动作序列 ✓    → [28.3, -9.1, 4.2, 44.8, 19.5, -14.7]</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 关键：如果换一个随机种子（不同的初始噪声），结果不同！</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 初始噪声 [种子=42] → 去噪 → 从上方抓取 [30, -10, 5, ...]</span>
+<span class="cm"># 初始噪声 [种子=99] → 去噪 → 从侧面抓取 [-15, 45, 0, ...]</span>
+<span class="cm"># 初始噪声 [种子=7]  → 去噪 → 绕后抓取 [60, 20, -20, ...]</span>
+<span class="cm">#</span>
+<span class="cm"># 三种都是合理的动作！模型学会了"分布"而非"平均值"</span></pre>
+
+  <h4 style="font-size:1.1em;color:var(--purple);margin:24px 0 10px;">🗺️ 为什么 VLM Condition 是 Diffusion 的完美搭档？</h4>
+
+  <p>Diffusion 本身只会"去噪"——它知道怎么让随机噪声变得有意义。但<strong>什么样的动作算"有意义"</strong>，完全由 VLM 提供的 condition 决定：</p>
+
+  <table>
+    <thead><tr><th>Condition 包含的信息</th><th>对去噪过程的引导作用</th></tr></thead>
+    <tbody>
+      <tr><td>图像特征 → "苹果在桌面坐标 (0.3, -0.1, 0.05)"</td><td>告诉去噪网络：<strong>"末端轨迹的终点要落到这个位置"</strong></td></tr>
+      <tr><td>语言语义 → "拿起来"（pick up，含向上运动）</td><td>告诉去噪网络：<strong>"轨迹末尾要有一个向上提升的 phase"</strong></td></tr>
+      <tr><td>空间关系 → "苹果在桌上，旁边有水杯"</td><td>告诉去噪网络：<strong>"轨迹要绕开水杯，不能直线穿过"</strong></td></tr>
+      <tr><td>物体属性 → "苹果大小约 5cm，表面光滑"</td><td>告诉去噪网络：<strong>"夹爪开合角度约 5~6cm，力度适中"</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">🔑 直觉理解</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      把 Diffusion 想象成一个<strong>拿着画笔的画家</strong>，把 VLM Condition 想象成<strong>一张照片</strong>。<br>
+      画家一开始面对一张白纸（随机噪声），但手里有参照照片（condition）。<br>
+      他看一眼照片，画一笔轮廓……再看一眼，细化细节……再看一眼，润色收尾。<br>
+      每次画出来的画可能略有不同（不同的笔触风格），但<strong>画的内容始终是照片里的场景</strong>。<br><br>
+      如果没有 condition（照片），画家就不知道要画什么——Diffusion 没有 VLM 的条件信号，就不知道"什么动作是合理的"。
+    </p>
+  </div>
+
+  <h4 style="font-size:1.1em;color:var(--teal);margin:24px 0 10px;">⚡ Pi0 为什么用 Flow Matching 而不是纯 Diffusion？</h4>
+
+  <p>Pi0（Physical Intelligence）用了 <strong>Flow Matching</strong>——Diffusion 的高效变体，核心区别在于<strong>"去噪路径"</strong>的设计：</p>
+
+  <div class="arch-box">
+    <span class="label">标准 Diffusion 的去噪路径：</span><br>
+    &nbsp;&nbsp;噪声 ──→ 弯曲路径 ──→ 弯曲路径 ──→ ... ──→ 干净动作<br>
+    &nbsp;&nbsp;<span style="color:var(--fg2);">每一步往随机方向走一点，需要 50~100 步才能到达目标</span><br><br>
+    <span class="label">Flow Matching 的去噪路径：</span><br>
+    &nbsp;&nbsp;噪声 ─────────────────→ 直线路径 ────────────────→ 干净动作<br>
+    &nbsp;&nbsp;<span style="color:var(--fg2);">路径被显式建模为一条直线，只需 5~10 步即可到达目标</span>
+  </div>
+
+  <div class="highlight">
+    <strong>为什么直线路径更快？</strong>Diffusion 的原始设计中，去噪路径是<strong>随机的</strong>——每一步往哪个方向走多少，网络自己学习。Flow Matching 直接把路径约束为<strong>直线插值</strong>（x_t = t·x_noise + (1-t)·x_clean），网络只需要学习这条直线上的"方向梯度"。路径更短、更可预测，所以步数从 50+ 降到个位数，<strong>Pi0Fast 因此得名</strong>。
+  </div>
+
+  <h4 style="font-size:1.1em;color:var(--fg);margin:24px 0 10px;">📊 三种范式对决 — 完整对比</h4>
+
+  <table>
+    <thead><tr><th>维度</th><th>回归 (MSE)</th><th>离散化 Token</th><th>Diffusion / Flow Matching</th></tr></thead>
+    <tbody>
+      <tr><td><strong>如何生成</strong></td><td>MLP → 一个确定值</td><td>逐 token 预测离散 bin</td><td>噪声 → K 步迭代去噪</td></tr>
+      <tr><td><strong>多模态分布</strong></td><td style="color:var(--red);">❌ 学的是平均值</td><td style="color:var(--orange);">⚠️ 可能但量化粗糙</td><td style="color:var(--green);">✅ 天然支持（采样）</td></tr>
+      <tr><td><strong>输出精度</strong></td><td style="color:var(--green);">✅ 连续值最高精度</td><td style="color:var(--red);">❌ 量化误差</td><td style="color:var(--green);">✅ 连续值高精度</td></tr>
+      <tr><td><strong>轨迹平滑度</strong></td><td style="color:var(--orange);">⚠️ 可能不连续</td><td style="color:var(--red);">❌ 离散阶梯状</td><td style="color:var(--green);">✅ 去噪天然平滑</td></tr>
+      <tr><td><strong>推理速度</strong></td><td style="color:var(--green);">✅ 极快（单次前向）</td><td style="color:var(--green);">✅ 快（并行解码）</td><td style="color:var(--orange);">⚠️ 需迭代 K 步</td></tr>
+      <tr><td><strong>训练兼容性</strong></td><td>独立 loss 设计</td><td style="color:var(--green);">✅ 与 LLM 统一</td><td style="color:var(--orange);">⚠️ 需额外去噪网络</td></tr>
+      <tr><td><strong>代表模型</strong></td><td>SmolVLA</td><td>RT-2, OpenVLA</td><td>Pi0 (Flow Matching), Octo</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>一句话总结：</strong>Action Head 用 Diffusion 不是因为"Diffusion 很酷"，而是因为机器人动作天然是<strong>多模态的</strong>（同一个任务有多个正确答案）——回归学不了"分布"，离散化丢精度且轨迹不连续，只有 Diffusion/Flow Matching 能同时做到<strong>采样不同合理动作 + 连续高精度输出 + 轨迹平滑</strong>。VLM 的融合表示作为 condition，就像给扩散过程装上了 GPS——确保采样出的动作始终符合当前场景和指令。
   </div>
 
   <h3>3.3 动作空间：VLA 输出什么？</h3>
