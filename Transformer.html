@@ -1088,41 +1088,221 @@ next_token = np.argmax(next_token_logits, axis=-<span class="num">1</span>)  <sp
     </tbody>
   </table>
 
-  <h3>9.2 高频面试问题</h3>
+  <h3>9.2 高频面试问题（详解版）</h3>
 
-  <div class="card-grid">
-    <div class="card">
-      <h4>❓ Q1: 为什么 Transformer 比 RNN 好？</h4>
-      <p><strong>答：</strong>并行计算（训练时所有位置同时做 Attention，RNN 必须串行）+ 长距离依赖（Self-Attention 直接建立任意两位置的连接，路径长度 O(1)，RNN 是 O(n)）+ 可解释性（Attention 权重可视化）。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q2: 为什么要除以 √dₖ？</h4>
-      <p><strong>答：</strong>防止点积方差过大导致 softmax 梯度消失。dₖ 越大，Q·K 的方差越大（正比于 dₖ），除以 √dₖ 将方差缩放回 1，保持 softmax 输出平滑。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q3: Multi-Head 中每个头学到了什么？</h4>
-      <p><strong>答：</strong>不同头关注不同的语言模式——有的头关注语法结构（主谓一致），有的关注语义关系（因果/转折），有的关注位置（相邻词）。头之间分工但不强制。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q4: BERT 和 GPT 的核心区别？</h4>
-      <p><strong>答：</strong>BERT 用 Encoder + 双向 Attention，训练目标 MLM（填空），擅长"理解"；GPT 用 Decoder + 单向（causal）Attention，训练目标 Next Token Prediction，擅长"生成"。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q5: LayerNorm 在 Attention 之前还是之后？</h4>
-      <p><strong>答：</strong>原始论文是 Post-LN（之后），现代模型（GPT-2、Llama）用 Pre-LN（之前）。Pre-LN 训练更稳定、收敛更快、不易梯度爆炸。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q6: KV Cache 是什么？</h4>
-      <p><strong>答：</strong>自回归生成时，每次生成新 token 都需要重新计算所有之前 token 的 K 和 V。KV Cache 把已计算的 K、V 缓存起来，每次只需计算新 token 的 Q、K、V，大幅加速推理。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q7: 为什么残差连接重要？</h4>
-      <p><strong>答：</strong>残差连接提供"梯度高速公路"——即使某层学不到有用信息（输出≈0），原始输入仍可无损传递。这在深层网络中防止了梯度消失和性能退化。</p>
-    </div>
-    <div class="card">
-      <h4>❓ Q8: Transformer 的时间/空间复杂度？</h4>
-      <p><strong>答：</strong>Self-Attention：<strong>O(n²d)</strong> 时间和 <strong>O(n²)</strong> 空间（n=序列长度）。这限制了上下文长度，也是 FlashAttention、Sparse Attention 等优化的动机。</p>
-    </div>
+  <!-- ═══ Q1: Transformer vs RNN ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:30px 0 16px;">❓ Q1: 为什么 Transformer 比 RNN 好？</h4>
+
+  <p>这个问题考察的是对<strong>架构核心差异</strong>的理解。可以从三个维度回答：</p>
+
+  <table>
+    <thead><tr><th>维度</th><th>RNN / LSTM</th><th>Transformer</th></tr></thead>
+    <tbody>
+      <tr><td><strong>计算方式</strong></td><td>串行：必须先算 t₀，再算 t₁，再算 t₂……无法并行</td><td>并行：所有位置同时做 Attention，GPU 利用率极高</td></tr>
+      <tr><td><strong>长距离依赖</strong></td><td>通过隐藏状态一步步传递，路径长度 O(n)。传 100 步后信息严重衰减</td><td>每个 token 直接与任意位置连接，路径长度 O(1)。"第 1 个词"和"第 1000 个词"之间只需一步</td></tr>
+      <tr><td><strong>梯度传播</strong></td><td>BPTT（沿时间反向传播），100 步回传 ≈ 100 次链式乘法 → 梯度消失/爆炸</td><td>残差连接 + 并行路径，梯度不需要穿过时间轴</td></tr>
+      <tr><td><strong>可解释性</strong></td><td>隐状态是黑盒，很难解释"模型为什么做了这个预测"</td><td>Attention 权重可以直接可视化——看到模型在"看"哪些词</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-box">
+    <span class="label">直观对比 — RNN 像传话游戏，Transformer 像圆桌会议：</span><br>
+    <span class="label">RNN:</span> 第 1 个人 → 告诉第 2 个人 → 告诉第 3 个人 → ...→ 到第 100 个人时，第 1 个人说了什么已经忘光了<br>
+    <span class="label">Transformer:</span> 所有人围坐一圈，每个人可以直接听到<strong>所有人</strong>的发言，想听谁就听谁
+  </div>
+
+  <div class="highlight">
+    <strong>一句话回答：</strong>RNN 必须串行处理（时间步之间强依赖），导致训练慢 + 长距离信息丢失；Transformer 的 Self-Attention 让每个位置直接与所有位置交互，路径长度恒为 O(1)，天然可并行，且 Attention 权重提供了可解释性。
+  </div>
+
+  <!-- ═══ Q2: √dₖ ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q2: 为什么要除以 √dₖ？不除会怎样？</h4>
+
+  <p>这个问题<strong>考察数学直觉</strong>——你需要展示你不仅知道"要除"，还理解<strong>为什么</strong>以及<strong>不除的后果</strong>。</p>
+
+  <p><strong>核心原因：</strong>假设 Q 和 K 的各分量独立且服从标准正态分布 N(0,1)，则：</p>
+
+  <div class="formula">
+    Q·K<sup>T</sup> = q₁k₁ + q₂k₂ + ... + q<sub>d</sub>k<sub>d</sub>
+  </div>
+
+  <p>每一项 q·k 的方差为 1（两个独立 N(0,1) 乘积的方差），dₖ 项相加后<strong>总方差 = dₖ</strong>。即 Q·K ∝ N(0, dₖ)。</p>
+
+  <table>
+    <thead><tr><th>dₖ</th><th>Q·K 的方差</th><th>softmax 后的分布</th><th>梯度状况</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>≈ 1</td><td>平滑，每个位置都有非零权重</td><td style="color:var(--green);">✅ 梯度正常</td></tr>
+      <tr><td>64</td><td>≈ 64</td><td>开始趋向极端，较大的值"通吃"</td><td style="color:var(--orange);">⚠️ 梯度偏小</td></tr>
+      <tr><td>512（不除）</td><td>≈ 512</td><td>几乎变成 one-hot（一个值 ≈1，其余 ≈0）</td><td style="color:var(--red);">❌ 梯度接近 0</td></tr>
+      <tr><td>512 ÷ √512</td><td>≈ 1</td><td>平滑分布（回到第 1 行状态）</td><td style="color:var(--green);">✅ 梯度正常</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>直觉理解：</strong>当方差很大时，softmax 输入中的一个维度可能比另一个维度大几十，exp() 放大了这个差距——结果就是一个维度概率接近 100%，其他维度接近 0%。这种"极端分布"的梯度几乎为 0（因为除了赢家，其他维度的导数 ≈0），模型无法有效学习。除以 √dₖ 就像给"分数"做了标准化，让竞争保持公平。
+  </div>
+
+  <p><strong>面试加分点：</strong>提一下这和"方差缩放的普遍原则"有关——神经网络中，为了让信号从前到后保持方差稳定，每一层的输出都需要适当的缩放。Attention 中的 1/√dₖ 和 Xavier/He 初始化是同一个哲学。</p>
+
+  <!-- ═══ Q3: Multi-Head ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q3: Multi-Head Attention 中不同的头学到了什么？</h4>
+
+  <p>不同 Attention 头会<strong>自发地</strong>（不需要人工指定）分化出不同的"关注模式"。研究表明：</p>
+
+  <table>
+    <thead><tr><th>头类型</th><th>关注模式</th><th>例子</th></tr></thead>
+    <tbody>
+      <tr><td><strong>语法头</strong></td><td>关注主谓一致、依存关系</td><td>"The <strong>cat</strong> … <strong>it</strong> was hungry" — it 关注 cat（单数一致）</td></tr>
+      <tr><td><strong>位置头</strong></td><td>关注相邻/附近位置的词</td><td>总是关注前一个或后一个词，类似 CNN 的局部感受野</td></tr>
+      <tr><td><strong>语义头</strong></td><td>关注因果关系、转折关系</td><td>"…<strong>because</strong> the door was locked" — 寻找原因标记</td></tr>
+      <tr><td><strong>句子边界头</strong></td><td>关注句首标记 [CLS] 或句尾 [SEP]</td><td>所有位置都以很高的权重关注 [CLS]，用于句子级表示</td></tr>
+      <tr><td><strong>"无用"头</strong></td><td>分布很均匀，没有明显模式</td><td>可以被剪枝（prune）而不影响模型效果</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">🔬 关键洞察</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      多头不是"越多越好"——研究表明相当一部分头是冗余的，剪掉 30%~50% 的头对效果影响甚微（Voita et al., 2019）。这也是 <strong>GQA（分组查询注意力）</strong> 的灵感来源：让多个 Query 头共享同一组 K/V，减少冗余。
+    </p>
+  </div>
+
+  <p><strong>面试加分点：</strong>提一下 <strong>GQA（Grouped Query Attention）</strong>——Llama 2/3 和 Mistral 用的机制。它把 Q 分成 G 组，每组共享一套 K、V。G=1 就是 MQA（Multi-Query，最快但可能丢精度），G=heads 就是标准 MHA，G=4 或 8 是工业界的甜点值。</p>
+
+  <!-- ═══ Q4: BERT vs GPT ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q4: BERT 和 GPT 的核心区别是什么？</h4>
+
+  <table>
+    <thead><tr><th>维度</th><th>BERT（Encoder-Only）</th><th>GPT（Decoder-Only）</th></tr></thead>
+    <tbody>
+      <tr><td><strong>用的组件</strong></td><td>只用 Transformer 的 Encoder 部分</td><td>只用 Transformer 的 Decoder 部分（去掉 Cross-Attention）</td></tr>
+      <tr><td><strong>Attention 方向</strong></td><td><strong>双向</strong> — 每个 token 能看到前后所有 token</td><td><strong>单向（Causal）</strong> — token i 只能看到 token 0~i</td></tr>
+      <tr><td><strong>训练目标</strong></td><td><strong>MLM（Masked Language Model）</strong> — 随机遮住 15% 的词，让模型根据上下文填空</td><td><strong>Next Token Prediction</strong> — 给定前文，预测下一个 token</td></tr>
+      <tr><td><strong>擅长的任务</strong></td><td>分类、NER、问答、文本匹配 — <strong>"理解"类任务</strong></td><td>续写、对话、翻译、摘要 — <strong>"生成"类任务</strong></td></tr>
+      <tr><td><strong>输出方式</strong></td><td>一次给出整句的表示（或每个位置的分类结果）</td><td>自回归：一个一个 token 生成，新 token 又被喂回去生成下一个</td></tr>
+      <tr><td><strong>典型参数</strong></td><td>BERT-Base: 110M, BERT-Large: 340M</td><td>GPT-1: 117M, GPT-3: 175B, GPT-4: 未公开（万亿级）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-box">
+    <span class="label">训练方式对比 — 同样一句话 "The cat sat on the mat"</span><br><br>
+    <span class="label">BERT (MLM):</span> "The [MASK] sat on the [MASK]" → 模型要预测出 "cat" 和 "mat"<br>
+    &nbsp;&nbsp;&nbsp;→ 模型可以<strong>同时看两边</strong>来推断被遮的词（"sat" 前面通常是主语，"on the" 后面通常是地点）<br><br>
+    <span class="label">GPT (Next Token):</span> "The" → 预测 "cat" → "The cat" → 预测 "sat" → …<br>
+    &nbsp;&nbsp;&nbsp;→ 模型<strong>只看左边</strong>，每次只预测下一个词，这个过程天然就是"续写"
+  </div>
+
+  <div class="highlight">
+    <strong>关键认知：</strong>现代大语言模型几乎全部采用 <strong>Decoder-Only 架构</strong>（GPT 路线）。原因在于：任何 NLP 任务都可以被重新表述为"给定前缀，续写后缀"——翻译 = "英文原文\n中文翻译：", 摘要 = "原文\n总结：", 对话 = "用户：xxx\n助手："。这种统一的接口让一个模型能做所有任务，而不需要像 BERT 那样为每个任务加一个分类头。
+  </div>
+
+  <!-- ═══ Q5: Pre-LN vs Post-LN ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q5: LayerNorm 放在 Attention 之前还是之后？为什么？</h4>
+
+  <table>
+    <thead><tr><th></th><th>Post-LN（原论文）</th><th>Pre-LN（现代标准）</th></tr></thead>
+    <tbody>
+      <tr><td><strong>计算顺序</strong></td><td>x → Sublayer(x) → <strong>Add &amp; Norm</strong></td><td>x → <strong>Norm</strong> → Sublayer(x) → Add</td></tr>
+      <tr><td><strong>公式</strong></td><td>out = LayerNorm(x + Sublayer(x))</td><td>out = x + Sublayer(LayerNorm(x))</td></tr>
+      <tr><td><strong>残差路径</strong></td><td>残差<strong>经过</strong> LayerNorm（梯度被"归一化"）</td><td>残差<strong>绕过</strong> LayerNorm（梯度直接流通）</td></tr>
+      <tr><td><strong>训练稳定性</strong></td><td>深层网络（12+ 层）容易梯度爆炸，<strong>必须用 warmup</strong></td><td>梯度流更通畅，几乎<strong>不需要 warmup</strong></td></tr>
+      <tr><td><strong>使用方</strong></td><td>原始 Transformer、早期 BERT</td><td>GPT-2/3、Llama、Mistral、几乎所有现代模型</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-box">
+    <span class="label">梯度流对比：</span><br><br>
+    <span class="label">Post-LN:</span> 梯度 → [LayerNorm] → [Sublayer 反向] → [LayerNorm 反向] → 上一层<br>
+    &nbsp;&nbsp;&nbsp;→ 每过一个 LN，梯度的尺度被重新调整。深层的 LN 连乘后梯度可能<strong>爆炸或消失</strong><br><br>
+    <span class="label">Pre-LN:</span> 梯度 → [Sublayer 反向] → 上一层 &nbsp;&nbsp;（残差通路）<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;梯度 → [LayerNorm 反向] → [Sublayer 反向] → … &nbsp;&nbsp;（旁路）<br>
+    &nbsp;&nbsp;&nbsp;→ 残差通路不经过 LayerNorm，<strong>梯度无阻碍</strong>；旁路通过 LN 提供归一化
+  </div>
+
+  <!-- ═══ Q6: KV Cache ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q6: KV Cache 是什么？为什么能加速推理？</h4>
+
+  <p><strong>问题背景：</strong>GPT 自回归生成时，每一步都要计算所有 token 的 Attention。假设已经生成了 100 个 token，生成第 101 个时：</p>
+
+  <table>
+    <thead><tr><th>步骤</th><th>不用 KV Cache</th><th>用 KV Cache</th></tr></thead>
+    <tbody>
+      <tr><td><strong>生成 token 1</strong></td><td>算 token₀ 的 Q,K,V → 1 次</td><td>算 token₀ 的 Q,K,V，<strong>存 K₀, V₀</strong></td></tr>
+      <tr><td><strong>生成 token 2</strong></td><td>重新算 token₀,₁ 的 Q,K,V → 2 次</td><td>只算 token₁ 的 Q,K,V + <strong>复用 K₀, V₀</strong> → 1 次</td></tr>
+      <tr><td><strong>生成 token 3</strong></td><td>重新算 token₀,₁,₂ 的 Q,K,V → 3 次</td><td>只算 token₂ 的 Q,K,V + <strong>复用 K₀,V₀,K₁,V₁</strong> → 1 次</td></tr>
+      <tr><td><strong>生成 token n</strong></td><td>…重新算前 n-1 个 → n 次</td><td>只算 token<sub>n-1</sub> 的 + 复用前 n-2 个 → 1 次</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>核心洞察：</strong>Self-Attention 中，token i 的 K 和 V 只依赖于 token i 自身的内容，<strong>不依赖后面的 token</strong>（causal mask 保证后面的 token 不会影响前面的 K/V）。所以已生成 token 的 K 和 V 一旦算出来就<strong>永远不会变</strong>——缓存起来，不需要每步重算。
+  </div>
+
+  <p><strong>量化收益：</strong>生成 n 个 token，不用 KV Cache 需要 O(n²) 次前向计算，用 KV Cache 只需要 O(n) 次（每步只算一个新 token）。KV Cache 的内存占用为 <strong>2 × layers × seq_len × d_model</strong>（每层存 K 和 V 两份）。以 Llama-7B 为例，seq_len=4096 时 KV Cache 约占 2 × 32 × 4096 × 4096 × 2 bytes ≈ <strong>2 GB</strong>。</p>
+
+  <p><strong>面试加分点：</strong>提到 KV Cache 相关的优化——<strong>GQA/MQA</strong> 通过让多个 Q 头共享 K/V 来减少 Cache 大小；<strong>PagedAttention</strong>（vLLM）把 KV Cache 像操作系统分页一样管理，避免碎片化；<strong>Sliding Window</strong>（Mistral）只保留最近 N 个 token 的 K/V。</p>
+
+  <!-- ═══ Q7: Residual ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q7: 为什么要用残差连接（Residual Connection）？</h4>
+
+  <p><strong>数学上：</strong>残差连接解决的是<strong>深层网络的退化问题</strong>（Degradation Problem）。直觉很简单：</p>
+
+  <div class="formula">
+    y = F(x) + x
+  </div>
+
+  <p>其中 F(x) 是子层（Attention 或 FFN）学到的变换。关键：</p>
+
+  <table>
+    <thead><tr><th>维度</th><th>无残差连接</th><th>有残差连接</th></tr></thead>
+    <tbody>
+      <tr><td><strong>信息流</strong></td><td>x → F₁(x) → F₂(F₁(x)) → … 原始信息逐渐被"淹没"</td><td>x → F₁(x)+x → F₂(F₁(x)+x)+(F₁(x)+x) → … 原始信息始终存在</td></tr>
+      <tr><td><strong>梯度流</strong></td><td>∂L/∂x = ∂L/∂y · ∂F/∂x，如果 ∂F/∂x 很小（梯度消失），整个链乘积极小</td><td>∂L/∂x = ∂L/∂y · (1 + ∂F/∂x)，<strong>+1</strong> 确保梯度至少为 1，不会消失</td></tr>
+      <tr><td><strong>学习内容</strong></td><td>F 必须学习完整的映射 —— 从头学起，难度大</td><td>F 只需学习<strong>残差</strong>（偏离恒等映射的部分）—— 更容易优化</td></tr>
+      <tr><td><strong>训练稳定性</strong></td><td>深层网络（100+ 层）几乎无法训练</td><td>1000+ 层也能稳定训练</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-box">
+    <span class="label">直观类比 — 残差连接就像"带橡皮擦的铅笔"：</span><br>
+    没有残差：每次改都必须重写整个答案。改 100 次后，最初的正确答案可能已经被改得面目全非。<br>
+    有残差：每次只在原答案旁边加修正。即使某一层的修正写错了（F(x)≈0），至少原始答案还在（+x）。
+  </div>
+
+  <div class="highlight">
+    <strong>一句话：</strong>残差连接在反向传播中提供了<strong>"梯度高速公路"</strong>——∂L/∂y · 1 这一项确保即使子层的梯度趋近于零，信号也能无损地传递到更早的层。这使得 Transformer 可以堆叠到几十甚至上百层而不退化。
+  </div>
+
+  <!-- ═══ Q8: Complexity ═══ -->
+  <h4 style="font-size:1.2em;color:var(--fg);margin:36px 0 16px;">❓ Q8: Transformer 的时间/空间复杂度是多少？为什么上下文窗口是瓶颈？</h4>
+
+  <table>
+    <thead><tr><th>组件</th><th>时间复杂度</th><th>空间复杂度</th><th>瓶颈在哪？</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Self-Attention</strong></td><td style="color:var(--red);">O(n²·d)</td><td style="color:var(--red);">O(n²) — 注意力矩阵</td><td>n² 随着 seq_len 平方增长！4K→16K 就是 16 倍</td></tr>
+      <tr><td><strong>FFN</strong></td><td>O(n·d²)</td><td>O(n·d)</td><td>线性依赖于 n，不是主瓶颈</td></tr>
+      <tr><td><strong>整个 Transformer</strong></td><td>O(n²·d + n·d²)</td><td>O(n² + n·d)</td><td>n 小时 FFN 占主导，n 大时 Attention 占主导</td></tr>
+    </tbody>
+  </table>
+
+  <p>当 n 比较小时（如 512），O(n·d²) > O(n²·d)；但当 n 很大时（如 128K），O(n²) 会<strong>爆炸</strong>。这也是为什么 128K 上下文需要特殊优化：</p>
+
+  <table>
+    <thead><tr><th>优化方法</th><th>核心思路</th><th>代表</th></tr></thead>
+    <tbody>
+      <tr><td><strong>FlashAttention</strong></td><td>用 GPU SRAM 做分块计算，避免把 n² 注意力矩阵写回 HBM。计算量不变但 IO 大幅减少</td><td>FlashAttention-2（几乎所有现代框架的默认实现）</td></tr>
+      <tr><td><strong>Sparse Attention</strong></td><td>不计算全部 n² 对，只算"有意义"的那部分（如局部窗口 + 全局 token）</td><td>Longformer、BigBird</td></tr>
+      <tr><td><strong>MQA / GQA</strong></td><td>多个 Q 头共享 K/V，减少 KV Cache 空间（推理时 O(n²) 无关，但缓存是瓶颈）</td><td>Llama 2 (GQA)、PaLM (MQA)</td></tr>
+      <tr><td><strong>Sliding Window</strong></td><td>每个 token 只 attend 前后各 W 个 token（W 是固定窗口大小），复杂度降为 O(n·W)</td><td>Mistral (W=4096)</td></tr>
+      <tr><td><strong>Ring Attention</strong></td><td>多 GPU 之间传递 K/V 块，每个 GPU 只管一段序列</td><td>支持百万级 token 上下文</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">💡 面试加分金句</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      "<strong>FlashAttention 不是近似算法，它计算的是精确的 Attention</strong>——它通过 IO-aware 的分块策略，利用 GPU 的 SRAM（快但小，~20MB）和 HBM（大但慢，~40GB）之间的速度差异，在不改变数学结果的前提下，把 Attention 的显存读写量减少了 10~20 倍。这是硬件感知优化（hardware-aware optimization）的经典案例。"
+    </p>
   </div>
 
   <h3>9.3 参数计算速查</h3>
