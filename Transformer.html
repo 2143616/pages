@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer 架构详解 — 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --fg: #e6edf3; --fg2: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --teal: #56d4dd; --pink: #f778ba;
+  --border: #30363d; --code-bg: #1c2128;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.8;
+  display: flex;
+}
+.toc {
+  position: fixed; top: 0; left: 0;
+  width: 260px; height: 100vh;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  padding: 30px 20px; overflow-y: auto; z-index: 10;
+}
+.toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg2); margin-bottom: 18px; }
+.toc ul { list-style: none; }
+.toc ul li { margin-bottom: 3px; }
+.toc ul li a {
+  display: block; padding: 5px 10px; border-radius: 5px;
+  color: var(--fg2); text-decoration: none; font-size: 13px;
+  transition: all 0.15s;
+}
+.toc ul li a:hover { background: var(--bg3); color: var(--fg); }
+.toc ul li a.active { background: rgba(88,166,255,0.12); color: var(--accent); }
+.main { margin-left: 260px; padding: 60px 80px; max-width: 1000px; width: 100%; }
+.header {
+  text-align: center; padding: 60px 0 50px;
+  border-bottom: 1px solid var(--border); margin-bottom: 50px;
+}
+.header h1 {
+  font-size: 2.6em; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 14px;
+}
+.header p { color: var(--fg2); font-size: 1.05em; max-width: 700px; margin: 0 auto; }
+.header .tags { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { background: var(--bg3); color: var(--fg2); padding: 5px 16px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border); }
+section { margin-bottom: 60px; padding-top: 20px; }
+h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+h2::before { content: "# "; color: var(--accent); font-weight: 400; }
+h3 { font-size: 1.3em; color: var(--teal); margin: 36px 0 16px; font-weight: 600; }
+h4 { font-size: 1.1em; color: var(--pink); margin: 24px 0 12px; font-weight: 600; }
+p { color: var(--fg2); margin-bottom: 16px; font-size: 15px; }
+strong { color: var(--fg); }
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px 24px; overflow-x: auto;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 12.5px; line-height: 1.7; position: relative; margin: 20px 0;
+}
+pre span.lang-label {
+  position: absolute; top: 10px; right: 14px; font-size: 11px;
+  color: var(--fg2); background: var(--bg3); padding: 2px 10px;
+  border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.kw  { color: #ff7b72; } .fn  { color: #d2a8ff; }
+.str { color: #a5d6ff; } .cm  { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; } .op  { color: #ffa657; }
+.builtin { color: #58a6ff; } .dec { color: #f778ba; } .cls { color: #ffa657; }
+.punct { color: #e6edf3; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+thead th { background: var(--bg3); color: var(--fg); padding: 12px 16px; text-align: left; font-weight: 600; border: 1px solid var(--border); }
+tbody td { padding: 10px 16px; border: 1px solid var(--border); color: var(--fg2); }
+tbody tr:hover { background: var(--bg2); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { color: var(--accent); margin: 0 0 8px; font-size: 1em; }
+.card p { font-size: 13.5px; margin: 0; }
+.highlight { background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent); padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; color: var(--fg); }
+.highlight strong { color: var(--accent); }
+.info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
+.info-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+.formula {
+  text-align: center; padding: 18px 0; font-size: 1.2em;
+  color: var(--fg); font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.05em;
+}
+.footer { text-align: center; padding: 40px 0 30px; border-top: 1px solid var(--border); margin-top: 60px; color: var(--fg2); font-size: 13px; }
+.footer a { color: var(--accent); text-decoration: none; }
+@media (max-width: 900px) {
+  .toc { display: none; } .main { margin-left: 0; padding: 30px 20px; }
+  .header h1 { font-size: 1.6em; } h2 { font-size: 1.4em; }
+  pre { padding: 16px 14px; font-size: 11px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
+/* Math notation */
+.math { color: var(--purple); font-style: italic; }
+/* Architecture diagram */
+.arch-box {
+  border: 1px dashed var(--border); padding: 12px 18px; margin: 8px 0; border-radius: 8px;
+  background: var(--bg2); font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--fg);
+}
+.arch-box .label { color: var(--teal); font-weight: 700; }
+.arch-box .arrow { color: var(--purple); }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <h3>📑 目录</h3>
+  <ul>
+    <li><a href="#sec1">1. 什么是 Transformer？</a></li>
+    <li><a href="#sec2">2. Self-Attention — 核心中的核心</a></li>
+    <li><a href="#sec3">3. Multi-Head Attention</a></li>
+    <li><a href="#sec4">4. 位置编码 Positional Encoding</a></li>
+    <li><a href="#sec5">5. Feed-Forward 与 Normalization</a></li>
+    <li><a href="#sec6">6. 完整架构：Encoder + Decoder</a></li>
+    <li><a href="#sec7">7. 用 NumPy 从零实现 Transformer</a></li>
+    <li><a href="#sec8">8. 变体：GPT / BERT / Llama</a></li>
+    <li><a href="#sec9">9. 面试高频考点 & 速查</a></li>
+  </ul>
+</nav>
+
+<div class="main">
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <h1>🤖 Transformer 架构详解</h1>
+  <p>从 Self-Attention 的数学直觉到 Encoder-Decoder 完整架构，再到从零 NumPy 实现 —— 彻底理解这一改变 AI 历史的架构</p>
+  <div class="tags">
+    <span>🧠 Attention</span>
+    <span>🐍 NumPy 实现</span>
+    <span>📐 数学推导</span>
+    <span>🔬 论文精读</span>
+    <span>🤗 GPT/BERT</span>
+    <span>📘 教学文档</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+   SEC 1: 什么是 Transformer
+   ═══════════════════════════════════════════ -->
+<section id="sec1">
+  <h2>1. 什么是 Transformer？</h2>
+
+  <p>2017 年，Google 的八位研究员发表了一篇题为 <strong>"Attention Is All You Need"</strong> 的论文，提出了一种全新的神经网络架构——<strong>Transformer</strong>。它彻底抛弃了 RNN/LSTM 的循环结构，完全基于 <strong>Attention 机制</strong>来建模序列数据。</p>
+
+  <p>这个看似激进的设计，后来证明是革命性的：GPT（Generative Pre-trained Transformer）、BERT、Llama、Claude……几乎所有现代大语言模型都建立在 Transformer 架构之上。可以说，<strong>不理解 Transformer，就无法真正理解今天的 AI</strong>。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔗 RNN 的问题</h4>
+      <p>RNN/LSTM 必须按顺序处理 token（t₁→t₂→t₃），无法并行训练。长距离依赖通过隐状态传递，容易梯度消失/爆炸，导致"记不住开头说了什么"。</p>
+    </div>
+    <div class="card">
+      <h4>⚡ Transformer 的解法</h4>
+      <p>Self-Attention 让<strong>每个 token 同时看到所有其他 token</strong>，一步到位计算全局依赖。训练可以完全并行，序列长度不再是瓶颈。</p>
+    </div>
+    <div class="card">
+      <h4>🏗 核心组件</h4>
+      <p>Multi-Head Self-Attention + Positional Encoding + Feed-Forward Network + Layer Normalization + Residual Connections。五个组件组合出惊人能力。</p>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <strong>一句话概括：</strong>Transformer 的核心思想是——让序列中的每个位置直接"关注"（attend to）所有其他位置，用加权求和的方式聚合全局信息，而不是通过循环逐步传递。这就像开会时每个人可以直接听到所有人的发言，而不是一个接一个传话。
+  </div>
+
+  <h3>1.1 架构全景图</h3>
+
+  <div class="arch-box">
+    <span class="label">INPUT</span> → [Input Embedding + Positional Encoding]<br>
+    <span class="arrow">│</span><br>
+    <span class="label">ENCODER</span> (×N layers):<br>
+    &nbsp;&nbsp;├─ Multi-Head Self-Attention → Add &amp; Norm<br>
+    &nbsp;&nbsp;└─ Feed-Forward Network → Add &amp; Norm<br>
+    <span class="arrow">│</span><br>
+    <span class="label">DECODER</span> (×N layers):<br>
+    &nbsp;&nbsp;├─ Masked Multi-Head Self-Attention → Add &amp; Norm<br>
+    &nbsp;&nbsp;├─ Cross-Attention (with Encoder output) → Add &amp; Norm<br>
+    &nbsp;&nbsp;└─ Feed-Forward Network → Add &amp; Norm<br>
+    <span class="arrow">│</span><br>
+    <span class="label">OUTPUT</span> → Linear + Softmax
+  </div>
+
+  <p>Encoder 负责"理解输入"（把源语言编码成上下文表示），Decoder 负责"生成输出"（自回归地逐 token 生成目标语言）。但在 GPT 这类纯 Decoder 架构中，<strong>Encoder 被整个拿掉</strong>，Decoder 既做理解又做生成——这也是为什么 GPT 能"续写"。</p>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 2: Self-Attention
+   ═══════════════════════════════════════════ -->
+<section id="sec2">
+  <h2>2. Self-Attention — 核心中的核心</h2>
+
+  <h3>2.1 直觉：什么叫"注意"？</h3>
+
+  <p>假设你读这句话：<strong>"The cat sat on the mat because it was tired."</strong></p>
+  <p>当人类读到 "it" 时，大脑自动把 "it" 和前面的 "cat" 关联起来——你知道 "it" 指的是猫，不是垫子。这就是 <strong>Attention 的本质：在处理某个词时，知道应该"看"句子中的哪些其他词，以及各看多少</strong>。</p>
+
+  <p>Transformer 的 Self-Attention 把这种直觉数学化了：</p>
+
+  <div class="formula">
+    Attention(<span class="math">Q, K, V</span>) = softmax( <span class="math">QK<sup>T</sup></span> / √<span class="math">d<sub>k</sub></span> ) · <span class="math">V</span>
+  </div>
+
+  <p>这就是整个 Transformer 最核心的公式。让我拆开来讲：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔍 Q（Query，查询）</h4>
+      <p>"我在找什么？" — 当前 token 发出的"搜索请求"。比如 "it" 的 Q 向量会表达"我要找一个名词作为指代对象"。</p>
+    </div>
+    <div class="card">
+      <h4>🔑 K（Key，键）</h4>
+      <p>"我是什么？" — 每个 token 的"标签/索引"。比如 "cat" 的 K 向量会表达"我是一个动物名词"。</p>
+    </div>
+    <div class="card">
+      <h4>💎 V（Value，值）</h4>
+      <p>"我有哪些信息？" — 每个 token 携带的"实际内容"。Attention 最终加权求和的是 V，不是 K。</p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="label">📚 类比：图书馆检索</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      <strong>Q</strong> = 你走进图书馆时心想"我要找关于深度学习的书"（你的搜索意图）<br>
+      <strong>K</strong> = 每本书封面上的标题和关键词（书的索引标签）<br>
+      <strong>V</strong> = 书的全部内容（你真正想获取的知识）<br>
+      你扫一眼所有书的标题（Q·K），算出每本书与你的搜索意图的匹配程度，然后按匹配度加权阅读书的内容（加权求和 V）。<br>
+      <br>
+      <strong>关键洞察：</strong>Q 和 K 做内积（相似度），决定"注意力权重"；V 提供"实际信息"。Q 和 K 决定看谁，V 决定看到什么。
+    </p>
+  </div>
+
+  <h3>2.2 为什么除以 √dₖ？</h3>
+
+  <p>假设 dₖ=64，Q 和 K 的各分量是独立标准正态分布 N(0,1)。那么 Q·K<sup>T</sup> 的结果是 64 个独立正态变量的和，<strong>方差为 64</strong>，即 Q·K ∝ N(0, 64)。如果不做缩放，内积值会很大，经过 softmax 后会变得<strong>非常尖锐</strong>（梯度接近 0），导致训练困难。</p>
+
+  <p>除以 √64 = 8 后，方差被拉回 1，softmax 输出变得平滑，梯度流动正常。</p>
+
+  <pre><span class="lang-label">Python</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 模拟：不缩放 vs 缩放对 softmax 的影响</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+d_k = <span class="num">64</span>                                         <span class="cm"># K 的维度</span>
+Q = np.random.randn(<span class="num">1</span>, d_k)                   <span class="cm"># 模拟一个 Query 向量，标准正态分布</span>
+K = np.random.randn(<span class="num">10</span>, d_k)                  <span class="cm"># 模拟 10 个 token 的 Key 向量</span>
+
+<span class="cm"># 不缩放：Q·K^T 的方差 ≈ d_k = 64，值很大</span>
+scores_raw = Q @ K.T                          <span class="cm"># 矩阵乘法，结果是一个 1×10 的行向量</span>
+<span class="kw">print</span>(<span class="str">f"未缩放 — 方差: {scores_raw.var():.1f}"</span>)  <span class="cm"># 输出 ~60-70</span>
+
+<span class="kw">def</span> <span class="fn">softmax</span>(x, axis=-<span class="num">1</span>):
+    <span class="cm"># softmax 公式: exp(x_i) / Σ exp(x_j)，把任意实数向量转为概率分布</span>
+    e_x = np.exp(x - np.max(x, axis=axis, keepdims=<span class="kw">True</span>))  <span class="cm"># 减 max 防溢出</span>
+    <span class="kw">return</span> e_x / np.<span class="builtin">sum</span>(e_x, axis=axis, keepdims=<span class="kw">True</span>)
+
+attn_raw = softmax(scores_raw)                <span class="cm"># 不缩放直接 softmax — 几乎变成 one-hot</span>
+<span class="kw">print</span>(<span class="str">f"未缩放 — attention 分布: {np.round(attn_raw, 3)}"</span>)
+<span class="cm"># 输出类似: [0. 0. 0.001 0.999 0. 0. 0. 0. 0. 0.] — 极度集中</span>
+
+<span class="cm"># 缩放：除以 √d_k 后方差 ≈ 1，分布平滑</span>
+scores_scaled = scores_raw / np.sqrt(d_k)     <span class="cm"># 方差被标准化到 ~1</span>
+<span class="kw">print</span>(<span class="str">f"缩放后 — 方差: {scores_scaled.var():.1f}"</span>)  <span class="cm"># 输出 ~0.8-1.2</span>
+
+attn_scaled = softmax(scores_scaled)
+<span class="kw">print</span>(<span class="str">f"缩放后 — attention 分布: {np.round(attn_scaled, 3)}"</span>)
+<span class="cm"># 输出类似: [0.12 0.08 0.15 0.18 0.09 0.06 0.11 0.07 0.06 0.08] — 平滑合理</span></pre>
+
+  <h3>2.3 Self-Attention 的完整计算流程</h3>
+
+  <pre><span class="lang-label">NumPy — Self-Attention 从零实现</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">self_attention</span>(X, d_k=<span class="num">64</span>):
+    <span class="cm"># ═════════════════════════════════════════════════════════</span>
+    <span class="cm"># Self-Attention 的完整计算流程（未加可学习权重）</span>
+    <span class="cm"># 输入 X: (seq_len, d_model) — 一句话中所有 token 的向量</span>
+    <span class="cm"># ═════════════════════════════════════════════════════════</span>
+    seq_len, d_model = X.shape
+
+    <span class="cm"># 在真实 Transformer 中，Q/K/V 是通过三个线性变换得到的：</span>
+    <span class="cm">#   Q = X @ W_Q, K = X @ W_K, V = X @ W_V</span>
+    <span class="cm"># 这里为了演示核心逻辑，直接用 X 本身作为 Q/K/V (d_k = d_model)</span>
+    Q = X.copy()                                <span class="cm"># Query:  "我在找什么"</span>
+    K = X.copy()                                <span class="cm"># Key:    "我是什么标签"</span>
+    V = X.copy()                                <span class="cm"># Value:  "我携带什么信息"</span>
+
+    <span class="cm"># Step 1: 计算注意力分数矩阵 (seq_len, seq_len)</span>
+    <span class="cm"># 矩阵中的 (i,j) 位置表示：token_i 应该"关注" token_j 多少</span>
+    scores = Q @ K.T                            <span class="cm"># Q 的每一行与 K 的每一行做内积</span>
+
+    <span class="cm"># Step 2: 缩放 — 防止大维度导致 softmax 梯度过小</span>
+    scores = scores / np.sqrt(d_k)              <span class="cm"># 方差归一化到 ~1</span>
+
+    <span class="cm"># Step 3: softmax 归一化 — 把每行的分数转为"权重分布"</span>
+    <span class="cm"># 每一行独立 softmax，确保该 token 对全体的关注权重之和 = 1</span>
+    attn_weights = np.exp(scores - scores.max(axis=<span class="num">1</span>, keepdims=<span class="kw">True</span>))
+    attn_weights /= attn_weights.<span class="builtin">sum</span>(axis=<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+    <span class="cm"># Step 4: 加权求和 — 用注意力权重对 V 做加权平均</span>
+    <span class="cm"># 结果：(seq_len, d_model)，每个 token 的新表示 = 所有 token 的 V 的加权和</span>
+    output = attn_weights @ V
+
+    <span class="kw">return</span> output, attn_weights
+
+<span class="cm"># ═════════════════════════════════════════════════════════</span>
+<span class="cm"># 演示：一句话中 "it" 如何通过 Attention 找到 "cat"</span>
+<span class="cm"># ═════════════════════════════════════════════════════════</span>
+np.random.seed(<span class="num">42</span>)
+tokens = [<span class="str">"The"</span>, <span class="str">"cat"</span>, <span class="str">"sat"</span>, <span class="str">"it"</span>, <span class="str">"was"</span>, <span class="str">"tired"</span>]  <span class="cm"># 6 个 token</span>
+
+<span class="cm"># 每个 token 用 8 维向量表示（实际通常是 512~4096 维）</span>
+embeddings = np.random.randn(<span class="builtin">len</span>(tokens), <span class="num">8</span>)
+
+output, weights = self_attention(embeddings, d_k=<span class="num">8</span>)
+
+<span class="kw">print</span>(<span class="str">"注意力权重矩阵 (行=查询者, 列=被关注者):"</span>)
+<span class="kw">print</span>(<span class="str">"        "</span> + <span class="str">"  "</span>.join(<span class="str">f"{t:>6}"</span> <span class="kw">for</span> t <span class="kw">in</span> tokens))
+<span class="kw">for</span> i, t <span class="kw">in</span> <span class="builtin">enumerate</span>(tokens):
+    <span class="kw">print</span>(<span class="str">f"{t:>6}: "</span> + <span class="str">" "</span>.join(<span class="str">f"{w:.3f}"</span> <span class="kw">for</span> w <span class="kw">in</span> weights[i]))
+<span class="cm"># 每一行都是该 token 对全体的关注分布</span>
+<span class="cm"># "it" 那行如果权重最大的位置在 "cat" 列 → attention 起作用了！</span></pre>
+
+  <h3>2.4 为什么叫 "Self"-Attention？</h3>
+
+  <p>因为 Q、K、V <strong>都来自同一个输入序列</strong>（Self = 自己对自己）。序列中的每个位置既是查询者（Q），又是被查询者（K），还是信息提供者（V）。这让模型能够捕捉到<strong>序列内部的依赖关系</strong>——哪些词之间有关系、关系有多强。</p>
+
+  <p>与之对应的是 <strong>Cross-Attention</strong>：Q 来自 Decoder（"我想生成什么"），K 和 V 来自 Encoder 的输出（"源语言说了什么"）。这在翻译任务中至关重要——生成每个目标词时都要"回看"源语言的对应部分。</p>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 3: Multi-Head Attention
+   ═══════════════════════════════════════════ -->
+<section id="sec3">
+  <h2>3. Multi-Head Attention — 多头注意力</h2>
+
+  <h3>3.1 为什么需要多头？</h3>
+
+  <p>单头 Attention 只有一种"关注模式"——就像你只能用一种视角看问题。但在语言中，一个词可能同时需要关注多个方面：</p>
+
+  <div class="highlight">
+    <strong>例子：</strong>"The cat chased the mouse <strong>because</strong> it was hungry."
+    <br>"it" 需要关注 <strong>"cat"</strong>（语法上的指代关系 —— 谁饿了？）
+    <br>同时 "chased" 需要关注 <strong>"because"</strong>（语义上的因果关系 —— 为什么追？）
+    <br>如果只有一个 Attention 头，它必须在这些不同的关注需求之间"妥协"。
+  </div>
+
+  <p><strong>Multi-Head Attention</strong> 的解决方案：把 Q、K、V 分别通过 h 个不同的线性变换（W<sub>Q</sub>, W<sub>K</sub>, W<sub>V</sub>），投影到 h 个不同的"子空间"，在每个子空间里独立做 Attention，最后把所有头的结果拼接起来再投影一次。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔬 头 1 — 语法头</h4>
+      <p>可能学会关注"主谓一致"关系。<br>"it" ↔ "cat"（单数匹配）</p>
+    </div>
+    <div class="card">
+      <h4>📖 头 2 — 语义头</h4>
+      <p>可能学会关注"因果关系"。<br>"chased" ↔ "because"（原因）</p>
+    </div>
+    <div class="card">
+      <h4>📍 头 3 — 位置头</h4>
+      <p>可能学会关注"相邻词"。<br>"sat" ↔ "on"（动词+介词搭配）</p>
+    </div>
+    <div class="card">
+      <h4>🔗 头 4 — 共指头</h4>
+      <p>可能学会关注"代词指代"。<br>"it" ↔ "mouse"（another candidate）</p>
+    </div>
+  </div>
+
+  <h3>3.2 Multi-Head Attention 的完整实现</h3>
+
+  <pre><span class="lang-label">NumPy — Multi-Head Attention</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">class</span> <span class="cls">MultiHeadAttention</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>, d_model=<span class="num">512</span>, num_heads=<span class="num">8</span>):
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="cm"># d_model: 模型总维度（原论文 512）</span>
+        <span class="cm"># num_heads: 注意力头数（原论文 8）</span>
+        <span class="cm"># d_k = d_model // num_heads  每个头处理的维度 (=64)</span>
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="builtin">self</span>.d_model = d_model
+        <span class="builtin">self</span>.num_heads = num_heads
+        <span class="builtin">self</span>.d_k = d_model // num_heads    <span class="cm"># 512/8 = 64，每个头只看 64 维</span>
+        <span class="kw">assert</span> d_model % num_heads == <span class="num">0</span>, <span class="str">"d_model 必须能被 num_heads 整除"</span>
+
+        <span class="cm"># 初始化可学习的投影矩阵（随机初始化模拟）</span>
+        <span class="cm"># 实际训练中这些矩阵通过反向传播不断更新</span>
+        scale = np.sqrt(<span class="num">2.0</span> / d_model)  <span class="cm"># Xavier 初始化的缩放因子</span>
+        <span class="builtin">self</span>.W_Q = np.random.randn(d_model, d_model) * scale  <span class="cm"># Q 的投影矩阵</span>
+        <span class="builtin">self</span>.W_K = np.random.randn(d_model, d_model) * scale  <span class="cm"># K 的投影矩阵</span>
+        <span class="builtin">self</span>.W_V = np.random.randn(d_model, d_model) * scale  <span class="cm"># V 的投影矩阵</span>
+        <span class="builtin">self</span>.W_O = np.random.randn(d_model, d_model) * scale  <span class="cm"># 输出投影矩阵</span>
+
+    <span class="kw">def</span> <span class="fn">_split_heads</span>(<span class="builtin">self</span>, x):
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="cm"># 输入 x: (batch, seq_len, d_model) → (batch, seq_len, 512)</span>
+        <span class="cm"># 输出:   (batch, num_heads, seq_len, d_k) → (batch, 8, seq_len, 64)</span>
+        <span class="cm"># 把 512 维切成 8 个 64 维的"头"，每个头独立做 Attention</span>
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        batch, seq_len, _ = x.shape
+        x = x.reshape(batch, seq_len, <span class="builtin">self</span>.num_heads, <span class="builtin">self</span>.d_k)  <span class="cm"># 掰成 8 份</span>
+        <span class="kw">return</span> x.transpose(<span class="num">0</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">3</span>)  <span class="cm"># (batch, heads, seq, d_k)</span>
+
+    <span class="kw">def</span> <span class="fn">_combine_heads</span>(<span class="builtin">self</span>, x):
+        <span class="cm"># 反向操作：把 8 个头的输出拼回 512 维</span>
+        x = x.transpose(<span class="num">0</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">3</span>)              <span class="cm"># (batch, seq, heads, d_k)</span>
+        batch, seq_len, _, _ = x.shape
+        <span class="kw">return</span> x.reshape(batch, seq_len, <span class="builtin">self</span>.d_model)  <span class="cm"># (batch, seq, 512)</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x, mask=<span class="kw">None</span>):
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="cm"># Self-Attention 模式: Q, K, V 都来自同一个 x</span>
+        <span class="cm"># Cross-Attention 模式: Q 来自 decoder, K/V 来自 encoder</span>
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="cm"># Step 1: 线性投影 — 把输入投影到查询/键/值空间</span>
+        Q = x @ <span class="builtin">self</span>.W_Q   <span class="cm"># (batch, seq, d_model) → 每个 token 从"要查什么"角度编码</span>
+        K = x @ <span class="builtin">self</span>.W_K   <span class="cm"># 每个 token 从"我是什么标签"角度编码</span>
+        V = x @ <span class="builtin">self</span>.W_V   <span class="cm"># 每个 token 从"我携带什么信息"角度编码</span>
+
+        <span class="cm"># Step 2: 拆分成多个头</span>
+        Q = <span class="builtin">self</span>._split_heads(Q)  <span class="cm"># (batch, 8, seq, 64)</span>
+        K = <span class="builtin">self</span>._split_heads(K)
+        V = <span class="builtin">self</span>._split_heads(V)
+
+        <span class="cm"># Step 3: 在每个头内独立计算 Scaled Dot-Product Attention</span>
+        <span class="cm"># Q @ K^T: (batch, 8, seq, seq) — 每个头算一个注意力矩阵</span>
+        scores = Q @ K.transpose(<span class="num">0</span>, <span class="num">1</span>, <span class="num">3</span>, <span class="num">2</span>) / np.sqrt(<span class="builtin">self</span>.d_k)
+
+        <span class="cm"># causal mask: 上三角填充 -inf，确保 token 只看得到"过去"</span>
+        <span class="kw">if</span> mask <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+            scores = scores + mask                    <span class="cm"># -inf 位置 softmax 后变 0</span>
+
+        <span class="cm"># softmax 得到每个头内的注意力权重分布</span>
+        scores = scores - scores.max(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)  <span class="cm"># 数值稳定</span>
+        attn_weights = np.exp(scores)
+        attn_weights /= attn_weights.<span class="builtin">sum</span>(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+        <span class="cm"># Step 4: 加权求和 — 用注意力权重对 V 做加权</span>
+        context = attn_weights @ V   <span class="cm"># (batch, 8, seq, 64)</span>
+
+        <span class="cm"># Step 5: 拼接所有头 + 输出投影</span>
+        context = <span class="builtin">self</span>._combine_heads(context)  <span class="cm"># (batch, seq, 512)</span>
+        output = context @ <span class="builtin">self</span>.W_O                  <span class="cm"># 输出投影，整合多头信息</span>
+
+        <span class="kw">return</span> output, attn_weights
+
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 演示 Multi-Head Attention 的参数量</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+mha = MultiHeadAttention(d_model=<span class="num">512</span>, num_heads=<span class="num">8</span>)
+total_params = <span class="num">0</span>
+<span class="kw">for</span> name, param <span class="kw">in</span> [(<span class="str">"W_Q"</span>, mha.W_Q), (<span class="str">"W_K"</span>, mha.W_K),
+                     (<span class="str">"W_V"</span>, mha.W_V), (<span class="str">"W_O"</span>, mha.W_O)]:
+    n = param.size
+    total_params += n
+    <span class="kw">print</span>(<span class="str">f"{name}: {param.shape} = {n:,} 参数"</span>)
+
+<span class="kw">print</span>(<span class="str">f"\nMulti-Head Attention 总参数量: {total_params:,}"</span>)
+<span class="cm"># 4 × (512 × 512) = 1,048,576  — 约 100 万参数，仅占整个 Transformer 的一小部分</span>
+<span class="cm"># 如果 8 个头各用独立的 W_Q（512×64 每个头），参数量一样：8×4×(512×64)</span></pre>
+
+  <h3>3.3 Multi-Head 的参数量与效率</h3>
+
+  <table>
+    <thead><tr><th>方案</th><th>参数量</th><th>计算量</th><th>表达能力</th></tr></thead>
+    <tbody>
+      <tr><td>单头 (d=512)</td><td>3×512²=786K</td><td>低</td><td>单一视角</td></tr>
+      <tr><td>8 头 (dₖ=64)</td><td>3×512²+512²=1,048K</td><td>中（多一个小 W_O）</td><td>8 个独立视角</td></tr>
+      <tr><td>16 头 (dₖ=32)</td><td>3×512²+512²=1,048K</td><td>与 8 头相同</td><td>16 个更细粒度的视角</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>关键洞察：</strong>无论多少个头，总参数量基本相同（都是 4 个 d_model × d_model 矩阵）。多头的关键不是"更多参数"，而是<strong>"多种投影"</strong>——把同一个 512 维向量切分成 8 个 64 维子空间，让模型同时从 8 个角度做 Attention。
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 4: Positional Encoding
+   ═══════════════════════════════════════════ -->
+<section id="sec4">
+  <h2>4. 位置编码 — Positional Encoding</h2>
+
+  <h3>4.1 Attention 的盲点：没有顺序感</h3>
+
+  <p>仔细看 Self-Attention 的计算：Q·K 的运算是对称的——"A attend to B"和"B attend to A"的计算方式完全相同。这意味着：<strong>Self-Attention 本身无法区分 token 的先后顺序</strong>。给模型输入 "狗咬人" 和 "人咬狗"，如果不加位置信息，Attention 看到的"狗"和"人"之间的关系完全一样。</p>
+
+  <p>RNN 天生有时序——隐藏状态一步步传递。Transformer 没有循环，所以必须<strong>显式注入位置信息</strong>。</p>
+
+  <h3>4.2 Sinusoidal Positional Encoding</h3>
+
+  <p>原论文使用了正弦/余弦函数来生成位置编码，而非可学习的 Embedding。公式如下：</p>
+
+  <div class="formula">
+    PE<sub>(pos, 2i)</sub> = sin( pos / 10000<sup>2i/d<sub>model</sub></sup> )<br>
+    PE<sub>(pos, 2i+1)</sub> = cos( pos / 10000<sup>2i/d<sub>model</sub></sup> )
+  </div>
+
+  <p>其中 <span class="math">pos</span> 是 token 位置（0, 1, 2...），<span class="math">i</span> 是维度索引（0 到 d<sub>model</sub>/2-1）。</p>
+
+  <div class="highlight">
+    <strong>直觉理解：</strong>每个维度是一个不同频率的正弦波。低频维度（i 小）变化慢，可以区分"远距离的前后关系"；高频维度（i 大）变化快，可以区分"相邻 token 的精确位置"。这些不同频率的波叠加在一起，给每个位置生成了一个<strong>独一无二的"指纹"</strong>。
+  </div>
+
+  <pre><span class="lang-label">NumPy — 位置编码实现</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="kw">def</span> <span class="fn">get_sinusoidal_positional_encoding</span>(seq_len, d_model):
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># seq_len: 序列长度（最大支持的 token 数）</span>
+    <span class="cm"># d_model: 模型维度（必须是偶数，因为 sin/cos 成对出现）</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    PE = np.zeros((seq_len, d_model))               <span class="cm"># 初始化矩阵 (seq_len, 512)</span>
+
+    <span class="cm"># pos: 每个 token 的位置编号 (0, 1, 2, ..., seq_len-1)</span>
+    <span class="cm"># 用 reshape 变成列向量，方便广播运算</span>
+    pos = np.arange(seq_len, dtype=np.float32).reshape(-<span class="num">1</span>, <span class="num">1</span>)
+
+    <span class="cm"># i: 维度索引，只取偶数位置 (0, 2, 4, ...)，因为 sin/cos 成对</span>
+    i = np.arange(<span class="num">0</span>, d_model, <span class="num">2</span>, dtype=np.float32)
+
+    <span class="cm"># 频率分母：10000^(2i/d_model)，i 越大频率越高</span>
+    <span class="cm"># 当 i=0: 分母 = 10000^0 = 1        → 最低频率</span>
+    <span class="cm"># 当 i=254: 分母 = 10000^(508/512) ≈ 10000 → 最高频率</span>
+    denominator = np.power(<span class="num">10000</span>, i / d_model)  <span class="cm"># (d_model/2,)</span>
+
+    <span class="cm"># 所有位置 ÷ 频率 → 每个位置在不同频率上的相位</span>
+    angle = pos / denominator                        <span class="cm"># (seq_len, d_model/2)</span>
+
+    <span class="cm"># 偶数维度填 sin，奇数维度填 cos</span>
+    PE[:, <span class="num">0</span>::<span class="num">2</span>] = np.sin(angle)            <span class="cm"># 维度 0,2,4,... 填充 sin 值</span>
+    PE[:, <span class="num">1</span>::<span class="num">2</span>] = np.cos(angle)            <span class="cm"># 维度 1,3,5,... 填充 cos 值</span>
+
+    <span class="kw">return</span> PE
+
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 可视化位置编码：横轴=维度，纵轴=位置，颜色=编码值</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+seq_len, d_model = <span class="num">60</span>, <span class="num">128</span>
+pe = get_sinusoidal_positional_encoding(seq_len, d_model)
+
+<span class="kw">print</span>(<span class="str">f"位置编码矩阵: {pe.shape}"</span>)   <span class="cm"># (60, 128)</span>
+<span class="kw">print</span>(<span class="str">f"位置 0 的前 8 维: {pe[0, :8]}"</span>)  <span class="cm"># 第 0 个 token 的位置编码</span>
+<span class="kw">print</span>(<span class="str">f"位置 5 的前 8 维: {pe[5, :8]}"</span>)  <span class="cm"># 第 5 个 token 的位置编码 — 不同位置编码不同</span>
+
+<span class="cm"># 验证线性性质：PE(pos+offset) 可以通过 PE(pos) 线性变换得到</span>
+<span class="cm"># 这是 Sinusoidal 编码的强大之处 — 模型可以学会"相对位置"</span>
+k = <span class="num">3</span>  <span class="cm"># 偏移量</span>
+dot1 = pe[<span class="num">0</span>] @ pe[k]     <span class="cm"># PE(0) 和 PE(3) 的内积</span>
+dot2 = pe[<span class="num">5</span>] @ pe[<span class="num">5</span>+k]   <span class="cm"># PE(5) 和 PE(8) 的内积</span>
+<span class="kw">print</span>(<span class="str">f"\n位置(0,3)内积: {dot1:.2f} | 位置(5,8)内积: {dot2:.2f}"</span>)
+<span class="kw">print</span>(<span class="str">f"两个内积之差: {abs(dot1-dot2):.6f} — 几乎为 0！"</span>)
+<span class="cm"># 这证明：偏移相同距离的两个位置，其编码的内积相同</span>
+<span class="cm"># 模型可以通过这个性质学会"相对距离"而非"绝对位置"</span></pre>
+
+  <h3>4.3 Sinusoidal vs Learned Positional Encoding</h3>
+
+  <table>
+    <thead><tr><th>特性</th><th>Sinusoidal（原论文）</th><th>Learned（GPT 常用）</th></tr></thead>
+    <tbody>
+      <tr><td>参数</td><td>0（完全由公式生成）</td><td>seq_len × d_model 个可学习参数</td></tr>
+      <tr><td>外推能力</td><td>✅ 天然支持任意长度</td><td>❌ 无法超出训练时的 seq_len</td></tr>
+      <tr><td>相对位置</td><td>✅ 内积编码相对距离</td><td>❌ 需要模型自己学</td></tr>
+      <tr><td>效果</td><td>基础任务够用</td><td>通常略好（有可学习参数）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4 RoPE — 旋转位置编码（现代模型标配）</h3>
+
+  <div class="highlight">
+    <strong>现代进展：</strong>Llama、Mistral、Qwen 等模型普遍使用 <strong>RoPE（Rotary Position Embedding）</strong>替代了 Sinusoidal PE。RoPE 的核心思想是：通过对 Q 和 K 向量施加<strong>旋转</strong>来注入位置信息，使得两个 token 的 Q·K 只依赖于它们的<strong>相对距离</strong>而非绝对位置。这解决了 Sinusoidal PE 需要"加到 embedding 上"的间接性问题，同时也天然支持长度外推。
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 5: FFN & Normalization
+   ═══════════════════════════════════════════ -->
+<section id="sec5">
+  <h2>5. Feed-Forward Network & Layer Normalization</h2>
+
+  <h3>5.1 Feed-Forward Network (FFN)</h3>
+
+  <p>Attention 负责"信息聚合"——每个 token 从其他 token 那里收集信息。但聚合后的信息还需要<strong>"加工处理"</strong>——这就是 FFN 的工作。FFN 对每个 token 独立操作（Position-wise），结构非常简单：</p>
+
+  <div class="formula">
+    FFN(x) = ReLU( x · W<sub>1</sub> + b<sub>1</sub> ) · W<sub>2</sub> + b<sub>2</sub>
+  </div>
+
+  <p>两个线性层 + 一个非线性激活。中间隐层维度通常是 d_model 的 4 倍（512 → 2048 → 512）。</p>
+
+  <div class="info-box">
+    <div class="label">🧠 为什么需要 FFN？Attenton 不够吗？</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      Attention 是<strong>线性加权求和</strong>——数学上它只能做"把不同 token 的信息按权重加起来"这件事。但很多语言现象是非线性的：否定翻转语义（"不 好" ≠ "好"）、比喻、推理链条等。<br>
+      FFN 的激活函数（ReLU/GELU）引入了<strong>非线性</strong>变换能力。如果说 Attention 是"把所有人的发言汇总"，那 FFN 就是"对汇总结果进行独立思考和加工"。
+    </p>
+  </div>
+
+  <pre><span class="lang-label">NumPy — FFN 实现</span>
+<span class="kw">class</span> <span class="cls">FeedForward</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>, d_model=<span class="num">512</span>, d_ff=<span class="num">2048</span>):
+        <span class="cm"># d_ff: 中间隐层维度，通常是 d_model 的 4 倍（512→2048→512）</span>
+        <span class="cm"># "先升维再降维"的设计：在 2048 维空间做非线性变换后再压回 512 维</span>
+        scale1 = np.sqrt(<span class="num">2.0</span> / d_model)
+        scale2 = np.sqrt(<span class="num">2.0</span> / d_ff)
+        <span class="builtin">self</span>.W1 = np.random.randn(d_model, d_ff) * scale1   <span class="cm"># 升维: 512→2048</span>
+        <span class="builtin">self</span>.b1 = np.zeros(d_ff)                            <span class="cm"># bias 初始化为 0</span>
+        <span class="builtin">self</span>.W2 = np.random.randn(d_ff, d_model) * scale2   <span class="cm"># 降维: 2048→512</span>
+        <span class="builtin">self</span>.b2 = np.zeros(d_model)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x):
+        <span class="cm"># x: (batch, seq_len, d_model)</span>
+        <span class="cm"># Step 1: 线性变换 + ReLU 非线性激活</span>
+        hidden = np.maximum(<span class="num">0</span>, x @ <span class="builtin">self</span>.W1 + <span class="builtin">self</span>.b1)  <span class="cm"># ReLU: max(0, z)，干掉所有负值</span>
+        <span class="cm"># 现代 Transformer (如 GPT) 用 GELU 代替 ReLU，效果更好</span>
+        <span class="cm"># GELU ≈ 0.5x(1+tanh(√(2/π)(x+0.044715x³)))</span>
+        <span class="cm"># Step 2: 投影回原始维度</span>
+        output = hidden @ <span class="builtin">self</span>.W2 + <span class="builtin">self</span>.b2
+        <span class="kw">return</span> output
+
+<span class="cm"># 参数量估算</span>
+ffn = FeedForward()
+<span class="kw">print</span>(<span class="str">f"W1: {ffn.W1.shape} → {ffn.W1.size:,} params"</span>)   <span class="cm"># 512×2048 = 1,048,576</span>
+<span class="kw">print</span>(<span class="str">f"W2: {ffn.W2.shape} → {ffn.W2.size:,} params"</span>)   <span class="cm"># 2048×512 = 1,048,576</span>
+total_ffn = ffn.W1.size + ffn.W2.size + ffn.b1.size + ffn.b2.size
+<span class="kw">print</span>(<span class="str">f"FFN 总参数: {total_ffn:,}"</span>)
+<span class="cm"># ≈ 2 × 512 × 2048 ≈ 210 万 — 比 Attention (1M) 多了约一倍</span>
+<span class="cm"># 这也是为什么 Transformer 的"大"主要来自 FFN 层</span></pre>
+
+  <h3>5.2 Layer Normalization & Residual Connections</h3>
+
+  <p>每个子层（Attention 和 FFN）后面都跟着 <strong>Add & Norm</strong>：</p>
+
+  <div class="arch-box">
+    <span class="label">Add:</span> &nbsp; output = LayerNorm( x + Sublayer(x) )<br>
+    <span class="label">含义:</span> 残差连接 + 层归一化<br>
+    <span class="label">作用:</span> 残差连接让梯度直接流过（缓解深层网络的梯度消失），LayerNorm 稳定训练。
+  </div>
+
+  <pre><span class="lang-label">NumPy — LayerNorm & Residual</span>
+<span class="kw">class</span> <span class="cls">LayerNorm</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>, d_model, eps=<span class="num">1e-6</span>):
+        <span class="cm"># eps: 防止除以 0 的小常数</span>
+        <span class="builtin">self</span>.gamma = np.ones(d_model)    <span class="cm"># 可学习的缩放参数（初始化为 1）</span>
+        <span class="builtin">self</span>.beta = np.zeros(d_model)    <span class="cm"># 可学习的偏移参数（初始化为 0）</span>
+        <span class="builtin">self</span>.eps = eps
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x):
+        <span class="cm"># LayerNorm 公式: γ * (x - μ) / √(σ² + ε) + β</span>
+        <span class="cm"># 与 BatchNorm 的区别：LayerNorm 对每个样本自身的所有维度做归一化</span>
+        <span class="cm"># 不依赖 batch 统计，因此训练和推理时行为一致</span>
+        mean = x.mean(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)         <span class="cm"># 沿最后一维求均值</span>
+        var = x.var(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)          <span class="cm"># 沿最后一维求方差</span>
+        x_norm = (x - mean) / np.sqrt(var + <span class="builtin">self</span>.eps)  <span class="cm"># 标准化到 N(0,1)</span>
+        <span class="kw">return</span> <span class="builtin">self</span>.gamma * x_norm + <span class="builtin">self</span>.beta        <span class="cm"># 可学习的仿射变换</span>
+
+
+<span class="kw">def</span> <span class="fn">add_and_norm</span>(x, sublayer_output, layer_norm):
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># "Add & Norm" — Transformer 中重复最多的操作</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 1: 残差连接 — 把子层的输出"加回"原始输入</span>
+    <span class="cm"># 捷径（shortcut）让梯度可以直接流过，解决深层网络的退化问题</span>
+    residual = x + sublayer_output          <span class="cm"># 如果子层学不到任何东西（输出≈0），</span>
+                                            <span class="cm"># 至少还有原始信息通过残差传递过去</span>
+    <span class="cm"># Step 2: Layer Normalization — 稳定训练、加速收敛</span>
+    <span class="kw">return</span> layer_norm.forward(residual)    <span class="cm"># 归一化后的结果作为下一层的输入</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 演示：对比有无残差连接</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+x = np.array([[[<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>, <span class="num">4.0</span>]]])  <span class="cm"># (1, 1, 4) — batch=1, seq=1, d_model=4</span>
+sublayer_out = np.array([[[<span class="num">0.1</span>, -<span class="num">0.2</span>, <span class="num">0.05</span>, -<span class="num">0.1</span>]]])  <span class="cm"># 子层输出很小，几乎是噪声</span>
+ln = LayerNorm(d_model=<span class="num">4</span>)
+
+without_residual = ln.forward(x + sublayer_out * <span class="num">0</span>)   <span class="cm"># 模拟没有残差：子层输入被丢弃</span>
+<span class="kw">print</span>(<span class="str">f"无残差 (仅 x):   {without_residual[0,0]}"</span>)          <span class="cm"># 标准化后的 x 本身</span>
+
+with_residual = add_and_norm(x, sublayer_out, ln)
+<span class="kw">print</span>(<span class="str">f"有残差 (x+sub):   {with_residual[0,0]}"</span>)            <span class="cm"># x + sublayer_out 后标准化</span>
+<span class="kw">print</span>(<span class="str">f"\n原始 x 的第一位: {x[0,0,0]:.3f}"</span>)                 <span class="cm"># 1.000</span>
+<span class="kw">print</span>(<span class="str">f"有残差后第一位:   {with_residual[0,0,0]:.3f}"</span>)      <span class="cm"># 接近但 ≠ 1.000</span>
+<span class="cm"># 残差连接确保了：即使子层输出很弱，原始信息也不会被"冲掉"</span></pre>
+
+  <h3>5.3 Pre-LN vs Post-LN</h3>
+
+  <table>
+    <thead><tr><th></th><th>Post-LN（原论文）</th><th>Pre-LN（现代模型首选）</th></tr></thead>
+    <tbody>
+      <tr><td>顺序</td><td>Sublayer → Add → Norm</td><td>Norm → Sublayer → Add</td></tr>
+      <tr><td>训练稳定性</td><td>需要 warmup</td><td>自然稳定，几乎不需要 warmup</td></tr>
+      <tr><td>梯度流</td><td>残差路径经过 Norm</td><td>残差路径不经过 Norm（更直接）</td></tr>
+      <tr><td>使用方</td><td>原始 Transformer</td><td>GPT-2/3、Llama、BERT 等</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 6: Encoder-Decoder
+   ═══════════════════════════════════════════ -->
+<section id="sec6">
+  <h2>6. 完整架构：Encoder + Decoder</h2>
+
+  <h3>6.1 Encoder（编码器）</h3>
+
+  <p>Encoder 由 N 层（原论文 N=6）完全相同的层堆叠而成。每层包含：</p>
+
+  <div class="arch-box">
+    <span class="label">Encoder Layer (每层):</span><br>
+    &nbsp;&nbsp;1. Multi-Head <strong>Self</strong>-Attention（能看到整个输入序列）<br>
+    &nbsp;&nbsp;2. Add &amp; Norm (残差 + 层归一化)<br>
+    &nbsp;&nbsp;3. Feed-Forward Network<br>
+    &nbsp;&nbsp;4. Add &amp; Norm<br>
+    <span class="label">输入：</span>源语言 token 序列<br>
+    <span class="label">输出：</span>每个位置的上下文感知表示（"理解了整个句子后对每个词的重新描述"）
+  </div>
+
+  <p>Encoder 的 Self-Attention 没有 mask——每个位置<strong>可以同时看到前面和后面的所有 token</strong>。这很合理：理解一个句子时你需要完整的上下文。</p>
+
+  <h3>6.2 Decoder（解码器）</h3>
+
+  <p>Decoder 也由 N 层堆叠，但每层比 Encoder 多了一个 <strong>Cross-Attention</strong> 子层：</p>
+
+  <div class="arch-box">
+    <span class="label">Decoder Layer (每层):</span><br>
+    &nbsp;&nbsp;1. <strong>Masked</strong> Multi-Head Self-Attention（只能看到已生成的 token）<br>
+    &nbsp;&nbsp;2. Add &amp; Norm<br>
+    &nbsp;&nbsp;3. <strong>Cross-Attention</strong> — Q 来自 Decoder，K/V 来自 Encoder<br>
+    &nbsp;&nbsp;4. Add &amp; Norm<br>
+    &nbsp;&nbsp;5. Feed-Forward Network<br>
+    &nbsp;&nbsp;6. Add &amp; Norm
+  </div>
+
+  <p><strong>Masked Self-Attention</strong> 是 Decoder 的关键设计：通过一个上三角矩阵（causal mask），确保生成 token<sub>i</sub> 时<strong>只能看到 token<sub>0</sub> 到 token<sub>i</sub></strong>，看不到后面的 token。这模拟了自回归生成的过程——你写下一个词时只能基于已经写下的内容。</p>
+
+  <pre><span class="lang-label">NumPy — Causal Mask</span>
+<span class="kw">def</span> <span class="fn">create_causal_mask</span>(seq_len):
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># 生成上三角 mask 矩阵，确保 token i 只能 attend token 0~i</span>
+    <span class="cm"># 对角线及以下 = 0（允许 attend），对角线以上 = -inf（禁止 attend）</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    mask = np.triu(np.ones((seq_len, seq_len)), k=<span class="num">1</span>) * (-np.inf)
+    <span class="kw">print</span>(<span class="str">"Causal Mask (0=允许, -inf=禁止):"</span>)
+    <span class="kw">print</span>(mask)
+    <span class="kw">return</span> mask
+
+mask = create_causal_mask(<span class="num">5</span>)
+<span class="cm"># 输出:</span>
+<span class="cm">#   0.  -inf -inf -inf -inf   → token 0 只能看到自己</span>
+<span class="cm">#   0.   0.  -inf -inf -inf   → token 1 能看到 token 0,1</span>
+<span class="cm">#   0.   0.   0.  -inf -inf   → token 2 能看到 token 0,1,2</span>
+<span class="cm">#   0.   0.   0.   0.  -inf   → token 3 能看到 token 0,1,2,3</span>
+<span class="cm">#   0.   0.   0.   0.   0.    → token 4 能看到全部（0~4）</span></pre>
+
+  <h3>6.3 Cross-Attention：连接 Encoder 和 Decoder</h3>
+
+  <p>Cross-Attention 是 Encoder-Decoder 之间的桥梁：</p>
+
+  <div class="highlight">
+    <strong>Q</strong> 来自 Decoder 当前层的输出 — "翻译到这个位置时，需要从源句子里找什么信息？"<br>
+    <strong>K, V</strong> 来自 Encoder 的最终输出 — "源句子的每个词都提供了什么信息？"<br>
+    <strong>结果：</strong>Decoder 每生成一个目标词，都会"回看"源句子中与当前生成最相关的部分。
+  </div>
+
+  <p>这是翻译任务的核心——"the cat" 生成时 decoder 的注意力会集中在源句子的 "le chat" 上。</p>
+
+  <h3>6.4 GPT 系列：只留 Decoder</h3>
+
+  <p>GPT = <strong>Generative Pre-trained Transformer</strong>。它砍掉了整个 Encoder，只用 Decoder 部分（更准确地说是 Decoder 去掉 Cross-Attention），因为 GPT 的任务不是"翻译"而是<strong>"续写"</strong>——给定前缀，预测下一个 token。没有源语言需要"cross-attend"到。</p>
+
+  <div class="info-box">
+    <div class="label">🏗 GPT Decoder-Only 架构</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      原始 Transformer 的 Decoder 有三个主要组件：<br>
+      1. Masked Self-Attention → GPT 保留（只需看到上文）<br>
+      2. Cross-Attention → GPT 删除（不需要源语言信息）<br>
+      3. Feed-Forward Network → GPT 保留<br><br>
+      砍掉 Cross-Attention 后的 Decoder 就是 GPT 的核心结构。这也是为什么 GPT 能做一切任务——它的"输入"和"输出"都是同一套 token 序列，任何任务都可以被重新表述为"给定前缀，续写后缀"。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 7: 完整实现
+   ═══════════════════════════════════════════ -->
+<section id="sec7">
+  <h2>7. 用 NumPy 从零实现一个 Mini Transformer</h2>
+
+  <p>本节的实现尽可能精简但完整——包含 Multi-Head Attention、FFN、LayerNorm、残差连接、位置编码和一个可训练的小型 GPT（纯 Decoder）。所有代码仅依赖 NumPy。</p>
+
+  <pre><span class="lang-label">NumPy — 完整 Mini Transformer (GPT-like)</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 超参数设置（迷你版 — 仅用于教学演示）</span>
+<span class="cm"># 真实 GPT-3 的参数比这大 1000 倍以上</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+VOCAB_SIZE = <span class="num">100</span>          <span class="cm"># 词汇表大小（真实模型通常 50K~256K）</span>
+D_MODEL    = <span class="num">64</span>           <span class="cm"># 模型维度（GPT-3 small: 768, GPT-3: 12288）</span>
+NUM_HEADS  = <span class="num">4</span>            <span class="cm"># 注意力头数（64/4=16 维每头）</span>
+NUM_LAYERS = <span class="num">2</span>            <span class="cm"># Transformer 层数（GPT-3 small: 12, GPT-3: 96）</span>
+SEQ_LEN    = <span class="num">16</span>           <span class="cm"># 最大序列长度</span>
+D_FF       = <span class="num">256</span>          <span class="cm"># FFN 中间维度（4 × D_MODEL）</span>
+
+
+<span class="kw">class</span> <span class="cls">MultiHeadAttention</span>:
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># 注意：此版本支持 Cross-Attention（encoder_output 可选）</span>
+    <span class="cm"># 如果传入 encoder_output → Cross-Attention (Q≠K,V)</span>
+    <span class="cm"># 如果不传 → Self-Attention (Q=K=V 同源)</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>):
+        d_k = D_MODEL // NUM_HEADS
+        <span class="builtin">self</span>.W_Q = np.random.randn(D_MODEL, D_MODEL) * <span class="num">0.02</span>  <span class="cm"># Xavier 缩小版</span>
+        <span class="builtin">self</span>.W_K = np.random.randn(D_MODEL, D_MODEL) * <span class="num">0.02</span>
+        <span class="builtin">self</span>.W_V = np.random.randn(D_MODEL, D_MODEL) * <span class="num">0.02</span>
+        <span class="builtin">self</span>.W_O = np.random.randn(D_MODEL, D_MODEL) * <span class="num">0.02</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x, encoder_output=<span class="kw">None</span>, causal_mask=<span class="kw">None</span>):
+        <span class="cm"># 如果有 encoder_output，Q 来自 x（decoder），K,V 来自 encoder_output</span>
+        <span class="cm"># 否则 Q,K,V 都来自 x（self-attention）</span>
+        kv_source = encoder_output <span class="kw">if</span> encoder_output <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span> <span class="kw">else</span> x
+
+        Q = x @ <span class="builtin">self</span>.W_Q             <span class="cm"># (batch, seq, d_model)</span>
+        K = kv_source @ <span class="builtin">self</span>.W_K
+        V = kv_source @ <span class="builtin">self</span>.W_V
+
+        <span class="cm"># 拆成多头: (batch, seq, d_model) → (batch, heads, seq, d_k)</span>
+        batch, seq_q, _ = Q.shape
+        batch, seq_k, _ = K.shape
+        Q = Q.reshape(batch, seq_q, NUM_HEADS, D_MODEL//NUM_HEADS).transpose(<span class="num">0</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">3</span>)
+        K = K.reshape(batch, seq_k, NUM_HEADS, D_MODEL//NUM_HEADS).transpose(<span class="num">0</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">3</span>)
+        V = V.reshape(batch, seq_k, NUM_HEADS, D_MODEL//NUM_HEADS).transpose(<span class="num">0</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">3</span>)
+
+        <span class="cm"># Scaled Dot-Product Attention</span>
+        scores = Q @ K.transpose(<span class="num">0</span>,<span class="num">1</span>,<span class="num">3</span>,<span class="num">2</span>) / np.sqrt(D_MODEL//NUM_HEADS)
+
+        <span class="kw">if</span> causal_mask <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+            scores = scores + causal_mask   <span class="cm"># 上三角 -inf → softmax 后变 0</span>
+
+        scores = scores - scores.max(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+        attn = np.exp(scores)
+        attn /= attn.<span class="builtin">sum</span>(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+
+        context = attn @ V
+
+        <span class="cm"># 合并多头</span>
+        context = context.transpose(<span class="num">0</span>,<span class="num">2</span>,<span class="num">1</span>,<span class="num">3</span>).reshape(batch, seq_q, D_MODEL)
+        output = context @ <span class="builtin">self</span>.W_O
+        <span class="kw">return</span> output
+
+
+<span class="kw">class</span> <span class="cls">LayerNorm</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>):
+        <span class="builtin">self</span>.gamma = np.ones(D_MODEL)
+        <span class="builtin">self</span>.beta = np.zeros(D_MODEL)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x):
+        mean = x.mean(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+        var = x.var(axis=-<span class="num">1</span>, keepdims=<span class="kw">True</span>)
+        <span class="kw">return</span> <span class="builtin">self</span>.gamma * (x - mean) / np.sqrt(var + <span class="num">1e-6</span>) + <span class="builtin">self</span>.beta
+
+
+<span class="kw">class</span> <span class="cls">FeedForward</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>):
+        <span class="builtin">self</span>.W1 = np.random.randn(D_MODEL, D_FF) * <span class="num">0.02</span>
+        <span class="builtin">self</span>.W2 = np.random.randn(D_FF, D_MODEL) * <span class="num">0.02</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x):
+        <span class="kw">return</span> np.maximum(<span class="num">0</span>, x @ <span class="builtin">self</span>.W1) @ <span class="builtin">self</span>.W2   <span class="cm"># ReLU 激活</span>
+
+
+<span class="kw">class</span> <span class="cls">TransformerBlock</span>:
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># 一个完整的 Transformer 层（pre-LN 风格）</span>
+    <span class="cm"># 支持 Self-Attention 和 Cross-Attention 两种模式</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>):
+        <span class="builtin">self</span>.ln1 = LayerNorm()        <span class="cm"># Attention 前的 LayerNorm</span>
+        <span class="builtin">self</span>.attn = MultiHeadAttention()
+        <span class="builtin">self</span>.ln2 = LayerNorm()        <span class="cm"># FFN 前的 LayerNorm</span>
+        <span class="builtin">self</span>.ffn = FeedForward()
+        <span class="cm"># 如果是 Encoder-Decoder 架构，还需要 cross-attention 的 ln 和 attn</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, x, causal_mask=<span class="kw">None</span>):
+        <span class="cm"># Sub-layer 1: Pre-LN → Self-Attention → Residual</span>
+        attn_out = <span class="builtin">self</span>.attn.forward(<span class="builtin">self</span>.ln1.forward(x), causal_mask=causal_mask)
+        x = x + attn_out                                <span class="cm"># 残差连接</span>
+
+        <span class="cm"># Sub-layer 2: Pre-LN → FFN → Residual</span>
+        ffn_out = <span class="builtin">self</span>.ffn.forward(<span class="builtin">self</span>.ln2.forward(x))
+        x = x + ffn_out                                 <span class="cm"># 残差连接</span>
+
+        <span class="kw">return</span> x
+
+
+<span class="kw">class</span> <span class="cls">MiniGPT</span>:
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="cm"># 一个迷你的 Decoder-Only Transformer (GPT-like)</span>
+    <span class="cm"># 包含 Token Embedding + Positional Embedding + N×Blocks + LM Head</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════════</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>):
+        <span class="cm"># Token Embedding: 把每个 token ID 映射为 d_model 维向量</span>
+        <span class="builtin">self</span>.token_embed = np.random.randn(VOCAB_SIZE, D_MODEL) * <span class="num">0.02</span>
+
+        <span class="cm"># Positional Embedding: 可学习的位置编码（GPT 风格）</span>
+        <span class="builtin">self</span>.pos_embed = np.random.randn(SEQ_LEN, D_MODEL) * <span class="num">0.02</span>
+
+        <span class="cm"># N 层 Transformer Blocks</span>
+        <span class="builtin">self</span>.blocks = [TransformerBlock() <span class="kw">for</span> _ <span class="kw">in</span> <span class="builtin">range</span>(NUM_LAYERS)]
+
+        <span class="cm"># Final LayerNorm（GTP-2 风格：最后一层后有额外的 LN）</span>
+        <span class="builtin">self</span>.final_ln = LayerNorm()
+
+        <span class="cm"># LM Head: 把 d_model 维向量映射回 vocab_size 维 → 每个 token 的 logits</span>
+        <span class="cm"># 实际 GPT 中 LM head 和 token embedding 共享权重（weight tying）</span>
+        <span class="builtin">self</span>.lm_head = np.random.randn(D_MODEL, VOCAB_SIZE) * <span class="num">0.02</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, token_ids):
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        <span class="cm"># token_ids: (batch, seq_len) — 待续写的 token ID 序列</span>
+        <span class="cm"># ═══════════════════════════════════════════════════════</span>
+        batch, seq = token_ids.shape
+
+        <span class="cm"># Step 1: Token Embedding — 查表获取每个 token 的向量</span>
+        x = <span class="builtin">self</span>.token_embed[token_ids]  <span class="cm"># (batch, seq, d_model)</span>
+
+        <span class="cm"># Step 2: Positional Embedding — 加上位置信息</span>
+        x = x + <span class="builtin">self</span>.pos_embed[:seq]       <span class="cm"># 广播: (seq, d_model) 加到每个 batch</span>
+
+        <span class="cm"># Step 3: 经过 N 层 Transformer Blocks</span>
+        <span class="cm"># 每层包含 Self-Attention + FFN（GPT 没有 Cross-Attention）</span>
+        causal_mask = np.triu(np.ones((seq, seq)), k=<span class="num">1</span>) * (-<span class="num">1e9</span>)
+        <span class="kw">for</span> block <span class="kw">in</span> <span class="builtin">self</span>.blocks:
+            x = block.forward(x, causal_mask=causal_mask)
+
+        <span class="cm"># Step 4: 最后一层 LayerNorm → LM Head → logits</span>
+        x = <span class="builtin">self</span>.final_ln.forward(x)
+        logits = x @ <span class="builtin">self</span>.lm_head     <span class="cm"># (batch, seq, vocab_size)</span>
+
+        <span class="kw">return</span> logits
+
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 演示：前向传播一次，看看输出形状</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+np.random.seed(<span class="num">42</span>)
+model = MiniGPT()
+
+<span class="cm"># 统计参数量</span>
+total = <span class="num">0</span>
+<span class="kw">for</span> attr <span class="kw">in</span> <span class="builtin">dir</span>(model):
+    obj = <span class="builtin">getattr</span>(model, attr)
+    <span class="kw">if</span> <span class="builtin">isinstance</span>(obj, np.ndarray):
+        total += obj.size
+<span class="kw">for</span> block <span class="kw">in</span> model.blocks:
+    <span class="kw">for</span> attr <span class="kw">in</span> <span class="builtin">dir</span>(block):
+        obj = <span class="builtin">getattr</span>(block, attr)
+        <span class="kw">if</span> <span class="builtin">isinstance</span>(obj, np.ndarray):
+            total += obj.size
+        <span class="kw">if</span> <span class="builtin">isinstance</span>(obj, MultiHeadAttention):
+            <span class="kw">for</span> a <span class="kw">in</span> <span class="builtin">dir</span>(obj):
+                o = <span class="builtin">getattr</span>(obj, a)
+                <span class="kw">if</span> <span class="builtin">isinstance</span>(o, np.ndarray): total += o.size
+        <span class="kw">if</span> <span class="builtin">isinstance</span>(obj, FeedForward):
+            <span class="kw">for</span> a <span class="kw">in</span> <span class="builtin">dir</span>(obj):
+                o = <span class="builtin">getattr</span>(obj, a)
+                <span class="kw">if</span> <span class="builtin">isinstance</span>(o, np.ndarray): total += o.size
+        <span class="kw">if</span> <span class="builtin">isinstance</span>(obj, LayerNorm):
+            <span class="kw">for</span> a <span class="kw">in</span> <span class="builtin">dir</span>(obj):
+                o = <span class="builtin">getattr</span>(obj, a)
+                <span class="kw">if</span> <span class="builtin">isinstance</span>(o, np.ndarray): total += o.size
+
+<span class="kw">print</span>(<span class="str">f"MiniGPT 总参数量: {total:,}"</span>)
+
+<span class="cm"># 模拟一个 batch 的输入</span>
+input_ids = np.random.randint(<span class="num">0</span>, VOCAB_SIZE, (<span class="num">2</span>, <span class="num">8</span>))  <span class="cm"># batch=2, seq=8</span>
+logits = model.forward(input_ids)
+<span class="kw">print</span>(<span class="str">f"输入形状:   {input_ids.shape}"</span>)          <span class="cm"># (2, 8)</span>
+<span class="kw">print</span>(<span class="str">f"输出 logits: {logits.shape}"</span>)           <span class="cm"># (2, 8, 100) — 每个位置对词汇表的预测分数</span>
+
+<span class="cm"># 模拟生成：取最后一个位置的 logits，贪心解码下一个 token</span>
+next_token_logits = logits[:, -<span class="num">1</span>, :]             <span class="cm"># (batch, vocab_size)</span>
+next_token = np.argmax(next_token_logits, axis=-<span class="num">1</span>)  <span class="cm"># 贪心选概率最高的</span>
+<span class="kw">print</span>(<span class="str">f"预测的下一个 token: {next_token}"</span>)       <span class="cm"># 随机权重下当然是随机的</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 8: 变体
+   ═══════════════════════════════════════════ -->
+<section id="sec8">
+  <h2>8. Transformer 变体家族</h2>
+
+  <table>
+    <thead>
+      <tr><th>模型</th><th>架构</th><th>参数量</th><th>关键创新</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Transformer (2017)</td><td>Encoder-Decoder</td><td>65M~213M</td><td>提出 Self-Attention + Multi-Head + PE</td></tr>
+      <tr><td>BERT (2018)</td><td>Encoder-Only</td><td>110M~340M</td><td>双向上下文（MLM）、只用 Encoder</td></tr>
+      <tr><td>GPT-1 (2018)</td><td>Decoder-Only</td><td>117M</td><td>自回归生成、大规模无监督预训练</td></tr>
+      <tr><td>GPT-2 (2019)</td><td>Decoder-Only</td><td>1.5B</td><td>LayerNorm 移到子层之前（Pre-LN）、更大规模</td></tr>
+      <tr><td>GPT-3 (2020)</td><td>Decoder-Only</td><td>175B</td><td>In-Context Learning、零样本/少样本能力</td></tr>
+      <tr><td>Llama (2023)</td><td>Decoder-Only</td><td>7B~65B</td><td>RoPE、SwiGLU 激活、Pre-Norm、RMSNorm</td></tr>
+      <tr><td>Llama 2/3 (2023/24)</td><td>Decoder-Only</td><td>7B~405B</td><td>GQA（分组查询注意力）、更大词表</td></tr>
+      <tr><td>Mistral (2023)</td><td>Decoder-Only</td><td>7B</td><td>Sliding Window Attention、GQA</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.1 三种架构范式</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔵 Encoder-Only (BERT)</h4>
+      <p>任务：理解/分类/抽取<br>Attention：双向（看全句）<br>训练方式：MLM（挖空填空）<br><strong>"我能读懂这段话"</strong></p>
+    </div>
+    <div class="card">
+      <h4>🟢 Decoder-Only (GPT)</h4>
+      <p>任务：生成/续写/对话<br>Attention：单向（只看上文）<br>训练方式：Next Token Prediction<br><strong>"我能续写这段话"</strong></p>
+    </div>
+    <div class="card">
+      <h4>🟣 Encoder-Decoder (T5)</h4>
+      <p>任务：翻译/摘要/问答<br>Encoder 双向 + Decoder 单向<br>训练方式：Seq2Seq（文本到文本）<br><strong>"我能把 A 变成 B"</strong></p>
+    </div>
+  </div>
+
+  <h3>8.2 Llama 系列的关键改进</h3>
+
+  <pre><span class="lang-label">架构演进</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 原始 Transformer → GPT → Llama 的架构演进链</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm"># 原始 Transformer (2017)        GPT-1/2/3 (2018-2020)      Llama (2023)</span>
+<span class="cm"># ──────────────────────        ──────────────────────      ───────────</span>
+<span class="cm"># Post-LN                        Pre-LN                      Pre-LN + RMSNorm</span>
+<span class="cm"># Sinusoidal PE                  Learned PE                  RoPE（旋转位置编码）</span>
+<span class="cm"># ReLU                           GELU                        SwiGLU（门控激活）</span>
+<span class="cm"># Multi-Head Attention           Multi-Head                  GQA（分组查询注意力）</span>
+<span class="cm"># Encoder + Decoder              Decoder Only                Decoder Only</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 关键改进详解：</span>
+<span class="cm">#</span>
+<span class="cm"># 1. RMSNorm = 去掉 LayerNorm 中的"减均值"步骤，只保留缩放</span>
+<span class="cm">#    公式: RMSNorm(x) = x / RMS(x) * γ，其中 RMS(x) = sqrt(mean(x²))</span>
+<span class="cm">#    优势：计算更快（少了 mean 计算），效果不输完整 LayerNorm</span>
+<span class="cm">#</span>
+<span class="cm"># 2. SwiGLU = Swish-Gated Linear Unit</span>
+<span class="cm">#    公式: SwiGLU(x) = (xW₁ ⊙ Swish(xW₂)) W₃</span>
+<span class="cm">#    带门控机制的 FFN：一个分支做信息变换，另一个分支做门控（决定保留多少）</span>
+<span class="cm">#    效果显著优于 ReLU 和 GELU</span>
+<span class="cm">#</span>
+<span class="cm"># 3. GQA (Grouped Query Attention)</span>
+<span class="cm">#    不是每个头都有独立的 K,V → 若干头共享一组 K,V</span>
+<span class="cm">#    显著减少 KV Cache 大小（推理时省显存），效果几乎无损</span>
+<span class="cm">#</span>
+<span class="cm"># 4. RoPE (Rotary Position Embedding)</span>
+<span class="cm">#    通过对 Q 和 K 施加旋转矩阵注入位置信息</span>
+<span class="cm">#    使得两个 token 的相似度只依赖相对距离，天然支持长度外推</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════
+   SEC 9: 面试高频考点
+   ═══════════════════════════════════════════ -->
+<section id="sec9">
+  <h2>9. 面试高频考点 & 速查</h2>
+
+  <h3>9.1 核心公式速查</h3>
+
+  <table>
+    <thead><tr><th>组件</th><th>公式</th><th>维度变化</th></tr></thead>
+    <tbody>
+      <tr><td>Self-Attention</td><td>softmax(QK<sup>T</sup>/√d<sub>k</sub>) · V</td><td>(seq, d) → (seq, d)</td></tr>
+      <tr><td>Multi-Head</td><td>Concat(head<sub>1</sub>,...,head<sub>h</sub>) · W<sub>O</sub></td><td>(seq, d) → (seq, d)</td></tr>
+      <tr><td>FFN</td><td>ReLU(x·W<sub>1</sub>+b<sub>1</sub>)·W<sub>2</sub>+b<sub>2</sub></td><td>(seq, d) → (seq, 4d) → (seq, d)</td></tr>
+      <tr><td>Positional Encoding</td><td>PE(pos,2i)=sin(pos/10000<sup>2i/d</sup>)</td><td>(seq) → (seq, d)</td></tr>
+      <tr><td>LayerNorm</td><td>γ(x-μ)/√(σ²+ε) + β</td><td>(seq, d) → (seq, d)</td></tr>
+      <tr><td>GPT 输出</td><td>softmax(x·W<sub>lm</sub>)</td><td>(seq, d) → (seq, vocab)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9.2 高频面试问题</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>❓ Q1: 为什么 Transformer 比 RNN 好？</h4>
+      <p><strong>答：</strong>并行计算（训练时所有位置同时做 Attention，RNN 必须串行）+ 长距离依赖（Self-Attention 直接建立任意两位置的连接，路径长度 O(1)，RNN 是 O(n)）+ 可解释性（Attention 权重可视化）。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q2: 为什么要除以 √dₖ？</h4>
+      <p><strong>答：</strong>防止点积方差过大导致 softmax 梯度消失。dₖ 越大，Q·K 的方差越大（正比于 dₖ），除以 √dₖ 将方差缩放回 1，保持 softmax 输出平滑。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q3: Multi-Head 中每个头学到了什么？</h4>
+      <p><strong>答：</strong>不同头关注不同的语言模式——有的头关注语法结构（主谓一致），有的关注语义关系（因果/转折），有的关注位置（相邻词）。头之间分工但不强制。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q4: BERT 和 GPT 的核心区别？</h4>
+      <p><strong>答：</strong>BERT 用 Encoder + 双向 Attention，训练目标 MLM（填空），擅长"理解"；GPT 用 Decoder + 单向（causal）Attention，训练目标 Next Token Prediction，擅长"生成"。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q5: LayerNorm 在 Attention 之前还是之后？</h4>
+      <p><strong>答：</strong>原始论文是 Post-LN（之后），现代模型（GPT-2、Llama）用 Pre-LN（之前）。Pre-LN 训练更稳定、收敛更快、不易梯度爆炸。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q6: KV Cache 是什么？</h4>
+      <p><strong>答：</strong>自回归生成时，每次生成新 token 都需要重新计算所有之前 token 的 K 和 V。KV Cache 把已计算的 K、V 缓存起来，每次只需计算新 token 的 Q、K、V，大幅加速推理。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q7: 为什么残差连接重要？</h4>
+      <p><strong>答：</strong>残差连接提供"梯度高速公路"——即使某层学不到有用信息（输出≈0），原始输入仍可无损传递。这在深层网络中防止了梯度消失和性能退化。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q8: Transformer 的时间/空间复杂度？</h4>
+      <p><strong>答：</strong>Self-Attention：<strong>O(n²d)</strong> 时间和 <strong>O(n²)</strong> 空间（n=序列长度）。这限制了上下文长度，也是 FlashAttention、Sparse Attention 等优化的动机。</p>
+    </div>
+  </div>
+
+  <h3>9.3 参数计算速查</h3>
+
+  <pre><span class="lang-label">参数计算</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 以 GPT-3 Small 为例 (d_model=768, n_heads=12, n_layers=12, vocab=50257)</span>
+<span class="cm">#</span>
+<span class="cm"># 1. Multi-Head Attention (每层):</span>
+<span class="cm">#    W_Q, W_K, W_V, W_O 各为 768×768</span>
+<span class="cm">#    4 × 768² ≈ 2.36M params/层</span>
+<span class="cm">#</span>
+<span class="cm"># 2. Feed-Forward (每层):</span>
+<span class="cm">#    W1: 768×3072, W2: 3072×768</span>
+<span class="cm">#    2 × 768 × 3072 ≈ 4.72M params/层</span>
+<span class="cm">#</span>
+<span class="cm"># 3. Token Embedding:</span>
+<span class="cm">#    50257 × 768 ≈ 38.6M</span>
+<span class="cm">#</span>
+<span class="cm"># 4. Position Embedding:</span>
+<span class="cm">#    seq_len × 768 (通常 1024×768 ≈ 0.79M)</span>
+<span class="cm">#</span>
+<span class="cm"># 总参数量 ≈ 38.6M + 0.79M + 12×(2.36M + 4.72M)</span>
+<span class="cm">#          ≈ 38.6M + 0.79M + 85.0M ≈ 124M</span>
+<span class="cm">#</span>
+<span class="cm"># 注意：FFN 参数占比 ≈ 4.72/(2.36+4.72) ≈ 67%</span>
+<span class="cm">#       所以 Transformer 的"大"主要来自 FFN 层，不是 Attention！</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  📘 Transformer 架构详解 · 教学文档 · 从入门到精通<br>
+  由 <a href="https://github.com/2143616">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span> ·
+  <span style="color: var(--fg2);">最后更新: 2026-07-18</span>
+</div>
+
+</div>
+</body>
+</html>
