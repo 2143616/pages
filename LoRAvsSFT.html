@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoRA vs SFT 全参数微调 — 从入门到精通</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Dark Theme — GitHub-style with Linear-inspired accents
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --fg: #e6edf3;
+  --fg2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --teal: #56d4dd;
+  --pink: #f778ba;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.75;
+  display: flex;
+}
+/* ═══ 侧边目录 ═══ */
+.toc {
+  position: fixed; top: 0; left: 0;
+  width: 260px; height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 30px 20px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.toc h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg2);
+  margin-bottom: 18px;
+}
+.toc ul { list-style: none; }
+.toc ul li { margin-bottom: 4px; }
+.toc ul li a {
+  display: block; padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--fg2);
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.toc ul li a:hover {
+  background: var(--bg3);
+  color: var(--fg);
+}
+.toc ul li a.active {
+  background: rgba(88,166,255,0.12);
+  color: var(--accent);
+}
+/* ═══ 主内容区 ═══ */
+.main {
+  margin-left: 260px;
+  padding: 60px 80px;
+  max-width: 1000px;
+  width: 100%;
+}
+/* ═══ Header ═══ */
+.header {
+  text-align: center;
+  padding: 60px 0 50px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 50px;
+}
+.header h1 {
+  font-size: 2.6em;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 14px;
+}
+.header p {
+  color: var(--fg2);
+  font-size: 1.1em;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.header .tags {
+  margin-top: 22px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.header .tags span {
+  background: var(--bg3);
+  color: var(--fg2);
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+}
+/* ═══ Sections ═══ */
+section {
+  margin-bottom: 60px;
+  padding-top: 20px;
+}
+h2 {
+  font-size: 1.8em;
+  font-weight: 700;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+}
+h2::before {
+  content: "# ";
+  color: var(--accent);
+  font-weight: 400;
+}
+h3 {
+  font-size: 1.3em;
+  color: var(--teal);
+  margin: 36px 0 16px;
+  font-weight: 600;
+}
+h4 {
+  font-size: 1.1em;
+  color: var(--pink);
+  margin: 24px 0 12px;
+  font-weight: 600;
+}
+p {
+  color: var(--fg2);
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+strong { color: var(--fg); }
+/* ═══ Code Blocks ═══ */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  position: relative;
+  margin: 20px 0;
+}
+pre span.lang-label {
+  position: absolute; top: 10px; right: 14px;
+  font-size: 11px;
+  color: var(--fg2);
+  background: var(--bg3);
+  padding: 2px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.kw  { color: #ff7b72; }        /* keywords */
+.fn  { color: #d2a8ff; }        /* function names */
+.str { color: #a5d6ff; }        /* strings */
+.cm  { color: #8b949e; font-style: italic; } /* comments */
+.num { color: #79c0ff; }        /* numbers */
+.op  { color: #ffa657; }        /* operators */
+.builtin { color: #58a6ff; }    /* builtins */
+.dec { color: #f778ba; }        /* decorators */
+.cls { color: #ffa657; }        /* class names */
+.punct { color: #e6edf3; }     /* punctuation */
+/* ═══ Tables ═══ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 14px;
+}
+thead th {
+  background: var(--bg3);
+  color: var(--fg);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+tbody td {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  color: var(--fg2);
+}
+tbody tr:hover { background: var(--bg2); }
+/* ═══ Cards ═══ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px;
+}
+.card h4 {
+  color: var(--accent);
+  margin: 0 0 8px;
+  font-size: 1em;
+}
+.card p { font-size: 13.5px; margin: 0; }
+/* ═══ Highlight Box ═══ */
+.highlight {
+  background: rgba(88,166,255,0.06);
+  border-left: 3px solid var(--accent);
+  padding: 16px 20px;
+  border-radius: 0 8px 8px 0;
+  margin: 20px 0;
+  color: var(--fg);
+}
+.highlight strong { color: var(--accent); }
+/* ═══ Info Box ═══ */
+.info-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+.info-box .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+/* ═══ Comparison Bar ═══ */
+.bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+  font-size: 13px;
+}
+.bar-wrap .bar-label {
+  width: 130px;
+  text-align: right;
+  color: var(--fg2);
+  flex-shrink: 0;
+}
+.bar-wrap .bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg3);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.bar-wrap .bar-fill-sft { background: var(--red); height: 100%; border-radius: 4px; }
+.bar-wrap .bar-fill-lora { background: var(--green); height: 100%; border-radius: 4px; }
+/* ═══ Footer ═══ */
+.footer {
+  text-align: center;
+  padding: 40px 0 30px;
+  border-top: 1px solid var(--border);
+  margin-top: 60px;
+  color: var(--fg2);
+  font-size: 13px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+/* ═══ Responsive ═══ */
+@media (max-width: 900px) {
+  .toc { display: none; }
+  .main { margin-left: 0; padding: 30px 20px; }
+  .header h1 { font-size: 1.6em; }
+  h2 { font-size: 1.4em; }
+  pre { padding: 16px 14px; font-size: 12px; }
+  table { font-size: 12px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR — TABLE OF CONTENTS
+     ═══════════════════════════════════════════════════════ -->
+<nav class="toc">
+  <h3>📑 目录</h3>
+  <ul>
+    <li><a href="#sec1">1. 先搞清楚：微调到底在干嘛</a></li>
+    <li><a href="#sec2">2. LoRA：用小矩阵撬动大模型</a></li>
+    <li><a href="#sec3">3. 全参数 SFT：暴力但有道理</a></li>
+    <li><a href="#sec4">4. 细节对比：一张表看清一切</a></li>
+    <li><a href="#sec5">5. 代码实战：手把手跑通两次训练</a></li>
+    <li><a href="#sec6">6. 如何选择：一张决策地图</a></li>
+    <li><a href="#sec7">7. 进阶技巧 & 常见坑</a></li>
+    <li><a href="#sec8">8. 总结 & 速查表</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════════════════════════ -->
+<div class="main">
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <h1>🧠 LoRA 微调 vs SFT 全参数训练</h1>
+  <p>从原理推导到代码实战，彻底搞懂两种大模型微调范式的来龙去脉、适用场景和选型诀窍</p>
+  <div class="tags">
+    <span>🐍 PyTorch</span>
+    <span>🤗 HuggingFace</span>
+    <span>📦 PEFT</span>
+    <span>⚡ LoRA</span>
+    <span>🔬 SFT</span>
+    <span>🧊 QLoRA</span>
+    <span>📘 教学文档</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 1: 先搞清楚微调到底在干嘛
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec1">
+  <h2>1. 先搞清楚：微调到底在干嘛</h2>
+
+  <p>想象你有一个<strong>全能型实习生</strong>（预训练大模型），他读过互联网上几乎所有公开的文字，能写诗、能翻译、能写代码——但<strong>他只读过通用资料</strong>，对你公司的内部产品文档、行业黑话、特定风格一无所知。</p>
+
+  <p><strong>微调（Fine-tuning）</strong>就是让这个全能实习生去你的业务部门<strong>"实习几天"</strong>，用你公司内部的资料再训练他，让他不仅能写诗，还能准确回答"这个 API 接口的超时时间是多少"。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🎯 微调的本质</h4>
+      <p>在预训练权重的基础上，用<strong>领域数据</strong>继续训练，让模型学会<strong>新知识</strong>或<strong>新行为模式</strong>（如遵循指令、特定格式输出）。</p>
+    </div>
+    <div class="card">
+      <h4>🧊 预训练 vs 微调</h4>
+      <p>预训练 = 从零开始学认字（万亿 token，数百万美元）；微调 = 在已认字的基础上读几本专业书（几千到几十万条数据，几百美元），学的是<strong>新领域知识</strong>而非基础语言能力。</p>
+    </div>
+    <div class="card">
+      <h4>⚖️ 两种路线</h4>
+      <p><strong>全参数 SFT</strong>：更新模型所有参数——像让实习生重新学所有知识，贵但彻底。<br><strong>LoRA</strong>：只训练额外的小插件——像给实习生发一本"速查手册"，便宜且安全。</p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="label">💡 关键认知</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      微调不是"重新训练"，而是<strong>继续训练</strong>。模型走到今天已经花了上千万美金，你只是在它的肩膀上加一层"专业皮"。
+      这也是为什么微调几千条数据就能见效——<strong>语言能力已经在了，你只是在加领域知识</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 2: LoRA 原理
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec2">
+  <h2>2. LoRA：用小矩阵撬动大模型</h2>
+
+  <h3>2.1 核心思想：低秩假设</h3>
+
+  <p>LoRA（Low-Rank Adaptation）基于一个大胆但被实验验证的假设：</p>
+
+  <div class="highlight">
+    <strong>低秩假设：</strong>模型在微调过程中需要更新的权重变化量 ΔW，虽然维度很大（比如 4096×4096），但它实际上是<strong>"低秩"</strong>的——也就是说，ΔW 可以被分解为两个小矩阵的乘积：<strong>ΔW = B × A</strong>，其中 B 和 A 非常窄（rank 通常只有 8~64）。
+  </div>
+
+  <p>这就像装修房子——你<strong>不需要推倒重来</strong>（全参数 SFT），只需要在一些关键位置<strong>打几个补丁</strong>（LoRA adapter），就足以让模型学会新技能。</p>
+
+  <pre><span class="lang-label">原理</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># LoRA 前向传播的数学本质：</span>
+<span class="cm">#   原始输出:  h = W₀ · x        （W₀ 被冻结，永远不变）</span>
+<span class="cm">#   LoRA 输出: h = W₀ · x + (α/r) · B · A · x</span>
+<span class="cm">#</span>
+<span class="cm">#   其中：</span>
+<span class="cm">#     W₀  ∈ R^{d×d}   — 原始权重矩阵（4096×4096，已冻结）</span>
+<span class="cm">#     B   ∈ R^{d×r}   — 降维矩阵（4096×16，可训练）</span>
+<span class="cm">#     A   ∈ R^{r×d}   — 升维矩阵（16×4096，可训练）</span>
+<span class="cm">#     r   = 16        — 秩，通常 8~64（核心超参数）</span>
+<span class="cm">#     α/r             — 缩放因子（控制 LoRA 对输出的影响强度）</span>
+<span class="cm">#</span>
+<span class="cm">#  这就像：原来的输出（W₀·x）保持不变，</span>
+<span class="cm">#  但在旁边加了一条"快捷通道"（B·A·x），</span>
+<span class="cm">#  这条通道专门负责处理"新学的任务"。</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>2.2 可视化：LoRA 是怎么"打补丁"的</h3>
+
+  <pre><span class="lang-label">直观图解</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm">#                    全参数 SFT                     LoRA</span>
+<span class="cm">#                  ────────────                  ────────</span>
+<span class="cm">#                                                   </span>
+<span class="cm">#   W (4096×4096)   全部更新        W₀ (4096×4096)   冻结不变 🔒</span>
+<span class="cm">#   ┌─────────────┐                ┌─────────────┐</span>
+<span class="cm">#   │█████████████│ ← 4096×4096   │▓▓▓▓▓▓▓▓▓▓▓▓│ ← 4096×4096 全部冻结</span>
+<span class="cm">#   │█████████████│    1600 万参数  │▓▓▓▓▓▓▓▓▓▓▓▓│</span>
+<span class="cm">#   └─────────────┘                └─────────────┘</span>
+<span class="cm">#                                      +</span>
+<span class="cm">#                                  B (4096×16)  ┐ 可训练 🔓</span>
+<span class="cm">#                                  ┌────┐        │</span>
+<span class="cm">#                                  │ ██ │        ├ 总共只有</span>
+<span class="cm">#                                  │ ██ │        │ 4096×16 + 16×4096</span>
+<span class="cm">#                                  └────┘        │ = 131,072 参数</span>
+<span class="cm">#                                  A (16×4096)  ┘ （全参数的 0.008%！）</span>
+<span class="cm">#                                  ┌─────────────┐</span>
+<span class="cm">#                                  │█████████████│</span>
+<span class="cm">#                                  └─────────────┘</span>
+<span class="cm">#</span>
+<span class="cm">#  关键洞察：B·A 的乘积维度是 4096×4096，</span>
+<span class="cm">#  但存储的参数量只有 4096×16 + 16×4096 = 131,072。</span>
+<span class="cm">#  这就是"低秩分解"的魔力——用极少的参数表达一个大的变化矩阵。</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>2.3 为什么 LoRA 有效？</h3>
+
+  <p>这背后有理论支撑。2021 年 Aghajanyan 等人的研究表明：<strong>预训练语言模型在微调时存在一个极低维度的"内在维度"（intrinsic dimension）</strong>——也就是说，你不需要更新上亿个参数来让模型学会新任务，只需要在这个低维子空间里调整就足够了。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🧠 直觉类比</h4>
+      <p>就像调整收音机——你不需要重新设计整个电路板，只要<strong>微调几个旋钮</strong>（LoRA rank）就能收到不同电台。大模型的"旋钮"比你想象的要少得多。</p>
+    </div>
+    <div class="card">
+      <h4>📊 实验证据</h4>
+      <p>在大多数 NLP 任务上，<strong>rank=16 的 LoRA 就能达到全参数 SFT 的 95%~99% 效果</strong>。只有极复杂的任务（如数学推理、长代码生成）才需要 rank≥64 或全参数训练。</p>
+    </div>
+    <div class="card">
+      <h4>🔗 与 Adapter 的区别</h4>
+      <p>早期的 Adapter 方法在每个 Transformer 层插入额外的小网络，导致<strong>推理时多一层延迟</strong>。LoRA 可以直接把 B·A 合并回 W₀：<strong>W' = W₀ + BA</strong>，推理时<strong>零额外开销</strong>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 3: 全参数 SFT
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec3">
+  <h2>3. 全参数 SFT：暴力但有道理</h2>
+
+  <h3>3.1 什么叫"全参数"？</h3>
+
+  <p>全参数 Supervised Fine-Tuning（SFT）就是<strong>把模型的每一个参数都放开，用你的数据进行训练</strong>。所有 70 亿（Llama-7B）甚至 700 亿（Llama-70B）参数全部参与反向传播和梯度更新。</p>
+
+  <pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 全参数 SFT：每一个参数都标为 requires_grad=True</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM
+
+<span class="cm"># 加载 Llama-7B：约 70 亿参数</span>
+<span class="cm"># 每个参数占 2 字节（BF16），模型权重 ≈ 14 GB</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"meta-llama/Llama-2-7b-hf"</span>,
+    torch_dtype=torch.bfloat16,      <span class="cm"># 用 BF16 存模型，省一半显存</span>
+    device_map=<span class="str">"auto"</span>                <span class="cm"># 多卡自动分配</span>
+)
+
+<span class="cm"># 确认：所有参数都是 requires_grad=True</span>
+<span class="cm"># 这意味着反向传播时要给 70 亿个参数各算一个梯度</span>
+<span class="kw">for</span> name, param <span class="kw">in</span> model.named_parameters():
+    <span class="kw">assert</span> param.requires_grad, <span class="str">"全参数 SFT 不能冻结任何层！"</span>
+
+<span class="cm"># ⚠️ 这时如果你打印显存占用：</span>
+<span class="cm">#   模型权重:   7B × 2 bytes = 14 GB</span>
+<span class="cm">#   梯度:       7B × 2 bytes = 14 GB（每个参数都要存梯度）</span>
+<span class="cm">#   Adam 状态:  7B × 8 bytes = 56 GB（momentum + variance，FP32）</span>
+<span class="cm">#   ─────────────────────────────────────────</span>
+<span class="cm">#   峰值 ≈ 84 GB（还没算激活值！）</span>
+<span class="cm">#   这就是为什么全参数 SFT 至少需要 4×A100-80G</span></pre>
+
+  <h3>3.2 全参数训练的内存分解</h3>
+
+  <table>
+    <thead>
+      <tr><th>组件</th><th>Llama-7B (BF16)</th><th>Llama-13B (BF16)</th><th>Llama-70B (BF16)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>模型权重</td><td>~14 GB</td><td>~26 GB</td><td>~140 GB</td></tr>
+      <tr><td>梯度</td><td>~14 GB</td><td>~26 GB</td><td>~140 GB</td></tr>
+      <tr><td>Adam 优化器状态 (m+v)</td><td>~56 GB</td><td>~104 GB</td><td>~560 GB</td></tr>
+      <tr><td>激活值（batch=1, seq=2048）</td><td>~10 GB</td><td>~18 GB</td><td>~60 GB</td></tr>
+      <tr style="font-weight:700;color:var(--red);"><td>总计（不含 offload）</td><td>~94 GB</td><td>~174 GB</td><td>~900 GB</td></tr>
+      <tr style="font-weight:700;color:var(--green);"><td>加上梯度检查点后</td><td>~80 GB</td><td>~150 GB</td><td>~700 GB</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>关键认知：</strong>全参数 SFT 的内存大头不是模型本身，而是<strong>优化器状态</strong>（Adam 的 momentum 和 variance 各存一份 FP32，比模型权重还大 4 倍）。这也是为什么 LoRA 能省这么多显存——它不需要给那 70 亿个冻结参数存优化器状态。
+  </div>
+
+  <h3>3.3 全参数 SFT 的优势</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔓 无容量瓶颈</h4>
+      <p>没有 LoRA 的低秩限制，所有参数自由更新。对于需要<strong>大幅改变模型行为</strong>的任务（如从英文切换到中文思维），全参数 SFT 无可替代。</p>
+    </div>
+    <div class="card">
+      <h4>📈 数据量大时更优</h4>
+      <p>当你有 <strong>10 万+ 条高质量指令数据</strong>时，LoRA 的 rank 限制会成为瓶颈。全参数 SFT 能够充分利用大规模数据中的信号。</p>
+    </div>
+    <div class="card">
+      <h4>🏆 追求极致性能</h4>
+      <p>在公开 Benchmark（MMLU、HumanEval 等）上，全参数 SFT 通常能比 LoRA 高出 <strong>1~3 个百分点</strong>。对于需要极致性能的场景，这点差距可能决定成败。</p>
+    </div>
+  </div>
+
+  <h3>3.4 全参数 SFT 的代价</h3>
+
+  <div class="bar-wrap"><div class="bar-label">灾难性遗忘风险</div><div class="bar-track"><div class="bar-fill-sft" style="width:85%"></div></div><span style="color:var(--red)">高</span></div>
+  <div class="bar-wrap"><div class="bar-label">所需 GPU 数量</div><div class="bar-track"><div class="bar-fill-sft" style="width:95%"></div></div><span style="color:var(--red)">4~16×A100</span></div>
+  <div class="bar-wrap"><div class="bar-label">单次训练时间</div><div class="bar-track"><div class="bar-fill-sft" style="width:80%"></div></div><span style="color:var(--orange)">数小时~数天</span></div>
+  <div class="bar-wrap"><div class="bar-label">模型存储大小</div><div class="bar-track"><div class="bar-fill-sft" style="width:90%"></div></div><span style="color:var(--red)">14GB~140GB</span></div>
+  <div class="bar-wrap"><div class="bar-label">实验迭代速度</div><div class="bar-track"><div class="bar-fill-sft" style="width:85%"></div></div><span style="color:var(--red)">慢</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 4: 细节对比
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec4">
+  <h2>4. 细节对比：一张表看清一切</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:25%">维度</th><th style="width:37%;color:var(--red);">全参数 SFT</th><th style="width:37%;color:var(--green);">LoRA</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>更新范围</strong></td>
+        <td>所有权重矩阵 W 全部更新</td>
+        <td>只训练低秩增量矩阵 ΔW = BA</td>
+      </tr>
+      <tr>
+        <td><strong>可训练参数量</strong></td>
+        <td>100%（7B 模型 = 全部 7B 参数）</td>
+        <td>0.01%~1%（rank=16 时约 800 万）</td>
+      </tr>
+      <tr>
+        <td><strong>前向传播</strong></td>
+        <td>h = W·x</td>
+        <td>h = W₀·x + (α/r)·BA·x</td>
+      </tr>
+      <tr>
+        <td><strong>推理时开销</strong></td>
+        <td>无额外开销</td>
+        <td>零（合并后 W' = W₀ + BA）</td>
+      </tr>
+      <tr>
+        <td><strong>显存需求（7B）</strong></td>
+        <td style="color:var(--red);">80~112 GB</td>
+        <td style="color:var(--green);">15~30 GB（含 QLoRA）</td>
+      </tr>
+      <tr>
+        <td><strong>最小 GPU</strong></td>
+        <td style="color:var(--red);">4×A100-80G</td>
+        <td style="color:var(--green);">1×RTX 3090/4090（24GB）</td>
+      </tr>
+      <tr>
+        <td><strong>灾难性遗忘</strong></td>
+        <td style="color:var(--red);">高 — 原始能力可能退化</td>
+        <td style="color:var(--green);">低 — 基座权重冻结不变</td>
+      </tr>
+      <tr>
+        <td><strong>收敛速度</strong></td>
+        <td style="color:var(--orange);">慢（参数空间巨大）</td>
+        <td style="color:var(--green);">快（参数空间小）</td>
+      </tr>
+      <tr>
+        <td><strong>数据需求</strong></td>
+        <td>1 万~10 万+ 条</td>
+        <td>几百~几千条即可见效</td>
+      </tr>
+      <tr>
+        <td><strong>学习率</strong></td>
+        <td>1e-6 ~ 2e-5（必须小）</td>
+        <td>1e-4 ~ 5e-4（可以更大）</td>
+      </tr>
+      <tr>
+        <td><strong>存储大小</strong></td>
+        <td>等于完整模型（7B ≈ 14GB）</td>
+        <td>只有 adapter（rank=16 ≈ 30MB）</td>
+      </tr>
+      <tr>
+        <td><strong>多任务切换</strong></td>
+        <td>需要保存多份完整模型</td>
+        <td>一个基座 + 多个 adapter 快速切换</td>
+      </tr>
+      <tr>
+        <td><strong>效果上限</strong></td>
+        <td style="color:var(--green);">最高（理论天花板）</td>
+        <td style="color:var(--orange);">接近（通常达到 95%~99%）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.1 显存对比可视化</h3>
+
+  <div class="bar-wrap"><div class="bar-label">全参数 SFT (7B)</div><div class="bar-track"><div class="bar-fill-sft" style="width:100%"></div></div><span style="color:var(--red)">~100 GB</span></div>
+  <div class="bar-wrap"><div class="bar-label">LoRA (7B, BF16)</div><div class="bar-track"><div class="bar-fill-lora" style="width:28%"></div></div><span style="color:var(--green)">~28 GB</span></div>
+  <div class="bar-wrap"><div class="bar-label">QLoRA (7B, 4-bit)</div><div class="bar-track"><div class="bar-fill-lora" style="width:15%"></div></div><span style="color:var(--green)">~15 GB</span></div>
+
+  <div class="info-box">
+    <div class="label">🔑 QLoRA 是什么？</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      QLoRA = <strong>Quantized</strong> LoRA = 4-bit 量化 + LoRA。先用 4-bit NormalFloat 把基座模型压缩到原来的 1/4 大小，再在上面挂 LoRA adapter。效果与全精度 LoRA 几乎相同，但显存再砍一半——单张 24GB 消费级显卡就能训练 Llama-7B！
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 5: 代码实战
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec5">
+  <h2>5. 代码实战：手把手跑通两次训练</h2>
+
+  <h3>5.1 全参数 SFT 训练脚本</h3>
+
+  <pre><span class="lang-label">Python — 全参数 SFT</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 全参数 SFT 标准流程：加载完整模型 → 全部参数放开 → 训练 → 保存</span>
+<span class="cm"># 硬件要求：至少 4×A100-80G（Llama-7B），建议 8×A100-80G</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> (
+    AutoModelForCausalLM, AutoTokenizer,
+    TrainingArguments, Trainer, DataCollatorForSeq2Seq
+)
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
+
+<span class="cm"># ─── Step 1: 加载模型和分词器 ───</span>
+<span class="cm"># 用 BF16 加载模型，每个参数占 2 字节而非 4 字节</span>
+<span class="cm"># device_map="auto" 让 accelerate 自动把不同层分配到不同 GPU</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"meta-llama/Llama-2-7b-hf"</span>,
+    torch_dtype=torch.bfloat16,      <span class="cm"># BF16 比 FP16 数值范围更大，训练更稳定</span>
+    device_map=<span class="str">"auto"</span>,                <span class="cm"># 多卡自动分配（如 4090×2）</span>
+    use_cache=<span class="kw">False</span>,                  <span class="cm"># 训练时必须关闭 KV Cache！否则梯度计算会出错</span>
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"meta-llama/Llama-2-7b-hf"</span>)
+tokenizer.pad_token = tokenizer.eos_token  <span class="cm"># Llama 没有 pad_token，用 eos 代替</span>
+
+<span class="cm"># ─── Step 2: 准备数据（SFT 格式） ───</span>
+<span class="cm"># 典型的指令微调数据格式：{"instruction": "...", "output": "..."}</span>
+<span class="cm"># 这里使用 Alpaca 格式作为示例</span>
+<span class="kw">def</span> <span class="fn">format_example</span>(example):
+    <span class="cm"># 把 instruction 和 output 拼成一条对话，让模型学会"问→答"的模式</span>
+    text = <span class="str">f"### 指令: {example['instruction']}</span><span class="str">\n</span><span class="str">### 回答: {example['output']}"</span>
+    <span class="kw">return</span> {<span class="str">"text"</span>: text}
+
+dataset = load_dataset(<span class="str">"yahma/alpaca-cleaned"</span>)  <span class="cm"># ≈ 5.2 万条指令数据</span>
+dataset = dataset.map(format_example)
+
+<span class="kw">def</span> <span class="fn">tokenize_fn</span>(example):
+    <span class="cm"># 将文本转为 token id 序列，截断到 2048 以内</span>
+    result = tokenizer(example[<span class="str">"text"</span>], truncation=<span class="kw">True</span>, max_length=<span class="num">2048</span>)
+    result[<span class="str">"labels"</span>] = result[<span class="str">"input_ids"</span>].copy()  <span class="cm"># labels 用于计算交叉熵 loss</span>
+    <span class="kw">return</span> result
+
+tokenized_dataset = dataset.map(tokenize_fn, remove_columns=dataset[<span class="str">"train"</span>].column_names)
+
+<span class="cm"># ─── Step 3: 配置训练参数 ───</span>
+training_args = TrainingArguments(
+    output_dir=<span class="str">"./sft_output"</span>,
+    per_device_train_batch_size=<span class="num">1</span>,         <span class="cm"># 全参数训练显存紧张，batch_size 只能设为 1</span>
+    gradient_accumulation_steps=<span class="num">32</span>,        <span class="cm"># 累积 32 步再更新 = 等效 batch_size=32</span>
+    num_train_epochs=<span class="num">3</span>,                     <span class="cm"># 全参数训练 epoch 不宜太多，容易过拟合</span>
+    learning_rate=<span class="num">2e-5</span>,                     <span class="cm"># 全参数 LR 必须保守，否则会破坏预训练知识</span>
+    warmup_ratio=<span class="num">0.03</span>,                      <span class="cm"># 前 3% 的步数线性预热 lr，防止初期震荡</span>
+    lr_scheduler_type=<span class="str">"cosine"</span>,              <span class="cm"># 余弦退火 — 从峰值平滑降到接近 0</span>
+    fp16=<span class="kw">True</span>,                            <span class="cm"># 混合精度训练：前向/反向用 FP16，权重更新用 FP32</span>
+    gradient_checkpointing=<span class="kw">True</span>,           <span class="cm"># 用计算换显存：不存中间激活，反向时重新计算</span>
+    optim=<span class="str">"adamw_torch"</span>,                  <span class="cm"># AdamW — 带权重衰减的 Adam，防止过拟合</span>
+    logging_steps=<span class="num">10</span>,
+    save_strategy=<span class="str">"epoch"</span>,                  <span class="cm"># 每个 epoch 结束保存一次 checkpoint</span>
+    save_total_limit=<span class="num">2</span>,                   <span class="cm"># 只保留最后 2 个 checkpoint，省磁盘</span>
+    bf16=<span class="kw">True</span>,                            <span class="cm"># A100/H100 上开启 BF16，数值稳定性更好</span>
+    ddp_find_unused_parameters=<span class="kw">False</span>,    <span class="cm"># 多卡训练时不要检查未使用参数，加速</span>
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset[<span class="str">"train"</span>],
+    tokenizer=tokenizer,
+    data_collator=DataCollatorForSeq2Seq(tokenizer, padding=<span class="kw">True</span>),
+)
+trainer.train()
+
+<span class="cm"># ─── Step 4: 保存模型 ───</span>
+<span class="cm"># 全参数 SFT 保存的是完整模型，体积 = 原始模型一样大</span>
+model.save_pretrained(<span class="str">"./sft_final"</span>)
+tokenizer.save_pretrained(<span class="str">"./sft_final"</span>)
+<span class="cm"># 推理时直接加载即可，无需额外步骤</span></pre>
+
+  <h3>5.2 LoRA 训练脚本（含 QLoRA）</h3>
+
+  <pre><span class="lang-label">Python — LoRA + QLoRA</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># LoRA + QLoRA 标准流程：量化加载基座 → 加 adapter → 只训练 adapter → 保存</span>
+<span class="cm"># 硬件要求：单张 RTX 3090/4090（24GB）即可训练 Llama-7B</span>
+<span class="cm"># 依赖：pip install peft bitsandbytes accelerate transformers datasets</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> (
+    AutoModelForCausalLM, AutoTokenizer,
+    TrainingArguments, Trainer, BitsAndBytesConfig
+)
+<span class="kw">from</span> <span class="builtin">peft</span> <span class="kw">import</span> LoraConfig, get_peft_model, TaskType, prepare_model_for_kbit_training
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
+
+<span class="cm"># ─── Step 1: 4-bit 量化配置（QLoRA 的 "Q"） ───</span>
+<span class="cm"># NormalFloat 4-bit: 一种为神经网络权重分布特化的 4-bit 量化格式</span>
+<span class="cm"># 比传统的线性量化保留更多信息，训练效果接近全精度</span>
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=<span class="kw">True</span>,                      <span class="cm"># 开启 4-bit 量化</span>
+    bnb_4bit_compute_dtype=torch.bfloat16, <span class="cm"># 前向/反向计算时反量化为 BF16（保证精度）</span>
+    bnb_4bit_use_double_quant=<span class="kw">True</span>,      <span class="cm"># 双重量化：对量化常数本身也量化，再省 ~0.4bit/param</span>
+    bnb_4bit_quant_type=<span class="str">"nf4"</span>,            <span class="cm"># NormalFloat 4，最优的 4-bit 量化策略</span>
+)
+
+<span class="cm"># ─── Step 2: 以 4-bit 模式加载基座模型 ───</span>
+<span class="cm"># 原本 14GB 的 Llama-7B 现在只占约 4GB VRAM！</span>
+base_model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"meta-llama/Llama-2-7b-hf"</span>,
+    quantization_config=bnb_config,
+    device_map=<span class="str">"auto"</span>,
+    trust_remote_code=<span class="kw">True</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"meta-llama/Llama-2-7b-hf"</span>)
+tokenizer.pad_token = tokenizer.eos_token
+
+<span class="cm"># ─── Step 3: 为 k-bit 训练做准备 ───</span>
+<span class="cm"># 这个函数会做一些必要的预处理，比如把某些层转为 FP32</span>
+<span class="cm"># （LayerNorm / lm_head 等对精度敏感的层会保留 FP32）</span>
+base_model = prepare_model_for_kbit_training(base_model)
+
+<span class="cm"># ─── Step 4: 配置 LoRA Adapter ───</span>
+lora_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,          <span class="cm"># 因果语言模型（自回归生成）</span>
+    r=<span class="num">16</span>,                                   <span class="cm"># ★ 秩 — 最重要的超参数。8/16/32 是常用值</span>
+    lora_alpha=<span class="num">32</span>,                           <span class="cm"># ★ 缩放系数 — alpha=2×r 是经验最佳起点</span>
+    lora_dropout=<span class="num">0.05</span>,                         <span class="cm"># 在 adapter 上做 dropout，防止过拟合小数据集</span>
+    target_modules=[                        <span class="cm"># ★ 在哪些层加 adapter</span>
+        <span class="str">"q_proj"</span>, <span class="str">"v_proj"</span>                <span class="cm"># 最轻量方案：只在 Q 和 V 加。有效且快速</span>
+        <span class="cm"># 更全面的方案（效果更好但参数多一点）：</span>
+        <span class="cm"># "q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"</span>
+    ],
+    bias=<span class="str">"none"</span>,                            <span class="cm"># 不训练 bias，只训练 adapter 权重</span>
+)
+
+<span class="cm"># ─── Step 5: 把 LoRA adapter 挂到模型上 ───</span>
+model = get_peft_model(base_model, lora_config)
+
+<span class="cm"># 打印看看：70 亿参数里只有多少是可训练的？</span>
+model.print_trainable_parameters()
+<span class="cm"># → trainable params: 8,388,608 || all params: 6,746,325,504 || trainable: 0.1243%</span>
+<span class="cm"># 只有 0.12% 的参数需要训练！</span>
+
+<span class="cm"># ─── Step 6: 准备数据 ───</span>
+<span class="kw">def</span> <span class="fn">format_and_tokenize</span>(example):
+    text = <span class="str">f"### 指令: {example['instruction']}</span><span class="str">\n</span><span class="str">### 回答: {example['output']}"</span>
+    result = tokenizer(text, truncation=<span class="kw">True</span>, max_length=<span class="num">2048</span>)
+    result[<span class="str">"labels"</span>] = result[<span class="str">"input_ids"</span>].copy()
+    <span class="kw">return</span> result
+
+dataset = load_dataset(<span class="str">"yahma/alpaca-cleaned"</span>)
+tokenized_dataset = dataset.map(format_and_tokenize, remove_columns=dataset[<span class="str">"train"</span>].column_names)
+
+<span class="cm"># ─── Step 7: 训练参数 — 与全参数 SFT 的关键差异 ───</span>
+training_args = TrainingArguments(
+    output_dir=<span class="str">"./lora_output"</span>,
+    per_device_train_batch_size=<span class="num">4</span>,          <span class="cm"># LoRA 显存充足，batch 可以开到 4 甚至更大</span>
+    gradient_accumulation_steps=<span class="num">4</span>,
+    num_train_epochs=<span class="num">3</span>,
+    learning_rate=<span class="num">1e-4</span>,                      <span class="cm"># ★ LoRA 学习率可以比全参数 SFT 高 5~10 倍！</span>
+    warmup_ratio=<span class="num">0.03</span>,
+    lr_scheduler_type=<span class="str">"cosine"</span>,
+    fp16=<span class="kw">True</span>,
+    optim=<span class="str">"paged_adamw_8bit"</span>,               <span class="cm"># ★ 8-bit 优化器，比 32-bit Adam 再省 75% 显存</span>
+    logging_steps=<span class="num">10</span>,
+    save_strategy=<span class="str">"epoch"</span>,
+    save_total_limit=<span class="num">3</span>,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset[<span class="str">"train"</span>],
+    tokenizer=tokenizer,
+)
+trainer.train()
+
+<span class="cm"># ─── Step 8: 保存 LoRA 权重 ───</span>
+<span class="cm"># 只保存 adapter（通常 10~100MB），不保存整个模型</span>
+<span class="cm"># 一个基座模型可以配多个 adapter 切换不同能力</span>
+model.save_pretrained(<span class="str">"./lora_adapter"</span>)
+tokenizer.save_pretrained(<span class="str">"./lora_adapter"</span>)
+<span class="cm"># 保存后目录结构：</span>
+<span class="cm">#   adapter_model.safetensors  ← 只有 30MB（rank=16 时）</span>
+<span class="cm">#   adapter_config.json        ← LoRA 配置</span>
+<span class="cm">#   对比全参数 SFT：14GB 的完整模型！</span></pre>
+
+  <h3>5.3 推理：两种加载方式</h3>
+
+  <pre><span class="lang-label">Python — 推理</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># LoRA 推理有两种方式，选择取决于你的部署场景</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+<span class="kw">from</span> <span class="builtin">peft</span> <span class="kw">import</span> PeftModel
+
+<span class="cm"># ═══ 方式 A：动态加载（推荐实验阶段） ═══</span>
+<span class="cm"># 先加载基座模型，再用 PeftModel.from_pretrained 加载 adapter</span>
+<span class="cm"># 优势：可以随时切换不同 adapter，一个基座同时服务多个任务</span>
+<span class="cm"># 劣势：推理时多一层 adapter 前向计算（开销极小但非零）</span>
+base_model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"meta-llama/Llama-2-7b-hf"</span>,
+    torch_dtype=torch.bfloat16,
+    device_map=<span class="str">"auto"</span>,
+)
+model = PeftModel.from_pretrained(base_model, <span class="str">"./lora_adapter"</span>)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./lora_adapter"</span>)
+
+<span class="cm"># 现在可以推理了</span>
+inputs = tokenizer(<span class="str">"用 Python 写一个快速排序"</span>, return_tensors=<span class="str">"pt"</span>).to(model.device)
+outputs = model.generate(**inputs, max_new_tokens=<span class="num">512</span>)
+<span class="builtin">print</span>(tokenizer.decode(outputs[<span class="num">0</span>], skip_special_tokens=<span class="kw">True</span>))
+
+<span class="cm"># ═══ 方式 B：合并权重（推荐生产部署） ═══</span>
+<span class="cm"># 把 LoRA adapter 直接算进原始权重：W' = W₀ + (α/r)·BA</span>
+<span class="cm"># 合并后完全等价于普通模型 — 推理时零额外开销</span>
+<span class="cm"># 适合 vLLM / TensorRT-LLM 等高性能推理框架</span>
+merged_model = model.merge_and_unload()
+merged_model.save_pretrained(<span class="str">"./merged_lora"</span>)
+tokenizer.save_pretrained(<span class="str">"./merged_lora"</span>)
+
+<span class="cm"># 此后 merged_model 就是普通模型了，可以直接 vllm serve：</span>
+<span class="cm"># $ vllm serve ./merged_lora</span></pre>
+
+  <h3>5.4 学习率的关键差异</h3>
+
+  <pre><span class="lang-label">直观理解</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 为什么 LoRA 可以用更高的学习率？</span>
+<span class="cm">#</span>
+<span class="cm">#   全参数 SFT:                    LoRA:</span>
+<span class="cm">#   ──────────────                ────────</span>
+<span class="cm">#   你要同时微调 70 亿个参数        你只需要微调 800 万个参数</span>
+<span class="cm">#   每个参数的梯度方向很嘈杂       梯度集中在少数参数上，信号更清晰</span>
+<span class="cm">#   学习率太大会"震碎"预训练知识    原始知识被冻住了，不怕震荡</span>
+<span class="cm">#</span>
+<span class="cm">#   类比：                         类比：</span>
+<span class="cm">#   让你同时改写 100 本书的每一个字 让你在 100 本书的页边加批注</span>
+<span class="cm">#   改快了会改出一堆错别字         批注写重了也只是多画几条线</span>
+<span class="cm">#   所以必须慢慢改（LR = 2e-5）    所以可以大胆写（LR = 1e-4）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 6: 如何选择
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec6">
+  <h2>6. 如何选择：一张决策地图</h2>
+
+  <pre><span class="lang-label">决策树</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm">#   你只有 1 张 24GB 显卡？</span>
+<span class="cm">#     ├── 是 → QLoRA（别无选择，但效果足够了）</span>
+<span class="cm">#     └── 否 → 继续</span>
+<span class="cm">#</span>
+<span class="cm">#   你的数据量？</span>
+<span class="cm">#     ├── &lt; 1000 条   → LoRA（全参数必然过拟合）</span>
+<span class="cm">#     ├── 1000~5 万条 → LoRA 优先（性价比最高），全参数可选</span>
+<span class="cm">#     └── &gt; 10 万条    → 全参数 SFT（LoRA 的低秩瓶颈显现）</span>
+<span class="cm">#</span>
+<span class="cm">#   你需要同时维护多个能力版本吗？</span>
+<span class="cm">#     ├── 是（如：代码版 / 翻译版 / 客服版）</span>
+<span class="cm">#     │     → LoRA（一个基座 + 多个 adapter 切换，每个才 30MB）</span>
+<span class="cm">#     └── 否（只做一个垂直领域）</span>
+<span class="cm">#           → 资金充足就全参数 SFT，否则 LoRA</span>
+<span class="cm">#</span>
+<span class="cm">#   你需要极致性能（争 Benchmark 榜单）？</span>
+<span class="cm">#     ├── 是 → 先全参数 SFT 打基础，再用 LoRA+DPO 做偏好对齐</span>
+<span class="cm">#     └── 否 → LoRA 就够了</span>
+<span class="cm">#</span>
+<span class="cm">#   你的任务复杂度？</span>
+<span class="cm">#     ├── 简单：文本分类/情感分析   → LoRA rank=4~8 就够</span>
+<span class="cm">#     ├── 中等：指令遵循/翻译/摘要  → LoRA rank=16~32</span>
+<span class="cm">#     └── 复杂：数学推理/长代码生成  → 全参数 SFT 优先，或 LoRA rank=64+</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>6.1 场景速查表</h3>
+
+  <table>
+    <thead>
+      <tr><th>场景</th><th>推荐方案</th><th>理由</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1 张 RTX 4090，想做 SFT</td>
+        <td style="color:var(--green);">QLoRA</td>
+        <td>唯一能在消费级显卡上训练 7B 模型的方式</td>
+      </tr>
+      <tr>
+        <td>需要快速对比 5 种训练策略</td>
+        <td style="color:var(--green);">LoRA</td>
+        <td>训练快（几小时），可并行训练多个 adapter</td>
+      </tr>
+      <tr>
+        <td>只有 500 条高质量对话数据</td>
+        <td style="color:var(--green);">LoRA</td>
+        <td>小数据全参数极容易过拟合</td>
+      </tr>
+      <tr>
+        <td>公司要上线 AI 客服，有多领域</td>
+        <td style="color:var(--green);">LoRA 多 adapter</td>
+        <td>一个基座模型 + 售前/售后/投诉各一 adapter</td>
+      </tr>
+      <tr>
+        <td>8×A100，20 万条数据，打榜</td>
+        <td style="color:var(--red);">全参数 SFT</td>
+        <td>资源充足时追求上限，低秩假设不再必要</td>
+      </tr>
+      <tr>
+        <td>SFT 完想加 DPO 偏好对齐</td>
+        <td style="color:var(--green);">全参 SFT + LoRA DPO</td>
+        <td>SFT 打好基础，DPO 只需微调偏好即可</td>
+      </tr>
+      <tr>
+        <td>要把英文模型适配到中文</td>
+        <td style="color:var(--red);">全参数 SFT</td>
+        <td>语言迁移需要大幅改变权重分布，LoRA 容量不够</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 7: 进阶技巧 & 常见坑
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec7">
+  <h2>7. 进阶技巧 & 常见坑</h2>
+
+  <h3>7.1 如何选择 LoRA 的 rank？</h3>
+
+  <table>
+    <thead>
+      <tr><th>rank</th><th>参数量占比</th><th>适用场景</th><th>效果</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>r=4</td><td>~0.03%</td><td>简单风格迁移、语气调整</td><td>够用</td></tr>
+      <tr><td>r=8</td><td>~0.06%</td><td>大多数小数据集 NLP 任务</td><td style="color:var(--green);">推荐起点</td></tr>
+      <tr><td>r=16</td><td>~0.12%</td><td>指令微调的标准选择</td><td style="color:var(--green);">甜点值</td></tr>
+      <tr><td>r=32</td><td>~0.25%</td><td>复杂任务、大数据量</td><td>接近全参</td></tr>
+      <tr><td>r=64</td><td>~0.50%</td><td>代码生成、数学推理</td><td>≈全参</td></tr>
+      <tr><td>r=128+</td><td>~1%</td><td>数据量极大且追求极限</td><td>边际递减</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>经验法则：</strong>rank=16 是 95% 场景的甜点。如果任务极简单（文体迁移），降到 r=4~8 就够了。如果任务极复杂（数学证明），试 r=32~64。大多数情况下 r=16 与 r=64 差距在 1% 以内。<strong>alpha 通常设为 2×r</strong>，dropout 在 0.05~0.1。
+  </div>
+
+  <h3>7.2 target_modules：给哪些层加 adapter？</h3>
+
+  <pre><span class="lang-label">Python</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># target_modules 的选择直接影响 LoRA 的容量和效果</span>
+<span class="cm"># 不同的策略对应不同的参数量和训练效率</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 方案 1: 最轻量 — 只在 Q 和 V 投影上加 adapter（推荐起步）</span>
+<span class="cm"># 可训练参数: ~0.12%（Llama-7B 约 800 万）</span>
+<span class="cm"># 依据: Q 和 V 是 attention 中最重要的组件，K 和 O 的贡献相对较小</span>
+lora_light = LoraConfig(
+    target_modules=[<span class="str">"q_proj"</span>, <span class="str">"v_proj"</span>],
+    r=<span class="num">16</span>,
+)
+
+<span class="cm"># 方案 2: 标准 — 在全部 attention 投影上加 adapter（推荐）</span>
+<span class="cm"># 可训练参数: ~0.25%（Llama-7B 约 1700 万）</span>
+<span class="cm"># 效果比方案 1 略好，参数量仍然很小</span>
+lora_standard = LoraConfig(
+    target_modules=[<span class="str">"q_proj"</span>, <span class="str">"k_proj"</span>, <span class="str">"v_proj"</span>, <span class="str">"o_proj"</span>],
+    r=<span class="num">16</span>,
+)
+
+<span class="cm"># 方案 3: 全面 — attention + MLP（追求最佳效果）</span>
+<span class="cm"># 可训练参数: ~0.5%（Llama-7B 约 3400 万）</span>
+<span class="cm"># gate_proj/up_proj/down_proj 是 Llama MLP 的三个权重矩阵</span>
+<span class="cm"># 加上它们能让 adapter 也参与到 MLP 的信息变换中</span>
+lora_full = LoraConfig(
+    target_modules=[
+        <span class="str">"q_proj"</span>, <span class="str">"k_proj"</span>, <span class="str">"v_proj"</span>, <span class="str">"o_proj"</span>,     <span class="cm"># Attention 四件套</span>
+        <span class="str">"gate_proj"</span>, <span class="str">"up_proj"</span>, <span class="str">"down_proj"</span>,    <span class="cm"># MLP 三件套</span>
+    ],
+    r=<span class="num">16</span>,
+)
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 如何查看你的模型有哪些模块名？</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 打印所有 nn.Linear 层的名字，看看哪些适合加 adapter</span>
+<span class="kw">for</span> name, module <span class="kw">in</span> model.named_modules():
+    <span class="kw">if</span> <span class="builtin">isinstance</span>(module, torch.nn.Linear):
+        <span class="builtin">print</span>(name)
+<span class="cm"># 典型 Llama 输出：</span>
+<span class="cm">#   model.layers.0.self_attn.q_proj   ← 给这些加 adapter</span>
+<span class="cm">#   model.layers.0.self_attn.k_proj</span>
+<span class="cm">#   model.layers.0.self_attn.v_proj</span>
+<span class="cm">#   model.layers.0.self_attn.o_proj</span>
+<span class="cm">#   model.layers.0.mlp.gate_proj</span>
+<span class="cm">#   model.layers.0.mlp.up_proj</span>
+<span class="cm">#   model.layers.0.mlp.down_proj</span>
+<span class="cm">#   lm_head                      ← ⚠️ 通常不加 adapter 到 lm_head</span></pre>
+
+  <h3>7.3 常见坑与解决方案</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>⚠️ 坑 1: LoRA 训练 loss 不下降</h4>
+      <p><strong>原因：</strong>学习率太小或 rank 太大。<br><strong>解决：</strong>试 r=8 配合 lr=2e-4，如果还不行，检查数据格式——labels 是否只计算了回答部分（而非指令部分）。</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ 坑 2: 合并后效果变差</h4>
+      <p><strong>原因：</strong>合并时精度丢失（BF16→FP16 转换）。<br><strong>解决：</strong>全程使用 BF16，合并后用 <code>model.half()</code> 转为 FP16 再保存。</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ 坑 3: QLoRA 训练 OOM</h4>
+      <p><strong>原因：</strong>batch_size 太大或序列太长。<br><strong>解决：</strong>降 batch_size、开 gradient_checkpointing、用 paged_adamw_8bit 优化器、缩短 max_length。</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ 坑 4: 全参数 SFT 后原始能力退化</h4>
+      <p><strong>原因：</strong>灾难性遗忘，新数据覆盖了旧知识。<br><strong>解决：</strong>混入 5%-10% 的通用数据（如维基百科片段）、降低学习率、减少 epoch。</p>
+    </div>
+  </div>
+
+  <h3>7.4 DPO 偏好对齐的 LoRA 用法</h3>
+
+  <pre><span class="lang-label">Python — SFT + LoRA DPO 两阶段</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 业界常用「两阶段」方案：</span>
+<span class="cm">#   阶段 1: 全参数 SFT — 注入领域知识和指令遵循能力</span>
+<span class="cm">#   阶段 2: LoRA + DPO — 用偏好数据精调风格、安全性和对话质量</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> DPOTrainer, DPOConfig
+<span class="kw">from</span> <span class="builtin">peft</span> <span class="kw">import</span> LoraConfig
+
+<span class="cm"># 加载阶段 1 训练好的全参数模型</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"./sft_final"</span>, torch_dtype=torch.bfloat16
+)
+
+<span class="cm"># 用 LoRA 做 DPO：只需要微调偏好，不需要重训整个模型</span>
+lora_config = LoraConfig(
+    r=<span class="num">16</span>, lora_alpha=<span class="num">32</span>,
+    target_modules=[<span class="str">"q_proj"</span>, <span class="str">"v_proj"</span>],
+)
+
+<span class="cm"># DPO 数据格式：{"prompt": "...", "chosen": "好的回答", "rejected": "差的回答"}</span>
+<span class="cm"># 模型学的是「chosen 比 rejected 更好」，而不是「只要生成 chosen」</span>
+<span class="cm"># 这让模型学会人类偏好 — 什么风格/语气/态度是好的</span>
+dpo_trainer = DPOTrainer(
+    model=model,
+    ref_model=<span class="kw">None</span>,                  <span class="cm"># None 时自动从 model 复制一份冻结的参考模型</span>
+    peft_config=lora_config,          <span class="cm"># DPO 阶段用 LoRA 就够</span>
+    args=DPOConfig(
+        output_dir=<span class="str">"./dpo_output"</span>,
+        per_device_train_batch_size=<span class="num">2</span>,
+        learning_rate=<span class="num">5e-5</span>,         <span class="cm"># DPO 学习率通常比 SFT 更低</span>
+        num_train_epochs=<span class="num">1</span>,           <span class="cm"># DPO 通常 1 个 epoch 就够了，多了容易过拟合</span>
+        beta=<span class="num">0.1</span>,                      <span class="cm"># KL 散度权重 — 控制偏离参考模型的程度</span>
+        logging_steps=<span class="num">10</span>,
+    ),
+    train_dataset=dpo_dataset,
+    tokenizer=tokenizer,
+)
+dpo_trainer.train()
+model.save_pretrained(<span class="str">"./dpo_lora_adapter"</span>)</pre>
+
+  <h3>7.5 训练监控：如何判断训练是否健康</h3>
+
+  <pre><span class="lang-label">训练日志解读</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 看 WandB / TensorBoard 时关注这几个信号：</span>
+<span class="cm">#</span>
+<span class="cm">#   1. Loss 曲线</span>
+<span class="cm">#      ✅ 健康: 平滑下降，3 个 epoch 后趋于平缓</span>
+<span class="cm">#      ❌ Loss 震荡不降 → 学习率太大，降 2~5 倍重试</span>
+<span class="cm">#      ❌ Loss 一直在降 → 可能在过拟合，看 eval loss</span>
+<span class="cm">#      ❌ Loss 突然爆炸（NaN） → 梯度爆炸，开梯度裁剪 (max_grad_norm=1.0)</span>
+<span class="cm">#</span>
+<span class="cm">#   2. Eval Loss 曲线</span>
+<span class="cm">#      ✅ 健康: eval loss 随 train loss 一起下降</span>
+<span class="cm">#      ❌ train loss 降但 eval loss 升 → 过拟合！减 epoch、加 dropout、减 rank</span>
+<span class="cm">#</span>
+<span class="cm">#   3. GPU 利用率</span>
+<span class="cm">#      ✅ 健康: GPU-Util 保持在 80%~98%</span>
+<span class="cm">#      ❌ GPU-Util 很低（如 30%） → batch_size 太小或 data loading 是瓶颈</span>
+<span class="cm">#      ❌ GPU 显存接近爆满（如 23.5/24 GB） → 随时 OOM，降 batch</span>
+<span class="cm">#</span>
+<span class="cm">#   4. 学习率曲线</span>
+<span class="cm">#      ✅ 健康: warmup 逐步上升 → 峰值 → cosine 退火降到接近 0</span>
+<span class="cm">#      ❌ warmup 阶段 loss 剧烈震荡 → warmup 步数太少</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+   SECTION 8: 总结
+   ═══════════════════════════════════════════════════════ -->
+<section id="sec8">
+  <h2>8. 总结 & 速查表</h2>
+
+  <div class="highlight">
+    <strong>一句话总结：</strong>LoRA 本质是「低秩假设」—— 模型微调所需的变化矩阵 ΔW 是低秩的，因此可以用两个小矩阵 BA 来高效逼近。全参数 SFT 没有这个假设，容量更大但代价也更高。实践中，数据少用 LoRA 防过拟合，数据多用全参数 SFT 追求上限，或者两阶段结合：SFT 打基础 + LoRA 做对齐。
+  </div>
+
+  <h3>8.1 核心超参数速查</h3>
+
+  <table>
+    <thead>
+      <tr><th>参数</th><th>全参数 SFT 推荐值</th><th>LoRA 推荐值</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>学习率</td><td>1e-6 ~ 2e-5</td><td>1e-4 ~ 5e-4</td></tr>
+      <tr><td>Batch size (有效)</td><td>32 ~ 128（靠梯度累积）</td><td>16 ~ 64</td></tr>
+      <tr><td>Epoch</td><td>1 ~ 3</td><td>2 ~ 5</td></tr>
+      <tr><td>Warmup ratio</td><td>0.03</td><td>0.03 ~ 0.1</td></tr>
+      <tr><td>优化器</td><td>adamw_torch (FP32)</td><td>paged_adamw_8bit</td></tr>
+      <tr><td>精度</td><td>BF16 + 混合精度</td><td>BF16（QLoRA: NF4 + BF16 计算）</td></tr>
+      <tr><td>Rank (r)</td><td>—</td><td>16（8~64 范围）</td></tr>
+      <tr><td>Alpha</td><td>—</td><td>2×r（如 r=16 则 alpha=32）</td></tr>
+      <tr><td>Dropout</td><td>—</td><td>0.05 ~ 0.1</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 关键命令速查</h3>
+
+  <pre><span class="lang-label">Shell</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 安装所有依赖</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+pip install transformers peft accelerate bitsandbytes datasets trl wandb
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 查看 GPU 显存使用（实时监控）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+watch -n <span class="num">1</span> nvidia-smi
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># LoRA adapter 合并到基座模型（用于 vLLM 部署）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+python -c <span class="str">"
+from peft import PeftModel
+from transformers import AutoModelForCausalLM
+base = AutoModelForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf')
+model = PeftModel.from_pretrained(base, './lora_adapter')
+merged = model.merge_and_unload()
+merged.save_pretrained('./merged_model')
+"</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># vLLM 部署（支持 LoRA adapter 热切换）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+vllm serve meta-llama/Llama-<span class="num">2</span>-<span class="num">7</span>b-hf \
+    --enable-lora \
+    --lora-modules code=<span class="str">./code_adapter</span> translate=<span class="str">./translate_adapter</span></pre>
+
+  <h3>8.3 推荐学习路径</h3>
+
+  <pre><span class="lang-label">学习路线</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm">#   第 1 步: 先用 QLoRA 在 Colab / 单 3090 上跑通一个小实验</span>
+<span class="cm">#           数据集: alpaca-cleaned（5 万条）, rank=16, 3 epochs</span>
+<span class="cm">#           目标: 感受训练流程、看 loss 下降、体验推理效果</span>
+<span class="cm">#</span>
+<span class="cm">#   第 2 步: 对比实验 — 同数据集，全参数 SFT vs LoRA</span>
+<span class="cm">#           用 lm-evaluation-harness 跑 MMLU/GSM8K 等 Benchmark</span>
+<span class="cm">#           记录两种方案的效果差距和训练成本</span>
+<span class="cm">#</span>
+<span class="cm">#   第 3 步: 学习 DPO/RLHF 偏好对齐</span>
+<span class="cm">#           用全参数 SFT 打底，LoRA+DPO 做对齐</span>
+<span class="cm">#           感受「知识注入」和「偏好调整」两个阶段的不同</span>
+<span class="cm">#</span>
+<span class="cm">#   第 4 步: 生产部署</span>
+<span class="cm">#           合并 LoRA → vLLM/TGI 部署 → 压测 → 监控</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>8.4 延伸阅读</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>📄 LoRA 原始论文</h4>
+      <p>Hu et al., 2021 — "LoRA: Low-Rank Adaptation of Large Language Models"<br>arXiv: 2106.09685 — 提出了低秩适配的核心思想。</p>
+    </div>
+    <div class="card">
+      <h4>📄 QLoRA 论文</h4>
+      <p>Dettmers et al., 2023 — "QLoRA: Efficient Finetuning of Quantized LLMs"<br>arXiv: 2305.14314 — 4-bit + LoRA，让消费级显卡训练大模型成为现实。</p>
+    </div>
+    <div class="card">
+      <h4>📄 Intrinsic Dimension</h4>
+      <p>Aghajanyan et al., 2021 — "Intrinsic Dimensionality Explains the Effectiveness of Language Model Fine-Tuning"<br>arXiv: 2012.13255 — LoRA 有效性的理论基础。</p>
+    </div>
+    <div class="card">
+      <h4>📄 DoRA</h4>
+      <p>Liu et al., 2024 — "DoRA: Weight-Decomposed Low-Rank Adaptation"<br>arXiv: 2402.09353 — LoRA 的改进版本，将权重分解为幅度和方向。</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  📘 LoRA vs SFT 全参数微调 · 教学文档 · 从入门到精通<br>
+  由 <a href="https://github.com/2143616">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span> ·
+  <span style="color: var(--fg2);">最后更新: 2026-07-17</span>
+</div>
+
+</div><!-- /.main -->
+
+</body>
+</html>
