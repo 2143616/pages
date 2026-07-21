@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型全参数训练 — SFT · RLHF · DPO 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --fg: #e6edf3; --fg2: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --teal: #56d4dd; --pink: #f778ba;
+  --border: #30363d; --code-bg: #1c2128;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.8;
+  display: flex;
+}
+.toc {
+  position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  padding: 30px 20px; overflow-y: auto; z-index: 10;
+}
+.toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg2); margin-bottom: 18px; }
+.toc ul { list-style: none; }
+.toc ul li { margin-bottom: 3px; }
+.toc ul li a {
+  display: block; padding: 5px 10px; border-radius: 5px;
+  color: var(--fg2); text-decoration: none; font-size: 13px; transition: all 0.15s;
+}
+.toc ul li a:hover { background: var(--bg3); color: var(--fg); }
+.toc ul li a.active { background: rgba(88,166,255,0.12); color: var(--accent); }
+.main { margin-left: 260px; padding: 60px 80px; max-width: 1000px; width: 100%; }
+.header {
+  text-align: center; padding: 60px 0 50px;
+  border-bottom: 1px solid var(--border); margin-bottom: 50px;
+}
+.header h1 {
+  font-size: 2.6em; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--pink), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 14px;
+}
+.header p { color: var(--fg2); font-size: 1.05em; max-width: 700px; margin: 0 auto; }
+.header .tags { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { background: var(--bg3); color: var(--fg2); padding: 5px 16px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border); }
+section { margin-bottom: 60px; padding-top: 20px; }
+h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+h2::before { content: "# "; color: var(--accent); font-weight: 400; }
+h3 { font-size: 1.3em; color: var(--teal); margin: 36px 0 16px; font-weight: 600; }
+h4 { font-size: 1.1em; color: var(--pink); margin: 24px 0 12px; font-weight: 600; }
+p { color: var(--fg2); margin-bottom: 16px; font-size: 15px; }
+strong { color: var(--fg); }
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px 24px; overflow-x: auto;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 12.5px; line-height: 1.7; position: relative; margin: 20px 0;
+}
+pre span.lang-label {
+  position: absolute; top: 10px; right: 14px; font-size: 11px;
+  color: var(--fg2); background: var(--bg3); padding: 2px 10px;
+  border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.kw  { color: #ff7b72; } .fn  { color: #d2a8ff; }
+.str { color: #a5d6ff; } .cm  { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; } .op  { color: #ffa657; }
+.builtin { color: #58a6ff; } .dec { color: #f778ba; } .cls { color: #ffa657; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+thead th { background: var(--bg3); color: var(--fg); padding: 12px 16px; text-align: left; font-weight: 600; border: 1px solid var(--border); }
+tbody td { padding: 10px 16px; border: 1px solid var(--border); color: var(--fg2); }
+tbody tr:hover { background: var(--bg2); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { color: var(--accent); margin: 0 0 8px; font-size: 1em; }
+.card p { font-size: 13.5px; margin: 0; }
+.highlight {
+  background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent);
+  padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; color: var(--fg);
+}
+.highlight strong { color: var(--accent); }
+.info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
+.info-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+.arch-box {
+  border: 1px dashed var(--border); padding: 14px 20px; margin: 10px 0; border-radius: 8px;
+  background: var(--bg2); font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--fg);
+  line-height: 1.9;
+}
+.arch-box .label { color: var(--teal); font-weight: 700; }
+.arch-box .arrow { color: var(--purple); }
+.formula {
+  text-align: center; padding: 18px 0; font-size: 1.15em;
+  color: var(--fg); font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.05em;
+}
+.math { color: var(--purple); font-style: italic; }
+.footer { text-align: center; padding: 40px 0 30px; border-top: 1px solid var(--border); margin-top: 60px; color: var(--fg2); font-size: 13px; }
+.footer a { color: var(--accent); text-decoration: none; }
+@media (max-width: 900px) {
+  .toc { display: none; } .main { margin-left: 0; padding: 30px 20px; }
+  .header h1 { font-size: 1.6em; } h2 { font-size: 1.4em; }
+  pre { padding: 16px 14px; font-size: 11px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <h3>📑 目录</h3>
+  <ul>
+    <li><a href="#sec1">1. 全景：大模型训练的完整链路</a></li>
+    <li><a href="#sec2">2. Pre-training 预训练 — 打地基</a></li>
+    <li><a href="#sec3">3. SFT 指令微调 — 学说话</a></li>
+    <li><a href="#sec4">4. RLHF — 学品位（上）</a></li>
+    <li><a href="#sec5">5. DPO — 学品位（下）</a></li>
+    <li><a href="#sec6">6. RLHF vs DPO 深度对决</a></li>
+    <li><a href="#sec7">7. 新方法：ORPO / GRPO / KTO</a></li>
+    <li><a href="#sec8">8. 选型指南 & 速查表</a></li>
+  </ul>
+</nav>
+
+<div class="main">
+
+<div class="header">
+  <h1>🧠 大模型全参数训练方法</h1>
+  <p>SFT · RLHF · DPO · ORPO · GRPO — 从预训练到对齐，彻底搞懂 LLM 训练的每一种范式</p>
+  <div class="tags">
+    <span>⚡ SFT</span>
+    <span>🎯 RLHF</span>
+    <span>🔥 DPO</span>
+    <span>🧪 GRPO</span>
+    <span>🐍 PyTorch</span>
+    <span>🤗 Transformers</span>
+    <span>📘 教学文档</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SEC 1 ═══ -->
+<section id="sec1">
+  <h2>1. 全景：大模型训练的完整链路</h2>
+
+  <p>训练一个大模型就像<strong>培养一个孩子</strong>。你不能一上来就教他"怎么做人"，而是先让他认字、再学说话、最后才教规矩和品位。这个过程恰好对应 LLM 训练的四个阶段：</p>
+
+  <div class="arch-box">
+    <span class="label">阶段 1: Pre-training（预训练）— 认字</span><br>
+    &nbsp;&nbsp;喂他全互联网的文本，让他学会"下一个词是什么"<br>
+    &nbsp;&nbsp;学到的：语法、常识、推理模式、世界知识<br>
+    &nbsp;&nbsp;成本：占总训练成本的 <strong>99%+</strong><br><br>
+    <span class="arrow">↓</span><br>
+    <span class="label">阶段 2: SFT（指令微调）— 学说话</span><br>
+    &nbsp;&nbsp;用高质量的"问题→答案"对教他对话格式<br>
+    &nbsp;&nbsp;学到的："用户这样问 → 我应该这样答"<br>
+    &nbsp;&nbsp;成本：几十万条数据，几小时到几天<br><br>
+    <span class="arrow">↓</span><br>
+    <span class="label">阶段 3: 偏好对齐（RLHF / DPO）— 学品位</span><br>
+    &nbsp;&nbsp;告诉他"哪种回答更好"——有用的、无害的、诚实的<br>
+    &nbsp;&nbsp;学到的："不是能回答就行，要回答得让人舒服"<br>
+    &nbsp;&nbsp;这是 ChatGPT 从"能用"到"好用"的关键一跃<br><br>
+    <span class="arrow">↓</span><br>
+    <span class="label">阶段 4（可选）: 推理增强（GRPO）— 学思考</span><br>
+    &nbsp;&nbsp;对数学、代码等有明确对错的任务，用规则奖励自我进化<br>
+    &nbsp;&nbsp;学到的："先想一想再回答"（像 DeepSeek-R1 那样）<br>
+  </div>
+
+  <table>
+    <thead><tr><th>阶段</th><th>目标函数</th><th>数据</th><th>学到什么</th><th>代表</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pre-training</strong></td><td>Next Token Prediction</td><td>互联网文本（万亿 token）</td><td>语言能力、知识储备</td><td>Llama, GPT-3</td></tr>
+      <tr><td><strong>SFT</strong></td><td>Next Token Prediction</td><td>QA 对话对（1~100 万条）</td><td>指令遵循、对话格式</td><td>所有 LLM</td></tr>
+      <tr><td><strong>RLHF</strong></td><td>PPO + Reward Model</td><td>偏好标注（数万条）</td><td>有用性、无害性、诚实性</td><td>ChatGPT, Claude</td></tr>
+      <tr><td><strong>DPO</strong></td><td>偏好分类（无 Reward Model）</td><td>偏好标注（同 RLHF）</td><td>同上，但更简单</td><td>Llama 2/3, Qwen</td></tr>
+      <tr><td><strong>GRPO</strong></td><td>组内相对排序</td><td>规则打分（无需人工标注）</td><td>推理能力、自我纠错</td><td>DeepSeek-R1</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 2 ═══ -->
+<section id="sec2">
+  <h2>2. Pre-training 预训练 — 打地基</h2>
+
+  <p>预训练虽然不属于"微调"，但<strong>它是所有后续步骤的基础</strong>，不理解它就不知道为什么 SFT 用几千条数据就能见效。</p>
+
+  <h3>2.1 目标函数：Next Token Prediction</h3>
+
+  <div class="formula">
+    Loss = -log P( token<sub>t</sub> | token<sub>0</sub>, token<sub>1</sub>, ..., token<sub>t-1</sub> )
+  </div>
+
+  <p>模型看到的永远是"前文"，要预测的永远是"下一个词"。这个目标<strong>极其简单但极度高效</strong>——互联网上的每一段文字天然就是这个任务的训练数据，不需要人工标注。</p>
+
+  <pre><span class="lang-label">Python — Next Token Prediction 的本质</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 预训练就是反复做这件事：给前文 → 猜下一个词 → 和正确答案对比</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+
+<span class="cm"># 假设有一句话："人工智能将改变世界"</span>
+tokens = [<span class="num">101</span>, <span class="num">345</span>, <span class="num">678</span>, <span class="num">901</span>, <span class="num">234</span>, <span class="num">567</span>, <span class="num">890</span>]  <span class="cm"># 每个数字是一个 token ID</span>
+
+<span class="cm"># 模型看前 6 个 token，预测第 7 个</span>
+input_ids = tokens[:<span class="num">6</span>]                                      <span class="cm"># [101,345,678,901,234,567] — 前 6 个作为输入</span>
+target    = tokens[<span class="num">6</span>]                                        <span class="cm"># 890 — 真正应该预测的第 7 个</span>
+
+<span class="cm"># 前向传播：模型对每个位置输出词汇表大小的 logits</span>
+logits = model(torch.tensor([input_ids]))                    <span class="cm"># (1, seq_len, vocab_size)</span>
+
+<span class="cm"># 只关心最后一个位置的预测（因为我们只预测"下一个词"）</span>
+last_logits = logits[<span class="num">0</span>, -<span class="num">1</span>, :]                              <span class="cm"># (vocab_size,) — 每个词的概率</span>
+
+<span class="cm"># CrossEntropy = -log(softmax(logits)[target])</span>
+<span class="cm"># 本质：正确答案的概率越高 → loss 越小</span>
+loss = F.cross_entropy(last_logits.unsqueeze(<span class="num">0</span>), torch.tensor([target]))
+<span class="kw">print</span>(<span class="str">f"Loss: {loss.item():.4f}"</span>)  <span class="cm"># 预训练开始时 loss ~10，结束时可降到 ~2</span></pre>
+
+  <div class="highlight">
+    <strong>为什么这个简单的目标能学会一切？</strong>因为"预测下一个词"这个任务隐含地要求模型理解语法（形容词后面通常是名词）、掌握常识（"天空是___" → 蓝色）、学会推理（"因为下雨，所以地面___" → 湿了）、甚至记住知识（"中国的首都是___" → 北京）。<strong>一个任务，涵盖了一切语言能力。</strong>
+  </div>
+
+  <h3>2.2 预训练 vs 微调的本质区别</h3>
+
+  <table>
+    <thead><tr><th></th><th>预训练</th><th>微调 (SFT/RLHF/DPO)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>数据规模</strong></td><td>万亿 token</td><td>几千~几十万条</td></tr>
+      <tr><td><strong>数据质量</strong></td><td>参差不齐（互联网原始文本）</td><td>精心筛选和标注</td></tr>
+      <tr><td><strong>学会的能力</strong></td><td>通用语言能力（"会说话"）</td><td>特定行为模式（"会聊天"）</td></tr>
+      <tr><td><strong>目标函数</strong></td><td>Next Token Prediction</td><td>Next Token Prediction / PPO / DPO Loss</td></tr>
+      <tr><td><strong>成本占比</strong></td><td>99%+（百万~千万美元）</td><td>&lt;1%（几千~几万美元）</td></tr>
+      <tr><td><strong>类比</strong></td><td>上完 12 年中小学</td><td>入职培训 3 天</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 3 ═══ -->
+<section id="sec3">
+  <h2>3. SFT（Supervised Fine-Tuning）— 指令微调</h2>
+
+  <h3>3.1 什么是 SFT？</h3>
+
+  <p>SFT 是让模型从"续写机器"变成"聊天助手"的<strong>第一步</strong>。预训练模型只会续写——你输入"请帮我写一首诗"，它可能续写"请帮我写一首诗吧，我已经等了很久了"，而不是真的写诗。</p>
+
+  <p>SFT 用<strong>高质量的"问题→答案"对</strong>训练模型，让它学会：当用户给出某种格式的输入时，应该以某种格式输出。</p>
+
+  <div class="info-box">
+    <div class="label">💡 SFT 的本质</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      SFT 的<strong>目标函数和预训练完全一样</strong>——都是 Next Token Prediction。区别只在于<strong>数据</strong>：预训练的数据是"随便什么文本"，SFT 的数据是"问题→答案对"。模型并不"知道"自己正在被 SFT，它只是继续做"预测下一个 token"这件事，但训练数据变了，所以行为变了。
+    </p>
+  </div>
+
+  <h3>3.2 SFT 的数据格式</h3>
+
+  <pre><span class="lang-label">SFT 数据格式示例</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># SFT 的每条数据就是一个"对话"，有多种模板风格</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 模板 1: Alpaca 格式（简单直接）</span>
+<span class="str">"Below is an instruction that describes a task.\n\n</span>
+<span class="str">### Instruction:\n用 Python 写一个快速排序\n\n</span>
+<span class="str">### Response:\n```python\ndef quicksort(arr):\n    ...```"</span>
+
+<span class="cm"># 模板 2: ChatML 格式（OpenAI 风格，支持多轮对话）</span>
+<span class="str">"&lt;|im_start|&gt;system\n你是一个有用的助手&lt;|im_end|&gt;\n</span>
+<span class="str">&lt;|im_start|&gt;user\n什么是光合作用？&lt;|im_end|&gt;\n</span>
+<span class="str">&lt;|im_start|&gt;assistant\n光合作用是植物利用阳光...&lt;|im_end|&gt;"</span>
+
+<span class="cm"># 模板 3: Llama 3 格式（最现代的对话模板）</span>
+<span class="str">"&lt;|begin_of_text|&gt;</span>
+<span class="str">&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;\n\n</span>
+<span class="str">用 Python 写一个快速排序</span>
+<span class="str">&lt;|eot_id|&gt;</span>
+<span class="str">&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;\n\n</span>
+<span class="str">```python\ndef quicksort(arr):\n    ...```</span>
+<span class="str">&lt;|eot_id|&gt;"</span></pre>
+
+  <h3>3.3 关键技巧：只在回答部分计算 Loss</h3>
+
+  <pre><span class="lang-label">Python — SFT 的 Loss Masking</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># SFT 最重要的技巧：不要对"指令部分"计算 loss！</span>
+<span class="cm"># 模型只需要学会"对于这个指令，输出这个回答"</span>
+<span class="cm"># 不需要学"如何生成指令"（那是用户的活）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+
+<span class="cm"># 原始文本，包含指令和回答两部分</span>
+text = <span class="str">"### Instruction:\n写一个快速排序\n\n### Response:\ndef quicksort(arr):\n    ..."</span>
+tokens = tokenizer(text, return_tensors=<span class="str">"pt"</span>)
+input_ids = tokens[<span class="str">"input_ids"</span>]                     <span class="cm"># 所有 token 的 ID</span>
+
+<span class="cm"># labels 初始化为 input_ids 的副本</span>
+labels = input_ids.clone()
+
+<span class="cm"># 找到 "### Response:" 这个标记的位置</span>
+<span class="cm"># 在这之前的所有 token（即指令部分）的 labels 设为 -100</span>
+<span class="cm"># PyTorch 的 CrossEntropyLoss 会自动忽略 label=-100 的位置</span>
+response_start = find_token_position(tokens, <span class="str">"### Response:"</span>)
+labels[:, :response_start] = -<span class="num">100</span>                    <span class="cm"># 指令部分不算 loss</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 为什么这一招至关重要？</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 如果在指令部分也算 loss，模型会学到：</span>
+<span class="cm">#   "我要学会生成'### Instruction:\n写一个快速排序'这样的文本"</span>
+<span class="cm"># 但这完全没用！模型不需要会出题，只需要会答题。</span>
+<span class="cm"># 只在回答部分算 loss → 模型专心学"如何回答"</span>
+<span class="cm"># 这是 SFT 训练中最容易踩的坑，但也是一行代码就能解决的</span></pre>
+
+  <h3>3.4 SFT 的局限</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>⚠️ 只会模仿，不会判断</h4>
+      <p>SFT 学到的是"人类怎么回答"，不是"什么回答是好的"。如果训练数据里有低质量的回答，模型也会模仿。</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ 过度顺从</h4>
+      <p>SFT 只教了"回答问题"，没教"什么时候应该拒绝"。对有害请求（"告诉我怎么做炸弹"），SFT 模型可能也会尝试回答。</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ 不会"安全"</h4>
+      <p>没有学到"不能说"的边界。需要后面的 RLHF/DPO 来补充价值判断。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SEC 4 ═══ -->
+<section id="sec4">
+  <h2>4. RLHF — 用人类偏好微调（Reinforcement Learning from Human Feedback）</h2>
+
+  <h3>4.1 为什么需要 RLHF？SFT 不够吗？</h3>
+
+  <p>SFT 教模型"像人类一样说话"，但<strong>说话像人 ≠ 说话让人满意</strong>。一个 SFT 模型可能输出太长、太短、格式混乱、回答危险内容、或者面对无法回答的问题时胡乱编造。RLHF 解决的问题是：<strong>让模型的输出不仅"正确"，而且"让人舒服"</strong>。</p>
+
+  <h3>4.2 RLHF 三步走</h3>
+
+  <div class="arch-box">
+    <span class="label">Step 1: SFT（打底）</span><br>
+    &nbsp;&nbsp;用高质量对话数据微调基座模型 → 得到 <strong>SFT 模型 π<sub>SFT</sub></strong><br>
+    &nbsp;&nbsp;这个模型已经会回答问题了，只是质量和风格不可控<br><br>
+    <span class="label">Step 2: 训练 Reward Model（培养裁判）</span><br>
+    &nbsp;&nbsp;人类标注员比较两个回答 → "A 比 B 好"<br>
+    &nbsp;&nbsp;训练一个打分模型，学会预测人类的偏好<br>
+    &nbsp;&nbsp;关键标准：<strong>Helpful（有用）+ Harmless（无害）+ Honest（诚实）</strong><br><br>
+    <span class="label">Step 3: PPO 强化学习（用裁判训练选手）</span><br>
+    &nbsp;&nbsp;SFT 模型生成回答 → Reward Model 打分 → PPO 更新模型<br>
+    &nbsp;&nbsp;目标：<strong>最大化 Reward，同时不偏离 SFT 模型太远</strong>
+  </div>
+
+  <h3>4.3 Step 2 深入：Reward Model 的数学</h3>
+
+  <p>Reward Model 本质是一个<strong>对比学习</strong>任务。给定同一个 prompt 的两个回答 y<sub>win</sub>（好的）和 y<sub>lose</sub>（差的）：</p>
+
+  <div class="formula">
+    Loss<sub>reward</sub> = -log σ( R(x, y<sub>win</sub>) - R(x, y<sub>lose</sub>) )
+  </div>
+
+  <p>其中 σ 是 sigmoid 函数。这个 loss 的含义是：<strong>让 Reward Model 给"好回答"打更高的分、给"差回答"打更低的分</strong>。</p>
+
+  <pre><span class="lang-label">Python — Reward Model 训练</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># Reward Model 通常就是从 SFT 模型改的 — 把最后的 lm_head</span>
+<span class="cm"># 换成一个标量输出层（输出一个分数而非词汇表大小的 logits）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">class</span> <span class="cls">RewardModel</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>, base_model):
+        <span class="kw">super</span>().<span class="fn">__init__</span>()
+        <span class="builtin">self</span>.transformer = base_model.transformer  <span class="cm"># 复用预训练的 Transformer 本体</span>
+        <span class="builtin">self</span>.reward_head = nn.Linear(hidden_size, <span class="num">1</span>)  <span class="cm"># 只改最后一层：输出一个标量</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, input_ids, attention_mask):
+        hidden = <span class="builtin">self</span>.transformer(input_ids, attention_mask)
+        <span class="cm"># 取最后一个 token 的 hidden state → 标量 reward</span>
+        reward = <span class="builtin">self</span>.reward_head(hidden[<span class="str">"last_hidden_state"</span>][:, -<span class="num">1</span>, :])
+        <span class="kw">return</span> reward.squeeze(-<span class="num">1</span>)  <span class="cm"># (batch,) — 每个样本一个分数</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 训练时：对每个 prompt，人类标注了 win 和 lose 两个回答</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+prompt = <span class="str">"请解释量子计算"</span>
+y_win  = <span class="str">"量子计算利用量子比特的叠加态..."</span>   <span class="cm"># 人类标注: 这个更好</span>
+y_lose = <span class="str">"量子计算是一种计算方式。"</span>          <span class="cm"># 人类标注: 这个太简单</span>
+
+r_win  = reward_model(prompt + y_win)         <span class="cm"># Reward Model 给好回答打分</span>
+r_lose = reward_model(prompt + y_lose)        <span class="cm"># Reward Model 给差回答打分</span>
+
+loss = -torch.log(torch.sigmoid(r_win - r_lose))  <span class="cm"># Bradley-Terry Loss</span>
+<span class="cm"># 想让 r_win >> r_lose → sigmoid(大正数) → log(≈1) → loss 小</span></pre>
+
+  <h3>4.4 Step 3 深入：PPO 的目标函数</h3>
+
+  <p>PPO（Proximal Policy Optimization）是 RLHF 的核心算法。它会告诉模型：<strong>多生成 Reward 高的回答，但别跑太远</strong>。</p>
+
+  <div class="formula">
+    maximize &nbsp; 𝔼[ R(x, y) ] - β · KL( π<sub>θ</sub>(y|x) ‖ π<sub>SFT</sub>(y|x) )
+  </div>
+
+  <div class="highlight">
+    <strong>两项的含义：</strong><br>
+    <strong>第一项 𝔼[R(x,y)]：</strong>让生成的回答获得更高的 Reward 分数（更有用、更无害、更诚实）<br>
+    <strong>第二项 β·KL：</strong>惩罚当前模型（π<sub>θ</sub>）和 SFT 模型（π<sub>SFT</sub>）之间的差异<br>
+    &nbsp;&nbsp;&nbsp;→ 为什么需要这个惩罚？如果没有它，模型会发现："我只要一直说'你太好了！'就能拿高分"——这种现象叫 <strong>Reward Hacking（奖励作弊）</strong><br>
+    &nbsp;&nbsp;&nbsp;→ KL 惩罚保证模型不会为了高分而胡说八道，保持在 SFT 模型附近
+  </div>
+
+  <pre><span class="lang-label">Python — PPO 的核心逻辑</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># PPO 需要同时运行 4 个模型：</span>
+<span class="cm">#   1. Policy Model (π_θ)        — 训练目标，正在被优化</span>
+<span class="cm">#   2. Reference Model (π_SFT)   — SFT 模型，冻结，用于计算 KL 惩罚</span>
+<span class="cm">#   3. Reward Model (R)          — 打分裁判，冻结</span>
+<span class="cm">#   4. Value Model (V)           — 估算"未来能得多少分"，用于计算 advantage</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="kw">for</span> batch <span class="kw">in</span> dataloader:
+    <span class="cm"># Step 1: 用 Policy Model 生成回答（注意：是当前正在训练的模型！）</span>
+    responses = policy_model.generate(batch[<span class="str">"prompt"</span>])  <span class="cm"># 每个 prompt 生成一个回答</span>
+
+    <span class="cm"># Step 2: Reward Model 打分</span>
+    rewards = reward_model(batch[<span class="str">"prompt"</span>], responses)  <span class="cm"># 每个回答一个分数</span>
+
+    <span class="cm"># Step 3: 计算 KL 散度 — 当前模型和 SFT 模型的概率分布差异</span>
+    logprob_curr = policy_model.logprob(responses)    <span class="cm"># 当前模型对这些回答的概率</span>
+    logprob_ref  = reference_model.logprob(responses) <span class="cm"># SFT 模型对这些回答的概率</span>
+    kl_penalty = (logprob_curr - logprob_ref).<span class="builtin">sum</span>()  <span class="cm"># KL 散度 = 两个 log 概率的差</span>
+
+    <span class="cm"># Step 4: PPO Loss — 最大化 奖励 - KL 惩罚</span>
+    loss = -(rewards.<span class="builtin">sum</span>() - beta * kl_penalty)  <span class="cm"># 负号是因为 optimizer 做 minimization</span>
+
+    loss.backward()
+    optimizer.step()</pre>
+
+  <h3>4.5 RLHF 的挑战</h3>
+
+  <table>
+    <thead><tr><th>挑战</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>显存爆炸</strong></td><td>需要同时运行 4 个模型（Policy + Reference + Reward + Value）。每个都是 7B~70B 参数，即使量化后也需要至少 4×A100</td></tr>
+      <tr><td><strong>Reward Hacking</strong></td><td>模型会找到 Reward Model 的漏洞——比如发现"用礼貌的语气 + 长句"能拿高分，而不一定是内容更好</td></tr>
+      <tr><td><strong>训练不稳定</strong></td><td>PPO 对超参数极度敏感。KL 系数 β 设大了模型不进步，设小了模型胡言乱语</td></tr>
+      <tr><td><strong>在线采样慢</strong></td><td>每步训练都需要 Policy Model 重新生成回答 → 打分 → 更新 → 重新生成，循环很慢</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 5 ═══ -->
+<section id="sec5">
+  <h2>5. DPO — 直接偏好优化（Direct Preference Optimization）</h2>
+
+  <h3>5.1 核心洞察：Reward Model 可以被"消掉"</h3>
+
+  <p>DPO 的数学发现是：<strong>RLHF 的 PPO 目标函数可以被改写，Reward Model 不需要显式存在</strong>。</p>
+
+  <p>在 RLHF 中，最优策略 π* 满足以下关系（推导过程略）：</p>
+
+  <div class="formula">
+    R(x, y) = β · log [ π*(y|x) / π<sub>ref</sub>(y|x) ] + β · log Z(x)
+  </div>
+
+  <p>这意味着<strong>"隐式的 Reward"完全可以从当前策略和参考策略的概率比中推算出来</strong>。将这个关系代回 Bradley-Terry 偏好模型，就得到了 DPO 的 Loss：</p>
+
+  <div class="formula">
+    Loss<sub>DPO</sub> = -log σ( β · log [π<sub>θ</sub>(y<sub>win</sub>)/π<sub>ref</sub>(y<sub>win</sub>)] - β · log [π<sub>θ</sub>(y<sub>lose</sub>)/π<sub>ref</sub>(y<sub>lose</sub>)] )
+  </div>
+
+  <div class="info-box">
+    <div class="label">🔑 直觉理解</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      DPO Loss 做的事情就是一句话：<br>
+      <strong>"提高模型对好回答的概率（相对于参考模型），降低模型对差回答的概率"</strong><br><br>
+      不需要 Reward Model 来打分，因为"概率比"本身就是分数——模型越喜欢一个回答（给它更高的概率），就等于给它打了更高的隐式 Reward。
+    </p>
+  </div>
+
+  <pre><span class="lang-label">Python — DPO 的完整训练逻辑</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># DPO 的优雅之处：只需要 Policy Model + Reference Model</span>
+<span class="cm"># 没有 Reward Model，没有 Value Model，没有 PPO 调参地狱</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">def</span> <span class="fn">dpo_loss</span>(policy_model, ref_model, prompt, y_win, y_lose, beta=<span class="num">0.1</span>):
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># 输入: prompt + 好的回答 (y_win) + 差的回答 (y_lose)</span>
+    <span class="cm"># 输出: DPO loss — 鼓励模型喜欢 y_win 超过 y_lose</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+
+    <span class="cm"># Step 1: 计算 Policy Model 对两个回答的 log 概率</span>
+    <span class="cm"># 就是常规的 Next Token Prediction 的 log-likelihood</span>
+    logp_win_policy  = policy_model.log_prob(prompt, y_win)   <span class="cm"># 当前策略对好回答的概率</span>
+    logp_lose_policy = policy_model.log_prob(prompt, y_lose)  <span class="cm"># 当前策略对差回答的概率</span>
+
+    <span class="cm"># Step 2: 计算 Reference Model（SFT 模型）的 log 概率</span>
+    <span class="cm"># Reference Model 是冻结的，不参与梯度更新</span>
+    <span class="kw">with</span> torch.no_grad():
+        logp_win_ref  = ref_model.log_prob(prompt, y_win)     <span class="cm"># SFT 模型对好回答的概率</span>
+        logp_lose_ref = ref_model.log_prob(prompt, y_lose)    <span class="cm"># SFT 模型对差回答的概率</span>
+
+    <span class="cm"># Step 3: 计算"隐式 Reward" = 策略概率比</span>
+    <span class="cm"># 核心公式: implicit_reward = β * log(π_θ(y|x) / π_ref(y|x))</span>
+    <span class="cm"># 如果当前策略比 SFT 更喜欢一个回答 → 隐式 Reward 为正</span>
+    <span class="cm"># 如果当前策略比 SFT 更不喜欢一个回答 → 隐式 Reward 为负</span>
+    reward_win  = beta * (logp_win_policy  - logp_win_ref)    <span class="cm"># 好回答的隐式 Reward</span>
+    reward_lose = beta * (logp_lose_policy - logp_lose_ref)   <span class="cm"># 差回答的隐式 Reward</span>
+
+    <span class="cm"># Step 4: DPO Loss — 让好回答的隐式 Reward > 差回答的</span>
+    <span class="cm"># 等价于 Bradley-Terry 偏好模型: P(win > lose) = σ(R_win - R_lose)</span>
+    loss = -torch.log(torch.sigmoid(reward_win - reward_lose))
+
+    <span class="kw">return</span> loss
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># β 的作用：控制"偏离 SFT 模型多远"</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># β = 0.01 → 几乎不偏离 SFT，模型保守但安全</span>
+<span class="cm"># β = 0.1  → 适中，工业界推荐值</span>
+<span class="cm"># β = 1.0  → 大幅偏离，但可能过拟合偏好数据中的噪声</span>
+<span class="cm"># β 太小会导致模型不学习（loss 不降），β 太大会导致过拟合</span></pre>
+
+  <h3>5.2 DPO 的优势</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🧊 显存减半</h4>
+      <p>不需要 Reward Model 和 Value Model，只需要 Policy + Reference 两个模型。训练 7B 模型从 4×A100 降到 2×A100。</p>
+    </div>
+    <div class="card">
+      <h4>🎯 训练稳定</h4>
+      <p>DPO 是监督学习（偏好分类），不是强化学习。Loss 平滑下降，不会像 PPO 那样突然崩掉。调参成本从几天降到几小时。</p>
+    </div>
+    <div class="card">
+      <h4>📦 离线训练</h4>
+      <p>不需要在线采样，直接用已有的偏好数据训练。RLHF 的 PPO 需要每步重新生成回答。</p>
+    </div>
+    <div class="card">
+      <h4>✅ 效果接近</h4>
+      <p>在大多数 Benchmark 上，DPO 的效果非常接近 RLHF（差距通常在 1%~3% 以内）。Llama 2/3、Qwen 等都使用 DPO。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SEC 6 ═══ -->
+<section id="sec6">
+  <h2>6. RLHF vs DPO 深度对决</h2>
+
+  <table>
+    <thead><tr><th>维度</th><th>RLHF (PPO)</th><th>DPO</th></tr></thead>
+    <tbody>
+      <tr><td><strong>模型数量</strong></td><td>4 个（Policy + Reference + Reward + Value）</td><td>2 个（Policy + Reference）</td></tr>
+      <tr><td><strong>训练方式</strong></td><td>强化学习（PPO）— 在线采样 + 打分 + 更新</td><td>监督学习 — 离线数据直接训练</td></tr>
+      <tr><td><strong>显存 (7B)</strong></td><td>~160GB（需要 4×A100-40G）</td><td>~60GB（2×A100-40G 即可）</td></tr>
+      <tr><td><strong>训练稳定性</strong></td><td style="color:var(--red);">⚠️ 难调，容易崩溃</td><td style="color:var(--green);">✅ 稳定，和 SFT 一样</td></tr>
+      <tr><td><strong>调参难度</strong></td><td style="color:var(--red);">高（KL 系数、PPO clip、学习率、采样温度……）</td><td style="color:var(--green);">低（基本只需要调 β 和学习率）</td></tr>
+      <tr><td><strong>是否需要 Reward Model</strong></td><td>✅ 需要（需要人类标注训练）</td><td>❌ 不需要</td></tr>
+      <tr><td><strong>数据需求</strong></td><td>偏好对（离线）+ 在线生成的回答</td><td>偏好对（离线）— 完全相同！</td></tr>
+      <tr><td><strong>效果上限</strong></td><td style="color:var(--green);">理论上更高（在线探索）</td><td>接近 RLHF（差距 ~1-3%）</td></tr>
+      <tr><td><strong>Reward Hacking</strong></td><td style="color:var(--red);">高（模型会发现 Reward Model 的漏洞）</td><td style="color:var(--green);">低（没有显式的 Reward Model 可以 exploit）</td></tr>
+      <tr><td><strong>代表</strong></td><td>ChatGPT, Claude</td><td>Llama 2/3, Qwen, Mistral</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.1 架构对比：模型数量决定显存</h3>
+
+  <pre><span class="lang-label">显存对比</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 以 Llama-7B 为例，BF16 精度，训练时的显存估算</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># RLHF (PPO):</span>
+<span class="cm">#   Policy Model:    7B × 2 bytes = 14 GB</span>
+<span class="cm">#   Reference Model:  7B × 2 bytes = 14 GB</span>
+<span class="cm">#   Reward Model:     7B × 2 bytes = 14 GB   (也是 7B，只是最后层不同)</span>
+<span class="cm">#   Value Model:      7B × 2 bytes = 14 GB   (同样规模)</span>
+<span class="cm">#   优化器状态 (Adam): 7B × 8 bytes × 2 = 112 GB (Policy + Value 需要优化器)</span>
+<span class="cm">#   激活 + 中间结果:   ~30 GB</span>
+<span class="cm">#   ═════════════════════════════════════════</span>
+<span class="cm">#   总计 ≈ 198 GB → 至少需要 4×A100-80G 或 8×A100-40G</span>
+
+<span class="cm"># DPO:</span>
+<span class="cm">#   Policy Model:     7B × 2 bytes = 14 GB</span>
+<span class="cm">#   Reference Model:  7B × 2 bytes = 14 GB  (冻结，不需要优化器)</span>
+<span class="cm">#   优化器状态:       7B × 8 bytes = 56 GB   (只有 Policy 需要)</span>
+<span class="cm">#   激活 + 中间结果:   ~15 GB</span>
+<span class="cm">#   ═════════════════════════════════════════</span>
+<span class="cm">#   总计 ≈ 99 GB → 2×A100-80G 即可，开了 ZeRO-3 甚至只需 2×RTX 4090</span></pre>
+
+  <h3>6.2 什么时候用 RLHF，什么时候用 DPO？</h3>
+
+  <div class="arch-box">
+    <span class="label">用 RLHF (PPO) 如果：</span><br>
+    &nbsp;&nbsp;• 你有充足的 GPU（8×A100-80G+）和调参经验<br>
+    &nbsp;&nbsp;• 你在追求极致性能（打榜、商业化旗舰模型）<br>
+    &nbsp;&nbsp;• 你需要在线探索——让模型在训练过程中不断尝试新回答<br><br>
+    <span class="label">用 DPO 如果：</span><br>
+    &nbsp;&nbsp;• 你的 GPU 预算有限（2-4 张卡）<br>
+    &nbsp;&nbsp;• 你希望快速迭代（DPO 训练一天 vs RLHF 调试一周）<br>
+    &nbsp;&nbsp;• 偏好数据充足且质量高（DPO 对数据质量更敏感）<br>
+    &nbsp;&nbsp;• <strong>这覆盖了 95% 的团队</strong>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SEC 7 ═══ -->
+<section id="sec7">
+  <h2>7. 新方法：ORPO / GRPO / KTO</h2>
+
+  <h3>7.1 ORPO — 最省资源：把 SFT 和对齐一步做完</h3>
+
+  <p>ORPO（Odds Ratio Preference Optimization）的洞察是：<strong>SFT 和偏好对齐可以同时做</strong>，不需要分成两个阶段。</p>
+
+  <div class="arch-box">
+    <span class="label">传统路线：</span><br>
+    &nbsp;&nbsp;基座 → SFT（阶段 1）→ DPO/RLHF（阶段 2）→ 对齐后的模型<br><br>
+    <span class="label">ORPO 路线：</span><br>
+    &nbsp;&nbsp;基座 ───→ SFT + 偏好对齐同时训练 ───→ 对齐后的模型<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;一次训练，两步合一！
+  </div>
+
+  <div class="highlight">
+    <strong>ORPO 的关键创新：</strong>它在 SFT 的 Cross Entropy Loss 上直接加了一个"偏好惩罚项"，惩罚项衡量的是模型对 y_win 和 y_lose 的概率比（Odds Ratio）。不需要 Reference Model，显存和 SFT 一模一样。适合 GPU 紧张的场景。
+  </div>
+
+  <h3>7.2 GRPO — DeepSeek-R1 的方法：推理能力自我进化</h3>
+
+  <p>GRPO（Group Relative Policy Optimization）是 DeepSeek-R1 使用的方法，专为<strong>数学和代码推理</strong>设计。</p>
+
+  <pre><span class="lang-label">GRPO 的核心思想</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># GRPO 既不要 Reward Model，也不要 Value Model（PPO 的两个大头）</span>
+<span class="cm"># 它用"同一道题，生成 N 个回答，组内比较"来提供训练信号</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 对每个 prompt（如一道数学题），采样 4 个回答：</span>
+responses = model.generate(prompt, num_return_sequences=<span class="num">4</span>)
+<span class="cm"># → [y1: "答案是 42", y2: "答案是 43", y3: "x=7", y4: "答案是 42.0"]</span>
+
+<span class="cm"># 用规则打分（不需要人类标注！）：</span>
+<span class="cm">#   数学题 → 比较数值答案是否正确</span>
+<span class="cm">#   代码题 → 运行代码看是否通过测试用例</span>
+rewards = [<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">0.5</span>]  <span class="cm"># y1 全对, y2 全错, y3 也对, y4 格式问题</span>
+
+<span class="cm"># 组内归一化：用这一组的均值+标准差做 baseline</span>
+group_mean = np.mean(rewards)   <span class="cm"># (1.0+0.0+1.0+0.5)/4 = 0.625</span>
+group_std  = np.std(rewards)    <span class="cm"># ≈ 0.41</span>
+
+<span class="cm"># "比组内平均水平好的回答 → 提高概率"</span>
+<span class="cm"># "比组内平均水平差的回答 → 降低概率"</span>
+advantages = (rewards - group_mean) / group_std
+<span class="cm"># → [0.91, -1.52, 0.91, -0.30]</span>
+
+<span class="cm"># GRPO 只需要 Policy Model 和 Reference Model（和 DPO 一样的显存）</span>
+<span class="cm"># 但不需要人类标注偏好数据！这是它最大的优势</span></pre>
+
+  <div class="highlight">
+    <strong>GRPO 为什么特别适合推理任务？</strong>数学和代码有明确的"对/错"标准，可以用规则自动打分。这让 GRPO 可以<strong>大规模自我进化</strong>——不需要昂贵的人工标注，只需要大量的题目（可以自动生成），模型就能通过"尝试 → 打分 → 学习"不断提升推理能力。DeepSeek-R1 的惊艳推理能力很大程度上来自 GRPO。
+  </div>
+
+  <h3>7.3 KTO — 连成对数据都不需要了</h3>
+
+  <p>RLHF 和 DPO 都需要<strong>成对</strong>的偏好数据（"A 比 B 好"）。但在实际场景中，很多时候我们只能标注"这个回答好"或"这个回答不好"，<strong>无法比较两个回答</strong>。</p>
+
+  <p>KTO（Kahneman-Tversky Optimization）利用前景理论（Prospect Theory），只需要单个回答的"好/坏"标注就能训练。这大大降低了数据采集成本。</p>
+
+  <h3>7.4 新方法全景对比</h3>
+
+  <table>
+    <thead><tr><th>方法</th><th>需要几个模型</th><th>数据需求</th><th>最佳场景</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DPO</strong></td><td>2 个</td><td>成对偏好（A vs B）</td><td>通用对齐 — 当前性价比首选</td></tr>
+      <tr><td><strong>ORPO</strong></td><td>1 个</td><td>成对偏好（同 DPO）</td><td>GPU 紧张时 — SFT + 对齐一步到位</td></tr>
+      <tr><td><strong>GRPO</strong></td><td>2 个</td><td>规则打分（无需人工）</td><td>数学、代码等有明确对错标准的任务</td></tr>
+      <tr><td><strong>KTO</strong></td><td>2 个</td><td>单个好/坏标注</td><td>无法获取成对偏好数据时</td></tr>
+      <tr><td><strong>SimPO</strong></td><td>1 个</td><td>成对偏好</td><td>连 Reference Model 都想省</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 8 ═══ -->
+<section id="sec8">
+  <h2>8. 选型指南 & 速查表</h2>
+
+  <h3>8.1 完整方法论速查</h3>
+
+  <table>
+    <thead><tr><th>方法</th><th>阶段</th><th>目标函数</th><th>关键创新</th><th>代表模型</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pre-training</strong></td><td>基础</td><td>Next Token Pred.</td><td>自监督，无需标注数据</td><td>所有 LLM</td></tr>
+      <tr><td><strong>SFT</strong></td><td>对齐</td><td>Next Token Pred.</td><td>只在回答部分算 loss（Loss Masking）</td><td>所有 LLM</td></tr>
+      <tr><td><strong>RLHF</strong></td><td>对齐</td><td>PPO + Bradley-Terry</td><td>用 Reward Model 模拟人类偏好</td><td>ChatGPT, Claude</td></tr>
+      <tr><td><strong>DPO</strong></td><td>对齐</td><td>偏好分类</td><td>消去 Reward Model，直接优化策略</td><td>Llama 2/3, Qwen</td></tr>
+      <tr><td><strong>ORPO</strong></td><td>对齐</td><td>SFT + Odds Ratio</td><td>SFT 和对齐一步完成</td><td>学术研究</td></tr>
+      <tr><td><strong>GRPO</strong></td><td>对齐/推理</td><td>组内相对排序</td><td>规则打分，自进化，无需 Reward/Value Model</td><td>DeepSeek-R1</td></tr>
+      <tr><td><strong>KTO</strong></td><td>对齐</td><td>前景理论</td><td>不需要成对数据</td><td>学术研究</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 决策树</h3>
+
+  <pre><span class="lang-label">选型决策树</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm">#</span>
+<span class="cm"># Q1: 你在做预训练（从零开始）还是对齐（在已有模型上）？</span>
+<span class="cm">#     → 预训练 → Next Token Prediction（没有其他选择）</span>
+<span class="cm">#     → 对齐 → 继续</span>
+<span class="cm">#</span>
+<span class="cm"># Q2: 你只有"问题→答案"数据，没有偏好标注？</span>
+<span class="cm">#     → 是 → SFT（第一步，通常会做）</span>
+<span class="cm">#     → 否 → 继续</span>
+<span class="cm">#</span>
+<span class="cm"># Q3: 你追求极致性能 + 有 8×A100+？</span>
+<span class="cm">#     → 是 → RLHF (PPO) ← 调参难度大但上限最高</span>
+<span class="cm">#     → 否 → 继续</span>
+<span class="cm">#</span>
+<span class="cm"># Q4: 你有成对的偏好数据（"A 比 B 好"）？</span>
+<span class="cm">#     → 是 → DPO（性价比首选，Llama/Qwen 都在用）</span>
+<span class="cm">#     → 否 → 继续</span>
+<span class="cm">#</span>
+<span class="cm"># Q5: 你做的是数学/代码等有明确对错标准的任务？</span>
+<span class="cm">#     → 是 → GRPO（无需人工标注，自进化）</span>
+<span class="cm">#     → 否 → 只有单条好/坏标注 → KTO</span>
+<span class="cm">#</span>
+<span class="cm"># Q6: GPU 极度紧张，连 Reference Model 都放不下？</span>
+<span class="cm">#     → ORPO 或 SimPO（只需一个模型）</span>
+<span class="cm">#</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>8.3 高频面试问题</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>❓ Q1: SFT 和 RLHF/DPO 的本质区别？</h4>
+      <p><strong>答：</strong>SFT 教模型"怎么回答"（模仿人类），RLHF/DPO 教模型"什么回答是好的"（价值判断）。SFT 用的是正向示例（positive examples only），RLHF/DPO 用对比示例（A 比 B 好）。SFT 后模型会说话，RLHF/DPO 后模型会"挑着说"——知道什么时候该拒绝、什么时候该详细、什么时候该简洁。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q2: 为什么 RLHF 要加 KL 惩罚？</h4>
+      <p><strong>答：</strong>防止 Reward Hacking。没有 KL 惩罚时，模型会发现"一直说好话"能拿高分（Reward Model 容易被讨好），但这不是真正的质量提升。KL 惩罚限制当前模型不能偏离 SFT 模型太远，保证它在"学会讨好人"的同时不忘记"好好说话"。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q3: DPO 为什么不需要 Reward Model？</h4>
+      <p><strong>答：</strong>数学上，RLHF 的最优策略和 Reward 之间存在一一映射关系：R(x,y) = β·log(π*/π_ref)。DPO 发现可以直接用"策略概率比"替代"Reward 分数"，从而把 RLHF 的 PPO 目标改写为监督学习的分类目标。Reward Model 在数学上被"消掉"了。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q4: DPO 的 β 参数怎么调？</h4>
+      <p><strong>答：</strong>β 控制偏离 Reference Model 的程度。β 太大 → 策略几乎不偏离 SFT → 学不动；β 太小 → 过度偏离 → 过拟合偏好数据。通常从 0.1 开始，观察训练 loss：平稳下降到 0.5~0.7 附近是理想范围。如果 loss 快速降到 0.3 以下，说明 β 太小。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q5: GRPO 和 DPO 的关键区别？</h4>
+      <p><strong>答：</strong>DPO 需要<strong>人类标注</strong>的偏好对（"A 比 B 好"），GRPO 用<strong>规则自动打分</strong>（数学题看答案对错，代码看测试通过率）。GRPO 的核心是"组内比较"——对同一 prompt 生成多个回答，在组内排名，好的提高概率，差的降低。这让 GRPO 特别适合有明确客观标准的推理任务。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q6: 为什么 SFT 的 loss 只在回答部分算？</h4>
+      <p><strong>答：</strong>因为模型不需要学"怎么出题"，只需要学"怎么答题"。如果在指令部分也算 loss，模型会浪费训练能力去学习"生成指令前缀"。Loss Masking（把指令部分的 label 设为 -100）让模型完全专注于回答生成。这是 SFT 最容易踩的坑，但也是最简单的优化。</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  📘 大模型全参数训练方法详解 · 教学文档 · 从入门到精通<br>
+  由 <a href="https://github.com/2143616">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span> ·
+  <span style="color: var(--fg2);">最后更新: 2026-07-18</span>
+</div>
+
+</div>
+</body>
+</html>
