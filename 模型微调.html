@@ -369,7 +369,151 @@ llamafactory-cli webui
     <span class="label">⑤ 点击"开始训练"</span> → 看 loss 曲线 → 训练完成后导出 adapter
   </div>
 
-  <h3>4.3 CLI 命令行方式 — 同一个配置的 YAML 版本</h3>
+  <h3>4.2.1 WebUI 导出的 Adapter 怎么用？—— 挂载与推理全流程</h3>
+
+  <p>WebUI 训练完成后，点击"Export"导出的是一个<strong>文件夹</strong>，里面只有两个文件：</p>
+
+  <pre><span class="lang-label">目录结构</span>
+<span class="cm"># 训练完毕后，output/lora_qwen 目录下：</span>
+output/lora_qwen/
+  ├── adapter_config.json      <span class="cm"># LoRA 配置（rank=16, alpha=32, target_modules...）</span>
+  └── adapter_model.safetensors <span class="cm"># ★ 实际的 adapter 权重，只有 ~30MB（rank=16 时）</span>
+
+<span class="cm"># 对比：基座模型 Qwen2.5-7B 是 14GB</span>
+<span class="cm">#       adapter 只有 30MB — 小 500 倍！</span></pre>
+
+  <p><strong>adapter 不能独立运行</strong>——它只是 ΔW 的权重（即 B·A 两个矩阵），必须挂载到一个同架构的基座模型上才能工作。挂载后，模型的前向传播变成：</p>
+
+  <div class="formula">
+    h = W<sub>基座</sub>·x + (α/r)·B·A·x
+  </div>
+
+  <p>下面给出<strong>三种挂载和使用方式</strong>，从简单到高级：</p>
+
+  <h4 style="font-size:1.1em;color:var(--orange);margin:24px 0 10px;">方式一：LlamaFactory WebUI 直接对话（最简单）</h4>
+
+  <p>WebUI 的 <strong>Chat 标签页</strong>支持直接加载 adapter：</p>
+
+  <div class="arch-box">
+    <span class="label">WebUI Chat 标签页操作：</span><br>
+    &nbsp;&nbsp;① 选择模型：<strong>Qwen2.5-7B-Instruct</strong>（和训练时相同的基座）<br>
+    &nbsp;&nbsp;② 勾选 <strong>"Use adapter"</strong> → 选择文件夹 <strong>./output/lora_qwen</strong><br>
+    &nbsp;&nbsp;③ 点击 <strong>"Load model"</strong> → 等待加载 (1~2 分钟)<br>
+    &nbsp;&nbsp;④ 在聊天框输入问题 → 模型就会用微调后的能力回答<br><br>
+    <span class="label">工作原理：</span>LlamaFactory 在后台调用 PEFT 库，动态地把 adapter 权重"挂"到基座模型上，不修改基座文件。
+  </div>
+
+  <h4 style="font-size:1.1em;color:var(--teal);margin:24px 0 10px;">方式二：Python 代码动态加载（最灵活）</h4>
+
+  <p>如果你想在自己的 Python 脚本中使用微调后的模型：</p>
+
+  <pre><span class="lang-label">Python — 加载基座 + 挂载 adapter + 推理</span>
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+<span class="kw">from</span> <span class="builtin">peft</span> <span class="kw">import</span> PeftModel                    <span class="cm"># PEFT 库 — HuggingFace 官方出品</span>
+
+<span class="cm"># ─── Step 1: 加载基座模型（原始权重，不包含任何微调信息） ───</span>
+base_model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,            <span class="cm"># 和训练时相同的基座</span>
+    torch_dtype=<span class="str">"auto"</span>,
+    device_map=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>)
+
+<span class="cm"># ─── Step 2: 把 adapter "挂载"到基座模型上 ───</span>
+<span class="cm"># PeftModel.from_pretrained 会自动读取 adapter_config.json，</span>
+<span class="cm"># 找到基座中对应的层（如 q_proj），在旁边挂上 B·A 两个小矩阵</span>
+model = PeftModel.from_pretrained(
+    base_model,
+    <span class="str">"./output/lora_qwen"</span>,                   <span class="cm"># adapter 文件夹路径</span>
+)
+<span class="cm"># ↑ 此时 model 的前向传播 = W_base·x + (16/32)·B·A·x</span>
+<span class="cm"># ↑ adapter 被激活，模型现在拥有了微调学到的能力</span>
+
+<span class="cm"># ─── Step 3: 像普通模型一样推理 ───</span>
+prompt = <span class="str">"请用 Python 写一个快速排序算法"</span>
+messages = [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: prompt}]
+text = tokenizer.apply_chat_template(messages, tokenize=<span class="kw">False</span>, add_generation_prompt=<span class="kw">True</span>)
+inputs = tokenizer(text, return_tensors=<span class="str">"pt"</span>).to(model.device)
+
+outputs = model.generate(**inputs, max_new_tokens=<span class="num">512</span>, temperature=<span class="num">0.7</span>)
+response = tokenizer.decode(outputs[<span class="num">0</span>], skip_special_tokens=<span class="kw">True</span>)
+<span class="kw">print</span>(response)
+
+<span class="cm"># ─── 优势：可以随时切换 adapter，一个基座同时服务多个任务 ───</span>
+<span class="cm"># model_math = PeftModel.from_pretrained(base_model, "./adapter_math")</span>
+<span class="cm"># model_code = PeftModel.from_pretrained(base_model, "./adapter_code")</span>
+<span class="cm"># 不需要重新加载基座！一个 14GB 基座 + 多个 30MB adapter = 多技能模型</span></pre>
+
+  <h4 style="font-size:1.1em;color:var(--green);margin:24px 0 10px;">方式三：合并后部署到 vLLM/Ollama（生产环境）</h4>
+
+  <p>动态加载有一个<strong>微小缺点</strong>：每次推理都要额外计算 B·A·x 这一项。在生产环境中，通常提前<strong>把 adapter 合并进基座权重</strong>，得到一个和普通模型完全一样的文件，然后扔给高性能推理框架：</p>
+
+  <div class="step-flow">
+    <span class="step">基座 (14GB)</span>
+    <span class="step-arrow">+</span>
+    <span class="step" style="border-color:var(--teal);">Adapter (30MB)</span>
+    <span class="step-arrow">→ 合并 →</span>
+    <span class="step" style="border-color:var(--purple);">完整模型 (14GB)</span>
+    <span class="step-arrow">→</span>
+    <span class="step">vLLM / Ollama 部署</span>
+  </div>
+
+  <pre><span class="lang-label">Shell — 三种部署方式</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 A: 在 LlamaFactory 中合并并导出</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+llamafactory-cli export \
+    --model_name_or_path Qwen/Qwen2.5-7B-Instruct \
+    --adapter_name_or_path ./output/lora_qwen \
+    --template qwen \
+    --finetuning_type lora \
+    --export_dir ./merged_qwen_lora \
+    --export_size 2    <span class="cm"># 2=导出合并后的 BF16 完整模型</span>
+
+<span class="cm"># 导出后 merged_qwen_lora/ 就是一个普通模型文件夹，可以直接：</span>
+<span class="cm">#   1. vllm serve ./merged_qwen_lora          → 生产级高性能推理</span>
+<span class="cm">#   2. ollama create my-model -f Modelfile     → 本地一键部署</span>
+<span class="cm">#   3. 用任何 HuggingFace 代码直接加载         → 科研/开发</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 B: Python 代码合并（如果你不想用 LlamaFactory CLI）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">peft</span> <span class="kw">import</span> PeftModel
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM
+
+base = AutoModelForCausalLM.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>)
+model = PeftModel.from_pretrained(base, <span class="str">"./output/lora_qwen"</span>)
+merged = model.merge_and_unload()              <span class="cm"># ★ 核心：W' = W_base + (alpha/r)·B·A</span>
+merged.save_pretrained(<span class="str">"./merged_model"</span>)    <span class="cm"># 保存合并后的完整权重</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 C: 量化后给 Ollama 用（链式操作）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># ① 先合并</span>
+llamafactory-cli export ... --export_dir ./merged_model
+<span class="cm"># ② 再量化为 GGUF（Ollama 支持的格式）</span>
+llamafactory-cli export \
+    --model_name_or_path ./merged_model \
+    --export_dir ./gguf_model \
+    --export_quantization_bit 4  <span class="cm"># 4-bit 量化，体积 ~4GB</span></pre>
+
+  <h4 style="font-size:1.1em;color:var(--purple);margin:24px 0 10px;">挂载方式的对比总结</h4>
+
+  <table>
+    <thead><tr><th>方式</th><th>适用场景</th><th>优点</th><th>缺点</th></tr></thead>
+    <tbody>
+      <tr><td><strong>WebUI Chat</strong></td><td>训练完立刻测试效果</td><td>零代码，所见即所得</td><td>只能手动测试，不能批量</td></tr>
+      <tr><td><strong>PeftModel 动态加载</strong></td><td>多任务切换、快速实验</td><td>一个基座 + 多个 adapter，灵活切换</td><td>推理时有额外 5% 计算开销</td></tr>
+      <tr><td><strong>合并后部署</strong></td><td>生产环境、vLLM/Ollama</td><td>零额外开销，和普通模型完全一样</td><td>需要额外占用完整的模型存储空间</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">💡 最佳实践</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      <strong>实验阶段</strong>用 PeftModel 动态加载（省磁盘，一个基座配多个 adapter），<strong>确认效果后</strong>合并导出为完整模型，交给 vLLM/Ollama 做生产部署。<strong>不要在生产环境中用动态加载</strong>——那 5% 的额外开销在高并发下会被放大。
+    </p>
+  </div>
 
   <pre><span class="lang-label">YAML — LoRA 训练配置文件</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
