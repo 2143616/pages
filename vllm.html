@@ -149,7 +149,19 @@ td { color: var(--fg2); }
   <ul>
     <li><a href="#sec1">1. vLLM 是什么</a></li>
     <li><a href="#sec2">2. 安装与环境准备</a></li>
-    <li><a href="#sec3">3. 核心概念：你必须知道的</a></li>
+    <li><a href="#sec3">3. 核心概念：你必须知道的</a>
+      <ul style="padding-left:16px;font-size:12px;">
+        <li><a href="#sec3-1" style="color:var(--fg2);">3.1 PagedAttention</a></li>
+        <li><a href="#sec3-2" style="color:var(--fg2);">3.2 连续批处理</a></li>
+        <li><a href="#sec3-5" style="color:var(--fg2);">3.5 投机解码</a></li>
+        <li><a href="#sec3-6" style="color:var(--fg2);">3.6 MTP 多 Token 预测</a></li>
+        <li><a href="#sec3-7" style="color:var(--fg2);">3.7 前缀缓存 APC</a></li>
+        <li><a href="#sec3-8" style="color:var(--fg2);">3.8 分块预填充</a></li>
+        <li><a href="#sec3-9" style="color:var(--fg2);">3.9 张量并行</a></li>
+        <li><a href="#sec3-10" style="color:var(--fg2);">3.10 量化推理</a></li>
+        <li><a href="#sec3-11" style="color:var(--fg2);">3.11 调度策略</a></li>
+      </ul>
+    </li>
     <li><a href="#sec4">4. 快速启动你的第一个模型</a></li>
     <li><a href="#sec5">5. 部署参数全解析</a></li>
     <li><a href="#sec6">6. 量化方法详解</a></li>
@@ -339,6 +351,91 @@ python -c <span class="str">"from vllm import ModelRegistry; print(ModelRegistry
   <li><strong>Decode（解码）</strong>：逐个生成后续 token，每次只算一个 token。内存访问密集型，GPU 利用率低</li>
 </ul>
 <p>vLLM 的优化重点就在 Decode 阶段——通过批处理把多个请求的 Decode 合并计算，提高 GPU 利用率。</p>
+
+<h3>3.5 投机解码（Speculative Decoding）</h3>
+<p>投机解码的核心思想：<strong>用小模型"猜"几个 token，再用大模型一次性验证</strong>。因为验证是并行的（大模型可以同时检查多个 token），而逐 token 生成是串行的，所以总速度更快。</p>
+<div class="arch-box">
+  <span class="label">投机解码流程：</span><br>
+  &nbsp;&nbsp;1. <strong>Draft Model（草稿模型）</strong>：一个小模型（~0.5B），快速生成 K 个候选 token<br>
+  &nbsp;&nbsp;2. <strong>Target Model（目标模型）</strong>：vLLM 部署的大模型，一次性验证这 K 个 token<br>
+  &nbsp;&nbsp;3. 从第一个不匹配的 token 处截断，接受前面的匹配 token<br>
+  &nbsp;&nbsp;4. 每步实际产出 1~K 个 token（取决于猜对的长度）<br><br>
+  <span class="label">为什么能加速？</span><br>
+  &nbsp;&nbsp;· 大模型的 Prefill 是并行的 → 验证 K 个 token ≈ 生成 1 个 token 的时间<br>
+  &nbsp;&nbsp;· 小模型生成 K 个 token 的时间 ≈ 大模型生成 1 个 token 的时间<br>
+  &nbsp;&nbsp;· 如果平均每次猜对 3 个 → 吞吐提升 ~3×<br>
+  &nbsp;&nbsp;· <strong>最关键：数学上无损失</strong>——验证通过的 token 和大模型自己逐 token 生成的结果完全一致
+</div>
+<p>vLLM 支持 Eagle（一种高效 draft model）和 Medusa 两种投机解码方案。配置方式：<code>--speculative-model &lt;draft_model&gt; --num-speculative-tokens 5</code>。</p>
+
+<h3>3.6 MTP — 多 Token 预测（Multi-Token Prediction）</h3>
+<p>MTP 是 <strong>DeepSeek-V3/R1 提出的一种训练阶段技术</strong>，让模型在训练时就学会"一次预测多个未来 token"，而非传统的"只预测下一个 token"。推理时，每个 Decode 步骤可以同时产出多个 token。</p>
+<table>
+  <tr><th>维度</th><th>投机解码</th><th>MTP</th></tr>
+  <tr><td><strong>原理</strong></td><td>小模型猜 + 大模型验证（两个模型协作）</td><td>训练时就在模型内部加了多个预测头（单一模型）</td></tr>
+  <tr><td><strong>需要额外模型</strong></td><td>✅ 需要 draft model</td><td>❌ 不需要（MTP 头是模型的一部分）</td></tr>
+  <tr><td><strong>每步产出</strong></td><td>1~K 个 token（取决于猜对率）</td><td>固定 K 个 token（通常 K=2~4）</td></tr>
+  <tr><td><strong>精度</strong></td><td>无损失（验证保证）</td><td>可能有微小损失（MTP 头的预测不如主头准）</td></tr>
+  <tr><td><strong>代表</strong></td><td>Eagle, Medusa</td><td>DeepSeek-V3, DeepSeek-R1</td></tr>
+  <tr><td><strong>vLLM 支持</strong></td><td>✅ 原生支持</td><td>⚠️ 需模型本身支持 MTP（如 DeepSeek-V3）</td></tr>
+</table>
+<p>vLLM 对于 DeepSeek-V3 等原生支持 MTP 的模型，可以直接利用其 MTP 头实现多 token 同时生成，无需额外配置 draft model。</p>
+
+<h3>3.7 前缀缓存（Automatic Prefix Caching / APC）</h3>
+<p>很多请求共享相同的系统提示词（System Prompt）。例如："你是一个有用的助手……" 这段文字每次请求都一样。如果没有缓存，每个请求都要重新计算这段前缀的 KV Cache。</p>
+<div class="arch-box">
+  <span class="label">APC 的工作原理：</span><br>
+  &nbsp;&nbsp;· 将 prompt 的 token 序列按固定大小分块（如每 16 个 token 一块）<br>
+  &nbsp;&nbsp;· 对每个块计算哈希值作为"指纹"<br>
+  &nbsp;&nbsp;· 新请求到来时，查找是否有相同哈希的块 → 命中则直接复用 KV Cache<br>
+  &nbsp;&nbsp;· <strong>结果：</strong>共享长 System Prompt 的场景下，TTFT（首 token 延迟）可降低 50%~90%
+</div>
+<p>vLLM 默认开启 APC，无需额外配置。通过 <code>--enable-prefix-caching</code> 显式开启（新版已默认）。</p>
+
+<h3>3.8 分块预填充（Chunked Prefill）</h3>
+<p>长 prompt（如 32K token）的 Prefill 阶段计算量巨大，一次处理会长时间占用 GPU，阻塞其他请求的 Decode。Chunked Prefill 把长 prompt 切成多个小块，交错执行：</p>
+<div class="arch-box">
+  <span class="label">分块前（长 Prefill 阻塞）：</span><br>
+  &nbsp;&nbsp;[-------- 32K Prefill (独占 GPU, 200ms) --------] → [Decode] → [Decode] → ...<br>
+  &nbsp;&nbsp;中途其他请求的 Decode 无法插队<br><br>
+  <span class="label">分块后（交错执行）：</span><br>
+  &nbsp;&nbsp;[4K Prefill] → [Decode 请求A] → [4K Prefill] → [Decode 请求B] → [4K Prefill] → ...<br>
+  &nbsp;&nbsp;每个 Prefill 小块只占 ~25ms，其他请求可以在间隙中插入 Decode
+</div>
+<p>配置方式：<code>--max-num-batched-tokens 8192</code>（限制单次 Prefill 最多处理的 token 数）和 <code>--enable-chunked-prefill</code>。</p>
+
+<h3>3.9 张量并行（Tensor Parallelism）— 多卡推理</h3>
+<p>当模型太大单卡放不下时，vLLM 使用张量并行把模型切到多张 GPU 上。不同于训练中的 DP/TP/PP 三维并行，推理并行更简单——因为不需要存梯度和优化器状态。</p>
+<table>
+  <tr><th>并行方式</th><th>原理</th><th>适用场景</th><th>vLLM 配置</th></tr>
+  <tr><td><strong>张量并行 (TP)</strong></td><td>把每层的权重矩阵切成 N 份放到 N 张卡上，每张卡算一部分再聚合</td><td>单卡放不下完整模型（如 70B→4×24GB）</td><td><code>--tensor-parallel-size 4</code></td></tr>
+  <tr><td><strong>流水线并行 (PP)</strong></td><td>前一半层放 GPU-0，后一半放 GPU-1，流水式传递</td><td>层数极多（如 DeepSeek-V3 的 60+ 层）</td><td><code>--pipeline-parallel-size 2</code></td></tr>
+</table>
+<p>TP 是推理中最常用的多卡策略。例如 70B 模型 FP16 需要 ~140GB 显存，4×A100-40G 通过 TP=4 刚好装下。</p>
+
+<h3>3.10 量化推理 — 更小的模型，更多的吞吐</h3>
+<p>vLLM 支持多种权重量化格式，在几乎不损失精度的前提下大幅降低显存占用：</p>
+<table>
+  <tr><th>量化方式</th><th>精度</th><th>显存节省 (vs FP16)</th><th>速度</th><th>vLLM 配置</th></tr>
+  <tr><td><strong>AWQ</strong></td><td>INT4（每通道缩放）</td><td>~75%（14GB→3.5GB）</td><td>接近 FP16</td><td>下载 AWQ 格式模型即可</td></tr>
+  <tr><td><strong>GPTQ</strong></td><td>INT4（分组量化）</td><td>~75%（14GB→3.5GB）</td><td>接近 FP16</td><td>下载 GPTQ 格式模型即可</td></tr>
+  <tr><td><strong>FP8</strong></td><td>8-bit 浮点</td><td>~50%（14GB→7GB）</td><td>⭐ 比 FP16 更快（H100 原生支持 FP8）</td><td><code>--quantization fp8</code></td></tr>
+  <tr><td><strong>INT8</strong></td><td>8-bit 整数</td><td>~50%（14GB→7GB）</td><td>略慢于 FP16</td><td><code>--quantization int8</code></td></tr>
+  <tr><td><strong>BitsAndBytes</strong></td><td>INT4/INT8</td><td>~50%~75%</td><td>较慢</td><td><code>--quantization bitsandbytes --load-format bitsandbytes</code></td></tr>
+</table>
+<div class="highlight">
+  <strong>推荐：</strong>H100/H200 用户优先选 <strong>FP8</strong>（原生硬件加速，比 FP16 更快且显存减半）；消费级显卡（RTX 3090/4090）优先选 <strong>AWQ</strong>（INT4 量化，24GB 可跑 70B 模型）。
+</div>
+
+<h3>3.11 调度策略（Scheduling Policy）</h3>
+<p>vLLM 支持多种请求调度策略，决定"先处理哪个请求、分配多少资源"：</p>
+<table>
+  <tr><th>策略</th><th>行为</th><th>适用场景</th></tr>
+  <tr><td><strong>FCFS（先到先服务）</strong></td><td>默认策略，按请求到达顺序处理</td><td>通用场景</td></tr>
+  <tr><td><strong>Priority（优先级）</strong></td><td>高优先级请求优先获得 GPU 时间片</td><td>在线服务（VIP 用户优先）</td></tr>
+  <tr><td><strong>Preemption（抢占）</strong></td><td>高优先级请求可以"踢掉"正在处理的低优先级请求（被踢的请求 swap 到 CPU 内存）</td><td>需要严格 SLA 的场景</td></tr>
+</table>
+<p>vLLM 的调度器会综合考虑每个请求的 prompt 长度、已生成 token 数、优先级等因素动态分配资源。Swap 机制允许把被抢占请求的 KV Cache 暂存到 CPU 内存，恢复时再搬回 GPU。</p>
 </section>
 
 <!-- ═══════════════════ 4 ═══════════════════ -->
