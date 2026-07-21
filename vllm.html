@@ -1130,25 +1130,48 @@ python -m vllm.entrypoints.openai.api_server \
 
 <h3>9.3 多节点部署</h3>
 
+<p>当模型大到单台机器装不下时（如 70B 模型 FP16 需要 ~140GB，而单机只有 4×A100-40G = 160GB 但实际可用 ~140GB），需要跨多台机器做<strong>张量并行</strong>。vLLM 通过 Ray 实现跨节点分布式推理。</p>
+
+<p><strong>关键理解：工作节点不运行 <code>vllm serve</code>，只运行 Ray。</strong>vLLM 通过 Ray 自动把 tensor-parallel worker 分布到集群中的 GPU 上：</p>
+
+<div class="arch-box">
+  <span class="label">跨节点 TP 的架构：</span><br>
+  &nbsp;&nbsp;<strong>节点 1（Head）</strong>：启动 Ray Head + vllm serve<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;→ vLLM 通过 Ray 分发 TP worker 到节点1的GPU + 节点2的GPU<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;→ 对外暴露 API（只有 Head 有 API）<br><br>
+  &nbsp;&nbsp;<strong>节点 2（Worker）</strong>：只启动 Ray Worker，加入集群<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;→ 不运行 vllm serve！Ray 自动把 Head 分配的计算任务调度过来<br>
+</div>
+
 <pre><span class="lang-label">bash</span>
-<span class="cm"># 节点 1（主节点）</span>
-python -m vllm.entrypoints.openai.api_server \
-  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 节点 1（主节点 + 推理服务）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># Step 1: 启动 Ray 集群的 Head 节点</span>
+ray start --head --port=<span class="num">6379</span>
+
+<span class="cm"># Step 2: 启动 vLLM（Ray 自动发现全部 GPU）</span>
+vllm serve meta-llama/Meta-Llama-3.1-70B-Instruct \
   --tensor-parallel-size <span class="num">8</span> \
-  --distributed-executor-backend ray \  <span class="cm"># 使用 Ray 做分布式</span>
+  --distributed-executor-backend ray \
   --port <span class="num">8000</span>
 
-<span class="cm"># 节点 2~N（自动发现主节点）</span>
-<span class="cm"># 需要设置环境变量:</span>
-<span class="cm"># export RAY_HEAD_IP=&lt;主节点IP&gt;</span>
-<span class="cm"># 然后同样的命令</span></pre>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 节点 2~N（工作节点 — 只需要加入 Ray 集群！）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 只需要一步：连接到 Head</span>
+ray start --address=<span class="str">'&lt;节点1的IP&gt;:6379'</span>
+
+<span class="cm"># 之后什么都不用做！Head 上的 vLLM 会自动发现 Worker 的 GPU</span>
+<span class="cm"># 验证集群: ray status  → 应该看到节点 1 + 节点 2 的所有 GPU</span></pre>
 
 <div class="highlight">
   <strong>💡 实践建议：</strong>
-  <br>• 4 张卡以内 → 单机 TP 就够了
+  <br>• 4 张卡以内 → 单机 TP 就够了，不需要 Ray
   <br>• 4~8 张卡 → 单机 TP + PP 组合
-  <br>• 8 张卡以上 → 多节点 + TP + PP
+  <br>• 8 张卡以上 → 多节点 + TP + PP（需要 Ray 做跨节点分布式）
   <br>• 跨节点需要高速网络（InfiniBand/RoCE），普通千兆会成瓶颈
+  <br>• <strong>Worker 节点绝对不要跑 vllm serve！只跑 ray start！</strong>
 </div>
 </section>
 
