@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RLHF 全参数训练显存估算 — Qwen2.5-1.5B × DGX Spark</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --fg: #e6edf3; --fg2: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --teal: #56d4dd; --border: #30363d; --code-bg: #1c2128;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto Sans SC, sans-serif;
+  line-height: 1.7;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+.header {
+  text-align: center; padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+.header h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: var(--fg2); margin-top: 8px; }
+.header .tags { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { padding: 4px 12px; border-radius: 20px; font-size: .8rem; background: var(--bg3); color: var(--fg2); }
+
+.toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 40px; }
+.toc h2 { font-size: 1rem; color: var(--fg2); margin-bottom: 12px; }
+.toc ul { columns: 2 280px; list-style: none; }
+.toc ul li { padding: 4px 0; }
+.toc ul li a { color: var(--accent); text-decoration: none; font-size: .92rem; }
+.toc ul li a:hover { text-decoration: underline; }
+
+section { margin-bottom: 48px; }
+section h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+section h3 { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; color: var(--teal); }
+section p { margin-bottom: 12px; color: var(--fg2); }
+section ul, section ol { margin: 8px 0 16px 20px; color: var(--fg2); }
+section li { margin-bottom: 6px; }
+
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: var(--bg3); color: var(--fg); font-weight: 600; }
+td { color: var(--fg2); }
+td.num { text-align: right; font-family: "JetBrains Mono", monospace; color: var(--green); }
+td.total { font-weight: 700; color: var(--accent); }
+td:warn { color: var(--orange); }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 18px; overflow-x: auto; margin: 12px 0;
+  font-size: .85rem; line-height: 1.55;
+}
+code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+code.inline { background: var(--bg3); padding: 2px 6px; border-radius: 4px; font-size: .88rem; }
+
+.highlight { background: var(--bg2); border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; }
+.highlight strong { color: var(--accent); }
+.highlight.red { border-left-color: var(--red); } .highlight.red strong { color: var(--red); }
+.highlight.green { border-left-color: var(--green); } .highlight.green strong { color: var(--green); }
+.highlight.orange { border-left-color: var(--orange); } .highlight.orange strong { color: var(--orange); }
+
+.bar { display: flex; height: 24px; border-radius: 4px; overflow: hidden; margin: 8px 0; font-size: .75rem; line-height: 24px; text-align: center; }
+.bar div { color: var(--bg); font-weight: 600; }
+.bar .w { background: var(--accent); }
+.bar .g { background: var(--purple); }
+.bar .o { background: var(--orange); }
+.bar .a { background: var(--teal); }
+.bar .m { background: var(--fg2); }
+
+.math-box {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 18px; margin: 12px 0; font-family: "JetBrains Mono", monospace;
+  font-size: .88rem; line-height: 1.8; text-align: center;
+}
+.math-box .big { font-size: 1.3rem; color: var(--accent); }
+
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--fg2); font-size: .85rem; }
+
+.qa { margin-top: 16px; }
+.qa .q { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; color: var(--accent); font-weight: 600; }
+.qa .a { padding: 10px 18px 16px; margin-bottom: 16px; color: var(--fg2); border-left: 3px solid var(--bg3); margin-left: 12px; }
+
+@media (max-width: 640px) { .toc ul { columns: 1; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>RLHF 全参数训练 — 显存到底要吃多少</h1>
+  <p>Qwen2.5-1.5B × DGX Spark 128GB × AdamW bf16 · 一步一步算给你看</p>
+  <div class="tags">
+    <span>🧠 显存估算</span> <span>🐍 Qwen2.5-1.5B</span> <span>📊 面试必备</span> <span>💾 DGX 128GB</span>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul>
+    <li><a href="#s1">1. 显存吃在哪儿——四大块</a></li>
+    <li><a href="#s2">2. SFT 全参数微调</a></li>
+    <li><a href="#s3">3. RM 奖励模型</a></li>
+    <li><a href="#s4">4. GRPO 强化学习</a></li>
+    <li><a href="#s4-5">4.5 PPO vs GRPO 显存对比</a></li>
+    <li><a href="#s5">5. DPO + QLoRA</a></li>
+    <li><a href="#s6">6. 四个阶段总览对比</a></li>
+    <li><a href="#s7">7. 面试模拟</a></li>
+  </ul>
+</div>
+
+<!-- ===== 1 ===== -->
+<section id="s1">
+<h2>1. 显存吃在哪儿——四大块</h2>
+
+<p>训练时显存不光是存模型参数。你可以把 GPU 显存想象成<strong>四张嘴同时在吃</strong>：</p>
+
+<div class="card-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0;">
+  <div class="card"><h4>① 模型参数</h4><p>权重本身。bf16 训练每个参数占 2 字节。1.5B × 2 = <strong>3 GB</strong></p></div>
+  <div class="card"><h4>② 梯度</h4><p>反向传播算出来的。和参数一样大。1.5B × 2 = <strong>3 GB</strong></p></div>
+  <div class="card"><h4>③ 优化器状态</h4><p>AdamW 存两份：动量 + 方差，各 fp32 (4字节)。1.5B × 4 × 2 = <strong>12 GB</strong></p></div>
+  <div class="card"><h4>④ 中间激活</h4><p>前向传播每层的中间结果，反向传播要用。跟 batch size × 序列长度成正比。<strong>2~15 GB</strong></p></div>
+</div>
+
+<div class="highlight">
+  <strong>打个比方：</strong>参数 = 食材本身（3GB），梯度 = 做菜的锅铲（3GB），优化器状态 = 记录每步该放多少调料的备忘录（12GB），激活 = 切好摆满一桌子等入锅的备菜。后面三样往往比食材还占地方。
+</div>
+</section>
+
+<!-- ===== 2 ===== -->
+<section id="s2">
+<h2>2. Stage 1: SFT 全参数微调</h2>
+
+<p>最干净的一个阶段——单模型、单任务。</p>
+
+<h3>2.1 逐项计算</h3>
+
+<table>
+  <tr><th>显存占用项</th><th>计算方式</th><th>大小</th></tr>
+  <tr><td>模型参数</td><td>1.5B params × 2 bytes (bf16)</td><td class="num">3.0 GB</td></tr>
+  <tr><td>梯度</td><td>同参数</td><td class="num">3.0 GB</td></tr>
+  <tr><td>AdamW 动量 (m)</td><td>1.5B × 4 bytes (fp32)</td><td class="num">6.0 GB</td></tr>
+  <tr><td>AdamW 方差 (v)</td><td>1.5B × 4 bytes (fp32)</td><td class="num">6.0 GB</td></tr>
+  <tr><td>中间激活</td><td>batch=2×4=8, seq=512, 28层, d=1536<br>≈ 8 × 512 × 1536 × 28 × 2 / 1e9</td><td class="num">~3.5 GB</td></tr>
+  <tr><td>CUDA context</td><td>cuBLAS workspace, NCCL buffer 等</td><td class="num">~1.0 GB</td></tr>
+  <tr><td class="total">合计</td><td></td><td class="total num">~22.5 GB</td></tr>
+</table>
+
+<div class="bar">
+  <div class="w" style="width:13%">参数 3</div>
+  <div class="g" style="width:13%">梯度 3</div>
+  <div class="o" style="width:27%">动量 6</div>
+  <div class="o" style="width:27%">方差 6</div>
+  <div class="a" style="width:16%">激活 3.5</div>
+  <div class="m" style="width:4%">CUDA</div>
+</div>
+
+<p style="margin-top:8px;color:var(--fg2);font-size:.82rem;">▎ 很明显：<strong>优化器状态占了超过一半（12GB/22.5GB = 53%）</strong>。这就是为什么有 8-bit Adam、LoRA 这些东西——不是模型大，是优化器太重。</p>
+
+<h3>2.2 梯度检查点的效果</h3>
+
+<p>上面激活的 3.5 GB 是<strong>开了 gradient_checkpointing 之后</strong>的。不开的话，每层都要存完整的中间激活——28 层的 Transformer 堆下来大约 12~15 GB。开了之后只存 checkpoint 节点的激活，其余的反向传播时重新算——激活降到 3~4 GB，代价是多跑一遍前向（大约慢 20%~30%）。</p>
+
+<table>
+  <tr><th></th><th>无梯度检查点</th><th>有梯度检查点</th></tr>
+  <tr><td>激活显存</td><td class="num">12~15 GB</td><td class="num">~3.5 GB</td></tr>
+  <tr><td>总显存</td><td class="num">31~34 GB</td><td class="total num">~22.5 GB</td></tr>
+  <tr><td>训练速度</td><td>基准</td><td>慢 20%~30%</td></tr>
+</table>
+
+<div class="highlight green">
+  <strong>结论：</strong>SFT 全参数训练 1.5B 模型，开了梯度检查点后 <strong>约 22~25 GB</strong>。在 DGX Spark 128GB 上轻松跑，还有 100GB+ 留着给数据加载和操作系统用。
+</div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section id="s3">
+<h2>3. Stage 2: RM 奖励模型</h2>
+
+<p>RM 训练和 SFT 结构几乎一样——都是全参数，只是输出层从 LM head 变成了一个标量头（1 个 label）。模型参数多加了 1×d_model ≈ 1536 个参数而已，可以忽略不计。</p>
+
+<p><strong>显存和 SFT 几乎一样：~22~25 GB。</strong>但 RM 用的是 TRL 的 <strong>RewardTrainer</strong>，它和 HuggingFace 原生 Trainer 有几个关键区别：</p>
+
+<h3>3.1 RewardTrainer vs 普通 Trainer</h3>
+
+<table>
+  <tr><th></th><th>普通 Trainer</th><th>RewardTrainer</th></tr>
+  <tr><td>模型输出</td><td>LM head → logits (vocab_size)</td><td>标量头 → 1 个值（整个序列的总分）</td></tr>
+  <tr><td>loss 函数</td><td>交叉熵（逐 token 对比 label）</td><td><strong>对比 loss</strong>：−log[σ(r_chosen − r_rejected)]</td></tr>
+  <tr><td>数据格式</td><td>{input_ids, labels}</td><td>{input_ids_chosen, input_ids_rejected}</td></tr>
+  <tr><td>前向传播</td><td>1 次（一条序列→loss）</td><td><strong>2 次</strong>（chosen→r_chosen, rejected→r_rejected→对比 loss）</td></tr>
+  <tr><td>输入 padding 方向</td><td>右侧 padding</td><td>无特殊要求，两个序列独立编码</td></tr>
+  <tr><td>eval 指标</td><td>accuracy / loss</td><td>accuracy（chosen 分 &gt; rejected 分的占比）、score margin</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>最核心的区别——loss 函数完全不同：</strong>普通 Trainer 用的是逐 token 交叉熵（每个 token 预测对不对），RewardTrainer 用的是 Bradley-Terry 对比 loss（整个 chosen 序列的得分是否高于整个 rejected 序列）。前者是"教学"——教模型每个位置该输出什么；后者是"裁判"——教模型学会哪个回答整体更好。
+</div>
+
+<p><strong>显存坑：chosen 和 rejected 要各过一次前向。</strong>虽然你说的"不会同时存在于显存中"是对的——TRL 的实现是先算 chosen 得分、再算 rejected 得分、然后算 loss——但在显存峰值上，两批输入都要分配激活空间。如果一个 batch 里有 8 条偏好对，实际要处理的是 8×2=16 条序列。所以 RM 的 effective batch size 是数据条数的 2 倍——这是为什么 RM 的 per_device_batch 通常比 SFT 设得小（你的就是 2，和 SFT 一样）。</p>
+</section>
+
+<!-- ===== 4 ===== -->
+<section id="s4">
+<h2>4. Stage 3: GRPO 强化学习</h2>
+
+<p>这个阶段显存消耗猛增——因为要<strong>同时加载两个模型</strong>：</p>
+<ul>
+  <li><strong>策略模型（Policy）：</strong>Qwen2.5-1.5B SFT 版，全参数训练状态，~22 GB</li>
+  <li><strong>奖励模型（RM）：</strong>Stage 2 训出来的，推理模式（不需要梯度/优化器），~3 GB</li>
+</ul>
+
+<h3>4.1 逐项计算</h3>
+
+<table>
+  <tr><th>组件</th><th>模式</th><th>大小</th></tr>
+  <tr><td>Policy 模型参数</td><td>训练（bf16）</td><td class="num">3.0 GB</td></tr>
+  <tr><td>Policy 梯度</td><td>训练</td><td class="num">3.0 GB</td></tr>
+  <tr><td>Policy 优化器状态</td><td>训练（AdamW）</td><td class="num">12.0 GB</td></tr>
+  <tr><td>Policy 激活</td><td>含生成阶段（num_generations=4, max_len=256）</td><td class="num">~6.0 GB</td></tr>
+  <tr><td>RM 模型</td><td>推理（eval, no grad）</td><td class="num">3.0 GB</td></tr>
+  <tr><td>RM KV cache</td><td>推理时缓存</td><td class="num">~1.0 GB</td></tr>
+  <tr><td class="total">合计</td><td></td><td class="total num">~28.0 GB</td></tr>
+</table>
+
+<div class="highlight orange">
+  <strong>为什么激活比 SFT 大？</strong>GRPO 每步不只前向一次——num_generations=4 意味着每个 prompt 要生成 4 个回答。生成的 token 都要存 KV cache 和中间状态。虽然 RM 评分时不回传梯度到 policy，但生成阶段的中间结果要吃显存。
+</div>
+
+<h3>4.2 GRPO 的特殊性</h3>
+
+<p>GRPO 不像 SFT 那样"一个 batch 训完就完"——它每个 step 是：</p>
+
+<ol>
+  <li><strong>生成阶段：</strong>Policy 模型生成 num_generations=4 个回答（自回归解码，吃 KV cache）</li>
+  <li><strong>评分阶段：</strong>RM 模型对每个回答打分（forward only，不存梯度）</li>
+  <li><strong>训练阶段：</strong>计算 GRPO loss，反向传播更新 policy</li>
+</ol>
+
+<p>所以 GRPO 的显存峰值出现在<strong>生成阶段和训练阶段交接的时候</strong>——KV cache 还没释放，训练又要分配激活。这也是为什么你脚本里 max_steps 只设了 3——GRPO 训练本身就很重，小步验证比一口气跑完安全。</p>
+
+<div class="highlight green">
+  <strong>结论：</strong>GRPO 阶段 <strong>约 25~30 GB</strong>。DGX 128GB 依然绰绰有余——但和 SFT 比已经多吃了 5~8 GB。
+</div>
+</section>
+
+<!-- ===== 4.5 PPO ===== -->
+<section id="s4-5">
+<h2>4.5 PPO（对比）— 如果不用 GRPO，显存会怎样</h2>
+
+<p>GRPO 省掉了 Value Model（Critic），只需要 2 个模型（Policy + Ref）。如果用<strong>经典 PPO</strong>，需要同时加载 <strong>4 个模型</strong>：Policy + Reference + Reward + Value。下面精确算一下差距。</p>
+
+<h3>PPO 的四模型显存分解</h3>
+
+<table>
+  <tr><th>模型</th><th>精度</th><th>计算</th><th>显存</th></tr>
+  <tr><td>① Policy Model（训练中）</td><td>bf16 + fp32 opt</td><td>1.5B×2 + 1.5B×2 + 1.5B×8</td><td class="num">~22 GB</td></tr>
+  <tr><td>② Reference Model（冻结）</td><td>bf16 only</td><td>1.5B×2</td><td class="num">~3 GB</td></tr>
+  <tr><td>③ Reward Model（冻结）</td><td>bf16 only</td><td>1.5B×2</td><td class="num">~3 GB</td></tr>
+  <tr><td>④ Value Model / Critic（训练中）</td><td>bf16 + fp32 opt</td><td>和 Policy 共享 backbone，额外 ~0.5 GB</td><td class="num">~0.5 GB</td></tr>
+  <tr><td>激活值（PPO 在线采样）</td><td>—</td><td>每步生成回答 + 四模型前向</td><td class="num">~8~12 GB</td></tr>
+</table>
+
+<h3>计算公式</h3>
+
+<div class="math-box">
+  <span class="big">VRAM<sub>PPO</sub> ≈ P×2 + P×2 + P×8 + (3 × P×2) + activations</span><br>
+  = <strong>P×16 + activations</strong>
+</div>
+
+<p>其中前三项是 Policy Model 的自身开销（参数 + 梯度 + 优化器），<code>3×P×2</code> 是 Ref、RM、Value 三个冻结/轻量模型的 BF16 权重。</p>
+
+<h3>PPO vs GRPO — 同模型下的显存对比</h3>
+
+<table>
+  <tr><th>组件</th><th>PPO</th><th>GRPO</th><th>省了</th></tr>
+  <tr><td>模型数量</td><td class="num">4 个</td><td class="num">2 个</td><td>Ref + RM + Value</td></tr>
+  <tr><td>优化器数量</td><td class="num">2 个（Policy+Value）</td><td class="num">1 个（Policy）</td><td>Value 的优化器</td></tr>
+  <tr><td>冻结模型显存</td><td class="num">~6.5 GB</td><td class="num">~3 GB</td><td>RM + Value 的两份权重</td></tr>
+  <tr><td>激活值</td><td class="num">~12 GB</td><td class="num">~8 GB</td><td>少两个模型的前向</td></tr>
+  <tr style="font-weight:700;"><td>总峰值显存</td><td class="num" style="color:var(--red);">~38~42 GB</td><td class="num" style="color:var(--green);">~25~30 GB</td><td>~30%~35%</td></tr>
+</table>
+
+<h3>为什么 PPO 的显存这么大？—— 逐项拆解</h3>
+
+<pre>
+PPO 显存 = 22 + 3 + 3 + 0.5 + 10
+          ↑    ↑   ↑   ↑     ↑
+        Policy Ref  RM  Value 激活
+
+GRPO 显存 = 22 + 3 + 5
+            ↑    ↑   ↑
+          Policy Ref  激活(组内采样4条)
+</pre>
+
+<p><strong>PPO 比 GRPO 多吃了 ~12~15 GB</strong>，主要来自三个地方：</p>
+<ul>
+  <li><strong>RM 模型（~3 GB）</strong>— GRPO 的 reward 来自打分函数（Python 代码），不需要加载一个 1.5B 参数的神经网络当裁判</li>
+  <li><strong>Value 模型（~0.5 GB + 优化器）</strong>— PPO 需要 Critic 网络估计 V(s)，而 GRPO 用组内归一化替代：advantage = (reward - group_mean) / group_std</li>
+  <li><strong>更大的激活值（~+4 GB）</strong>— PPO 每步要跑 4 个模型的前向，中间结果更多</li>
+</ul>
+
+<div class="highlight">
+  <strong>结论：</strong>PPO <strong>约 38~42 GB</strong>。在 DGX 128GB 上依然跑得动，但是 GRPO 只要 25~30 GB 就能达到同样的对齐效果（甚至更好——DeepSeek-R1 就是 GRPO 训出来的）。<strong>这也是为什么 GRPO 正在取代 PPO 成为 RLHF 的默认选择。</strong>
+</div>
+
+<h3>如果用 7B 模型跑 PPO —— 显存爆炸</h3>
+
+<p>把上面的公式从 1.5B 换成 7B，看看会发生什么：</p>
+
+<table>
+  <tr><th>模型</th><th>PPO（4 模型）</th><th>GRPO（2 模型）</th></tr>
+  <tr><td>Qwen2.5-1.5B</td><td class="num">~40 GB ✅</td><td class="num">~28 GB ✅</td></tr>
+  <tr><td>Qwen2.5-3B</td><td class="num">~75 GB ⚠️</td><td class="num">~50 GB ✅</td></tr>
+  <tr><td style="color:var(--red);">Qwen2.5-7B</td><td class="num" style="color:var(--red);">~180 GB ❌</td><td class="num">~100 GB ⚠️</td></tr>
+  <tr><td>Qwen2.5-14B</td><td class="num" style="color:var(--red);">~340 GB ❌</td><td class="num" style="color:var(--red);">~180 GB ❌</td></tr>
+</table>
+
+<div class="highlight red">
+  <strong>关键：</strong>7B 以上的模型，PPO 基本没法在单机跑（4 个 7B 模型 ≈ 4×A100-80G 才够）。GRPO 虽然好一些，但 14B+ 也要多卡。这就是为什么 DPO（只需 2 个模型 + 可以量化）成了工业界主流——不是因为效果更好，是能跑得动。
+</div>
+</section>
+
+<!-- ===== 5 ===== -->
+<section id="s5">
+<h2>5. DPO + QLoRA：为什么只吃 30MB</h2>
+
+<p>DPO 最大的不同：<strong>不需要 RM 模型，不需要强化学习，直接在偏好对上优化。</strong></p>
+
+<p>QLoRA 的两个杀招：</p>
+
+<h3>5.1 4-bit 量化（NF4）</h3>
+
+<table>
+  <tr><th></th><th>全参数 bf16</th><th>QLoRA NF4</th></tr>
+  <tr><td>基本模型权重</td><td class="num">3.0 GB</td><td class="num">0.75 GB</td></tr>
+  <tr><td>参考模型（DPO 需要）</td><td class="num">3.0 GB</td><td class="num">0.75 GB</td></tr>
+  <tr><td>可训 LoRA 参数</td><td class="num">—</td><td class="num">~30 MB</td></tr>
+  <tr><td>优化器状态</td><td class="num">12 GB</td><td class="num">~0.12 GB</td></tr>
+  <tr><td class="total">总计</td><td class="total num">~24 GB</td><td class="total num">~4 GB</td></tr>
+</table>
+
+<h3>5.2 参数才 30MB 的魔法</h3>
+
+<p>LoRA 不训原始权重——只在原始权重旁边挂两个小矩阵 A 和 B（r=16）。1.5B 模型中所有 attention 和 FFN 的线性层加起来，LoRA 参数量：</p>
+
+<div class="math-box">
+  <span class="big">LoRA 参数 ≈ r × Σ(d_in + d_out) ≈ 16 × 2M ≈ 32M ≈ 30 MB</span><br><br>
+  可训参数占比：30 MB / 3 GB = <strong>~1%</strong><br>
+  实际训练的参数量不到原来的百分之一
+</div>
+
+<div class="highlight green">
+  <strong>结论：</strong>DPO + QLoRA <strong>约 4~6 GB</strong>。一张 8GB 显卡都能跑。这是为什么 DPO 被称为 RLHF 的"轻量替代方案"——不是效果更好，是<strong>更好跑</strong>。
+</div>
+</section>
+
+<!-- ===== 6 ===== -->
+<section id="s6">
+<h2>6. 四个阶段总览对比</h2>
+
+<table>
+  <tr><th>阶段</th><th>可训参数</th><th>模型数</th><th>优化器</th><th>峰值显存</th><th>DGX 128GB 占比</th></tr>
+  <tr>
+    <td>SFT（全参数）</td><td>1.5B</td><td>1</td><td>AdamW fp32</td>
+    <td class="total num">~22.5 GB</td><td class="num">17.6%</td>
+  </tr>
+  <tr>
+    <td>RM（全参数）</td><td>1.5B</td><td>1</td><td>AdamW fp32</td>
+    <td class="total num">~23 GB</td><td class="num">18.0%</td>
+  </tr>
+  <tr>
+    <td>GRPO</td><td>1.5B</td><td>2（Policy+Ref）</td><td>AdamW fp32</td>
+    <td class="total num">~28 GB</td><td class="num">21.9%</td>
+  </tr>
+  <tr style="background:rgba(248,113,113,0.06);">
+    <td>PPO（对比）</td><td>1.5B</td><td>4（Policy+Ref+RM+Value）</td><td>AdamW fp32 ×2</td>
+    <td class="total num" style="color:var(--red);">~40 GB</td><td class="num">31.3%</td>
+  </tr>
+  <tr>
+    <td>DPO + QLoRA</td><td>~32M (LoRA)</td><td>2（Model+Ref）</td><td>AdamW 8-bit</td>
+    <td class="total num">~5 GB</td><td class="num">3.9%</td>
+  </tr>
+</table>
+
+<div class="bar" style="margin:16px 0;">
+  <div class="w" style="width:18%">SFT 22.5</div>
+  <div class="w" style="width:18%">RM 23</div>
+  <div class="o" style="width:22%">GRPO 28</div>
+  <div class="m" style="width:31%">PPO 40</div>
+  <div class="a" style="width:4%">DPO 5</div>
+  <div class="m" style="width:38%">空闲 100+ GB</div>
+</div>
+<p style="color:var(--fg2);font-size:.82rem;">▎ DGX 128GB 下所有阶段都是小菜一碟。最吃显存的 GRPO 也只用了 22%。真正的天花板不是显存，是<strong>训练时间</strong>和<strong>数据质量</strong>。</p>
+
+<div class="highlight orange">
+  <strong>面试加分项：</strong>如果你被问到"128GB 够不够跑全参数 RLHF"，别只回答"够"——说清楚<strong>为什么够</strong>：① 模型只有 1.5B，不是 7B/70B；② 优化器是显存大头，不是模型；③ batch size 小（8~16），激活可控。同样的问题换成 7B 模型，全参数 RLHF 就需要 80~100GB，刚好到 DGX 天花板。
+</div>
+</section>
+
+<!-- ===== 7 ===== -->
+<section id="s7">
+<h2>7. 面试模拟</h2>
+
+<div class="qa">
+  <div class="q">Q1：训练一个 1.5B 模型，显存主要花在哪？</div>
+  <div class="a">
+    <p>大部分人会说"模型参数"，但实际大头是<strong>优化器状态</strong>。AdamW 每个参数存两份 fp32 状态（动量+方差），1.5B × 4 × 2 = <strong>12 GB</strong>，而模型本身 bf16 才 3 GB。参数:优化器 ≈ 1:4。</p>
+    <p>所以才有 8-bit Adam（省一半）和 LoRA（只训少量参数，优化器状态也等比缩小）这些技术。他们不是在省模型显存——是在减<strong>优化器</strong>的重量。</p>
+    <p>再追问一步可以提：fp32 的优化器不仅是容量问题，还有<strong>显存带宽</strong>问题。12GB 的优化器每步都要读写，IO 开销不容忽视——这也是 FP8 training 兴起的一个动机。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q2：GRPO 训练为什么比 SFT 显存高那么多？</div>
+    <div class="a">
+      <p>三点原因：</p>
+      <p>① <strong>双模型：</strong>SFT 只跑一个模型，GRPO 同时跑 Policy（训练态）+ RM（推理态）。RM 虽然不训但也占 3GB。</p>
+      <p>② <strong>生成阶段的开销：</strong>GRPO 每步先要 Policy 模型<strong>自回归生成</strong> num_generations=4 个回答，这部分产生大量 KV cache 和中间状态，高峰期显存比纯训练还高。</p>
+      <p>③ <strong>batch 构成更复杂：</strong>SFT 的 batch 是固定长度的 inputs → labels，GRPO 每步 batch 是由动态生成的回答和 prompt 拼起来的，内存分配比 SFT 碎片化得多。</p>
+      <p>如果你在面试里再补一句"这也是为什么我们的 max_steps 只设 3——GRPO 训练本身很重，小步验证更安全"，面试官会觉得你真跑过。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q3：为什么 DPO + QLoRA 能把显存从 22GB 压到 5GB？</div>
+    <div class="a">
+      <p>三重压缩叠加：</p>
+      <p>① <strong>4-bit 量化：</strong>冻结的模型权重从 bf16 (2 bytes/param) → NF4 (0.5 bytes/param)，模型 + 参考模型从 6GB 变成 1.5GB。</p>
+      <p>② <strong>LoRA 只训 1% 参数：</strong>可训参数从 1.5B 降到 ~32M，优化器状态从 12GB 降到 ~0.12GB。这是<strong>最大的节省来源</strong>。</p>
+      <p>③ <strong>8-bit 优化器：</strong>在 4-bit 量化之上再用 8-bit Adam（paged_adamw_8bit），进一步压缩优化器状态。</p>
+      <p>这三层是把"优化器状态"这个显存最大头从 12GB 打到 0.12GB——<strong>一百倍</strong>。代价呢？效果比全参数差 1~3 个百分点，但换来的是 8GB 显卡就能跑。性价比高到不讲道理。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q4：如果要训 7B 模型而不是 1.5B，DGX 128GB 还够吗？</div>
+    <div class="a">
+      <p><strong>SFT 全参数：</strong>7B × 2 × 4（参数+梯度+优化器×2）+ 激活 ≈ <strong>60~80 GB</strong>，<strong>勉强能跑</strong>但要小心 batch size 不能大（per_device=1, grad_accum=1~2）。</p>
+      <p><strong>GRPO 全参数：</strong>Policy 训练态 ~70GB + RM 推理态 ~14GB + KV cache ≈ <strong>90~110 GB</strong>，<strong>踩到 DGX 的天花板了</strong>。能跑但显存利用率 90%+，随时 OOM。</p>
+      <p><strong>DPO + QLoRA：</strong>基本模型 NF4 约 3.5GB × 2（模型+参考）+ LoRA ≈ <strong>10~12 GB</strong>，轻松。</p>
+      <p>所以 7B 的推荐路径是：<strong>SFT 全参数 + DPO QLoRA，跳过 GRPO</strong>。如果一定要做 GRPO，得上 LoRA 策略模型（cut 掉大部分优化器开销）。这也是业界主流做法——不是不愿意全参数 GRPO，是真的跑不动。</p>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q5：梯度检查点（gradient checkpointing）到底是什么？为什么能省显存？</div>
+    <div class="a">
+      <p>正常训练：前向传播时<strong>每一层</strong>的中间激活都存下来（因为反向传播要用）。28 层 × 每层激活 ≈ 10~15 GB。</p>
+      <p>梯度检查点：只存<strong>少数几层</strong>（checkpoint 节点）的激活。反向传播到某层发现没存激活——当场把前向重新跑一遍，算出该层的激活和梯度，然后继续往上。用<strong>计算换显存</strong>。</p>
+      <p>激活从 12GB 降到 3.5GB，但要多跑 1~2 遍前向（约慢 20%~30%）。HuggingFace 里一句 <code class="inline">gradient_checkpointing=True</code> 就开了。</p>
+      <p>反问面试官可以提：gradient checkpointing 的实现有三种——<code class="inline">use_reentrant=True</code>（PyTorch 旧版，向后兼容但 deprecated）、<code class="inline">use_reentrant=False</code>（新版，推荐）、以及 selective checkpointing（只对特定层开，比如每隔 2 层设一个检查点）。你的项目用的是 <code class="inline">use_reentrant=False</code>。</p>
+    </div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q6：为什么要用 KL 散度约束？不用会有什么后果？</div>
+  <div class="a">
+    <p>KL 散度衡量的是"训练后的策略模型"和"原始 SFT 模型"输出分布的差异。算出来是 0 说明两个模型一模一样，越大说明策略模型跑得越远。</p>
+
+    <p><strong>不用 KL 约束会怎样？</strong></p>
+    <p>① <strong>Reward Hacking（奖励作弊）。</strong>RM 不是完美的——它可能偏好"回答越长分越高"、"带某些关键词分高"这种浅层特征。没有 KL 约束，策略模型会很快学会用废话、重复、或特定模板来刷分——reward 一路涨，但回答质量崩了。</p>
+    <p>打个比方：你请了个评委给作文打分，评委喜欢"虽然……但是……"句式。没有 KL 约束 = 学生每篇作文狂塞 50 个"虽然但是"——得分爆表但文章没法读。</p>
+    <p>② <strong>语言能力退化。</strong>RL 阶段 lr 极小（1e-6），理论上不会忘东西。但 reward 信号单一——只奖励"RM 觉得好"的回答——如果 RM 不懂对话质量、只懂"有没有说正经话"，模型会退化成只说官腔套话。KL 约束就是一根绳子——"你可以优化，但别跑出这根绳子的范围"。</p>
+    <p>③ <strong>数学上 KL 项让梯度更稳定。</strong>GRPO 的 loss = -reward + β·KL。如果不加 KL 项，loss 只由 reward 驱动——reward 的梯度可能会极其尖锐（某一步 reward 突然涨很多），导致策略模型步子迈太大，训练不稳。KL 项给了 loss 一个"平滑"的底——即使 reward 梯度乱了，KL 也会把模型往回拉。</p>
+    <p><strong>你的项目里 KL~0.001 说明什么？</strong>非常小的值——策略模型和 SFT 几乎一模一样。这很正常：GRPO 只跑了 3 步，模型还没怎么变。真要看出 KL 的效果至少要跑 50~100 步。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q7：Reward Model 是怎么训练出来的？优化目标是什么？</div>
+  <div class="a">
+    <p>RM 的训练可以理解为：<strong>让模型学会"哪个回答更好"这种偏好判断。</strong></p>
+    <p><strong>训练数据：</strong>每条是 (prompt, chosen, rejected) 三元组——同一个 prompt，chosen 是人类更喜欢的回答，rejected 是更不喜欢的。你的数据来自 Anthropic/hh-rlhf，16 万对。</p>
+    <p><strong>模型结构：</strong>基座 Qwen2.5-1.5B，把最后的 LM head 替换成一个<strong>标量输出头</strong>（1 个值），给整个回答序列打一个分。注意 RM 不是逐 token 打分——是对整个 (prompt+response) 打一个总分。</p>
+    <p><strong>优化目标（Bradley-Terry 模型）：</strong></p>
+    <div class="math-box">
+      <span class="big">Loss = −log[σ(r_chosen − r_rejected)]</span><br><br>
+      σ 是 sigmoid 函数，r 是 RM 给整个序列的标量得分<br>
+      loss 越低 → r_chosen 和 r_rejected 的差距越大 → RM 区分度越好
+    </div>
+    <p>这个 loss 的含义：希望 chosen 的得分<strong>明显高于</strong> rejected。如果 r_chosen = r_rejected，sigmoid(0) = 0.5，loss = −log(0.5) ≈ 0.693——RM 完全没区分能力。训练过程中 loss 从 0.7 降到 0.3~0.4，说明 RM 学会了区分。</p>
+    <p><strong>你的项目里 reward 从 -0.47 到 +0.26：</strong>刚开始 RM 随机初始化，给所有回答都打负分。训练完后 chosen 能拿到正分（+0.26），rejected 拿到负分（更负），说明 RM 学到了偏好方向。</p>
+    <p><strong>RM 训练最大坑：过拟合。</strong>160K 偏好对，RM 很容易记住"训练集里哪些句子特征对应高分"而不是学到真正的质量判断。所以 RM 只训 1 epoch，lr 偏低（1e-5），和 SFT 比更保守。看 RM 好不好不是看 loss——是看<strong>eval accuracy</strong>：chosen 分 &gt; rejected 分的样本占比。>65% 算及格。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q8：为什么要用 GRPO 强化学习？PPO 不行吗？</div>
+  <div class="a">
+    <p>GRPO（Group Relative Policy Optimization）是 DeepSeek 在 2024 年提出的，本质是对 PPO 的<strong>"砍掉 Value Model"简化版</strong>。</p>
+    <p><strong>PPO 需要什么：</strong>① Policy 模型 + ② Reference 模型（算 KL）+ ③ Reward 模型（打分）+ ④ <strong>Value 模型</strong>（估计每个 token 的预期收益，用来算 advantage）。四个模型同时跑，Value 模型还得和 Policy 一样大——显存直接炸。</p>
+    <p><strong>GRPO 砍掉了什么：</strong>同一 prompt 生成<strong>一组</strong>（num_generations=4）回答，用组内的<strong>相对分数</strong>代替 Value 模型来估计 advantage。不用学 Value 函数——省掉一个完整模型的显存（1.5B × 2 = 3GB）。</p>
+    <div class="math-box">
+      <span class="big">Advantage = (r_i − mean(r_group)) / std(r_group)</span><br><br>
+      组内标准化：自己的 reward 相对于组均值的偏离就是"你这个回答有多好"<br>
+      不需要 Value Model 估计 baseline——组均值天然就是 baseline
+    </div>
+    <p><strong>为什么选择 GRPO 而不是 DPO：</strong>DPO 只能在<strong>已有的偏好对</strong>上优化——你的偏好数据里 chosen 是什么样，模型就学什么样。GRPO 可以<strong>在线探索</strong>——策略模型自己生成新回答，RM 现场打分，然后优化。你的偏好数据只有 16 万条，chosen 的回答未必覆盖了"最好的回答"——GRPO 能帮你搜出更好的。</p>
+    <p><strong>代价：</strong>GRPO 训练慢——每步要先生成 4 个回答（自回归解码），然后打分，最后算 loss。单步开销是 SFT 的 5~10 倍。所以你只跑了 3 步验证。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q9：MTP 自推测解码为什么能实现 1.5~2 倍推理加速？</div>
+  <div class="a">
+    <p>MTP（Multi-Token Prediction）是 DeepSeek-V3 提出的加速手段。核心思想一句话：<strong>原来每步生成 1 个 token，改成每步"尝试生成多个 token"，然后用主模型验证，验证通过的全收下——一步当多步用。</strong></p>
+    <p><strong>怎么做的：</strong></p>
+    <p>① 在模型最后加几个<strong>额外的预测头</strong>（MTP module），每个头多预测 1 个 token。主模型输出 token_1，MTP_1 预测 token_2，MTP_2 预测 token_3。</p>
+    <p>② 把这些预测 token 连同"如果按正常方式一个个解码"的 ground truth token 一起送入主模型做<strong>一次验证</strong>。</p>
+    <p>③ 验证通过的 token（即 MTP 头的预测和主模型自己生成的 token 一致）全部接受。验证失败的截断。</p>
+    <p><strong>为什么能加速：</strong></p>
+    <p>大模型的生成瓶颈不是<strong>计算量</strong>——是<strong>显存带宽</strong>。每生成一个 token 都要把整个模型的权重从显存读到计算单元，这步叫"weight loading"——模型大小 / 显存带宽 = 延迟下限。batch=1 时，计算单元大部分时间在等数据，利用率不到 30%。</p>
+    <p>正常解码：读模型→算一个 token→读模型→算一个 token→…… 3 个 token = 3 次读模型</p>
+    <p>MTP：读模型→主模型算 1 个 + MTP 头算 2 个→一次验证→3 个全接受 = <strong>1 次读模型</strong></p>
+    <p>权重读取开销从 3 次降到 1 次——所以理论加速是 3 倍。实际 MTP 头的接受率不是 100%，平均 50%~80%，所以实测 1.5~2 倍。</p>
+    <p><strong>MTP 和 Speculative Decoding 的区别：</strong>传统推测解码需要一个小模型（draft model），MTP 的 draft 直接嵌在主模型里——不需要额外加载另一个模型，零显存开销。这也是 DeepSeek-V3 能做到"671B 总参但推理不慢"的关键原因之一。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q10：beta=0.04 是什么意思？有什么作用？</div>
+  <div class="a">
+    <p>beta 是 KL 惩罚项的<strong>权重系数</strong>。在 GRPO 的 loss 里：</p>
+    <div class="math-box">
+      <span class="big">Loss = − Reward  +  <strong style="color:var(--accent)">β</strong> · KL(π_new || π_ref)</span><br><br>
+      β 越大 → KL 约束越强 → 策略模型越不敢偏离 SFT<br>
+      β 越小 → KL 约束越弱 → 策略模型越激进地追 reward
+    </div>
+    <p><strong>beta 的三个档位：</strong></p>
+    <table>
+      <tr><th>beta 值</th><th>行为</th><th>什么时候用</th></tr>
+      <tr><td>0.01~0.02</td><td>激进：reward 快速上升，但容易作弊（reward hacking）</td><td>RM 非常可靠时</td></tr>
+      <tr><td><strong>0.04（你的）</strong></td><td>平衡：reward 稳步上升，KL 缓慢增长，安全裕度大</td><td>通用起点</td></tr>
+      <tr><td>0.1~0.5</td><td>保守：模型几乎不动，reward 涨很慢</td><td>RM 不太可靠时（宁可不优化也别瞎优化）</td></tr>
+    </table>
+    <p><strong>怎么判断 beta 合不合适：</strong></p>
+    <p>看 KL-reward 曲线。理想情况：reward 稳步上升，KL 从 0 缓慢增加到 0.01~0.05 范围。如果 KL 短时间内冲到 0.5 以上——beta 太小，模型在乱搞，加大 beta。如果跑了几十步 reward 完全不动——beta 太大或 RM 有问题。</p>
+    <p>你项目里 beta=0.04、KL~0.001，说明模型几乎没动——这正常，只跑了 3 步。</p>
+    <p><strong>面试加分：</strong>beta 不是越大越好也不是越小越好——它是个<strong>经验参数</strong>，取决于你的 RM 有多靠谱。RM 强可以放低 beta 让模型多探索，RM 弱必须提高 beta 防止 reward hacking。这就是为什么 RLHF 流程里 Stage 2 RM 的质量直接决定 Stage 3 GRPO 的天花板。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q11：PagedAttention 是什么？为什么能省显存？</div>
+  <div class="a">
+    <p>PagedAttention 是 vLLM 的核心创新。要理解它先得理解问题在哪：</p>
+    <p><strong>传统 KV Cache 的浪费：</strong>推理时每生成一个 token，Attention 层的 key 和 value 都要缓存起来（下次生成时复用）。传统做法是预先分配一大块<strong>连续的显存</strong>给 KV cache，大小 = max_seq_len × num_layers × 2 × d_model。假设 max_len=4096, 28层, d=1536: 4096 × 28 × 2 × 1536 × 2 bytes ≈ <strong>700 MB</strong>。</p>
+    <p>但实际大部分请求不会到 max_len——可能只生成 200 个 token 就结束了。预分配的 500MB 就这么浪费了。而且每个请求的 KV cache 长度不一样、开始时间不一样，内存碎片化严重——总利用率通常不到 30%。</p>
+    <p><strong>PagedAttention 的做法：</strong>把 KV cache 切成<strong>固定大小的小块（blocks）</strong>，像操作系统的虚拟内存分页一样管理。需要时才分配，用完就回收。</p>
+    <div class="highlight">
+      <strong>类比：</strong>传统方式 = 每个客人来都给他开一整排包厢（固定大小），哪怕他只坐两分钟。PagedAttention = 把包厢拆成小卡座，客人需要几个给几个，走了立马清空给下一个人。同样的场地能容纳 4 倍的人。
+    </div>
+    <p><strong>三个好处：</strong></p>
+    <p>① <strong>零碎片浪费：</strong>block 固定大小（通常是 16 tokens/block），分配回收都是整块操作，不会出现"中间有 300MB 空隙但没法用"的情况。</p>
+    <p>② <strong>KV Cache 共享：</strong>同一个 prompt 前缀被多个请求共享时，只存一份 KV block。比如 10 个请求 prompt 前 100 token 完全一样——传统方式存 10 份，PagedAttention 只存 1 份，通过引用计数共享。这是 beam search 和并行采样场景的巨大优势。</p>
+    <p>③ <strong>显存利用率提升 2~4 倍：</strong>batch size 可以更大，吞吐量自然上去。vLLM 比 HuggingFace transformers 推理吞吐高 10~20 倍，PagedAttention 贡献了其中一半。</p>
+    <p><strong>你的 V100 上 vLLM 推理为什么快：</strong>16GB 显存，关了 PagedAttention 可能只够 batch=4~6 的 KV cache；开了之后 batch 能干到 32+。这就是 vLLM 对比原生 transformers 的核心卖点。</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q">Q12：静态批处理和连续批处理有什么区别？连续批处理的好处是什么？</div>
+  <div class="a">
+    <p>这个区别本质是<strong>"等齐再走"</strong>和<strong>"来了就走"</strong>的区别。</p>
+    <p><strong>静态批处理（Static Batching）：</strong></p>
+    <p>攒够一批请求（比如 8 个），一起送给模型，等<strong>这 8 个全部生成完</strong>才处理下一批。问题在哪：如果 7 个生成了 50 个 token 就结束、1 个生成了 500 个 token 还没完——整个 batch 都得等最慢的那个。那 7 个早结束的"空位"在那干等，GPU 算力全浪费。</p>
+    <p><strong>连续批处理（Continuous Batching / In-flight Batching）：</strong></p>
+    <p>不攒固定 batch。每个 step 结束时，检查哪些请求已经生成完了，<strong>立刻把它们踢出去，把排队的新请求塞进来</strong>。batch 的组成每步都在变——最快的不会等最慢的。</p>
+    <div class="highlight">
+      <strong>类比：</strong>静态批处理 = 公交车，必须等满一车人才发车。连续批处理 = 自动扶梯——来了就站上去，到了就下去，行列永远在流动。
+    </div>
+    <p><strong>vLLM 里的具体做法：</strong></p>
+    <p>每个 step：① 对当前 batch 里所有请求各生成 1 个 token ② 如有请求达到 max_tokens 或生成 EOS，立即移除 ③ 从等待队列拉新请求补位 ④ 下一个 step。</p>
+    <p>这意味着同一 batch 里的请求可能处于完全不同的解码进度——有的刚进来（prefill 阶段），有的已经生成了 300 个 token。PagedAttention 的 KV block 机制正好支持这种"混乱进度"——每个请求的 KV cache 独立分块管理，互不干扰。</p>
+    <p><strong>连续批处理的好处（三个数字）：</strong></p>
+    <p>① <strong>吞吐提升 2~5 倍。</strong>GPU 不再空等短请求，利用率从 30%~50% 拉到 80%~90%。</p>
+    <p>② <strong>延迟抖动大幅降低。</strong>静态批处理里一个长请求进来，后面所有人排队等。连续批处理里长请求不阻塞短请求，P99 延迟降一个数量级。</p>
+    <p>③ <strong>和 PagedAttention 是绝配。</strong>PagedAttention 管内存，连续批处理管调度——vLLM 把两者结合才能做到比 HF transformers 快两个数量级。</p>
+  </div>
+</div>
+
+<div class="highlight green" style="margin-top:24px;">
+  <strong>面试一句话总结：</strong>1.5B 全参数 RLHF 在 128GB 上完全不是问题——最吃显存的不是模型本身，是 AdamW 的两份 fp32 优化器状态（12GB），占全部显存的 50% 以上。这就是为什么我们聊 LoRA/QLoRA/8-bit Adam 时，核心逻辑永远是"优化器在吃显存，不是在省模型"。
+</div>
+</section>
+
+<div class="footer">
+  <p>RLHF 全参数训练显存估算 · Qwen2.5-1.5B · DGX Spark 128GB</p>
+  <p style="margin-top:4px">面试问题生成 · 2026-07</p>
+</div>
+
+</div>
+</body>
+</html>
