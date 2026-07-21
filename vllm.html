@@ -424,7 +424,7 @@ python -c <span class="str">"from vllm import ModelRegistry; print(ModelRegistry
   <tr><td><strong>BitsAndBytes</strong></td><td>INT4/INT8</td><td>~50%~75%</td><td>较慢</td><td><code>--quantization bitsandbytes --load-format bitsandbytes</code></td></tr>
 </table>
 <div class="highlight">
-  <strong>推荐：</strong>H100/H200 用户优先选 <strong>FP8</strong>（原生硬件加速，比 FP16 更快且显存减半）；消费级显卡（RTX 3090/4090）优先选 <strong>AWQ</strong>（INT4 量化，24GB 可跑 70B 模型）。
+  <strong>推荐：</strong>H100/H200 用户优先选 <strong>FP8</strong>（原生硬件加速，比 FP16 更快且显存减半）；DGX Spark（Blackwell, 128GB 统一内存）同样优先选 <strong>FP8</strong>，而且 128GB 显存跑 70B 模型直接用 BF16 也绰绰有余；消费级显卡（RTX 3090/4090）优先选 <strong>AWQ</strong>（INT4 量化，24GB 可跑 70B 模型）。
 </div>
 
 <h3>3.11 调度策略（Scheduling Policy）</h3>
