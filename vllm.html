@@ -580,6 +580,100 @@ response = client.chat.completions.create(
 
 <span class="builtin">print</span>(response.choices[<span class="num">0</span>].message.content)</pre>
 
+<h4 style="margin:28px 0 12px;">完整的生成参数配置</h4>
+<p>上面的示例只用了 <code>temperature</code> 和 <code>max_tokens</code>。OpenAI 兼容 API 支持全部生成参数，下面是<strong>带所有常用参数的完整版本</strong>：</p>
+
+<pre><span class="lang-label">Python — 带全部生成参数的客户端代码</span>
+<span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
+
+client = OpenAI(base_url=<span class="str">"http://localhost:8000/v1"</span>, api_key=<span class="str">"EMPTY"</span>)
+
+response = client.chat.completions.create(
+    model=<span class="str">"my-qwen"</span>,
+
+    <span class="cm"># ─── 消息体（必填） ───</span>
+    messages=[
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">"你是一个精通 Python 的编程助手"</span>},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用Python写一个快速排序"</span>},
+        <span class="cm"># 也可以传入历史对话实现多轮</span>
+        <span class="cm"># {"role": "assistant", "content": "好的，快速排序是..."},</span>
+        <span class="cm"># {"role": "user", "content": "能加注释吗？"},</span>
+    ],
+
+    <span class="cm"># ─── 输出长度控制 ───</span>
+    max_tokens=<span class="num">2048</span>,                              <span class="cm"># ★ 生成的最大 token 数（不含 prompt）</span>
+    max_completion_tokens=<span class="num">2048</span>,                    <span class="cm"># 同上（新版 OpenAI API 参数名）</span>
+    <span class="cm"># stop=["```", "\n\n\n"],            # ★ 停止词 — 遇到这些字符串立即停止</span>
+
+    <span class="cm"># ─── 随机性与多样性 ───</span>
+    temperature=<span class="num">0.7</span>,                             <span class="cm"># ★ 温度 (0~2)。0=确定性输出，1=标准随机，>1=更随机</span>
+    top_p=<span class="num">0.9</span>,                                   <span class="cm"># ★ 核采样 — 只从累积概率 top_p 的 token 中选</span>
+    top_k=<span class="num">50</span>,                                    <span class="cm"># ★ Top-K 采样 — 只从概率最高的 K 个 token 中选</span>
+    seed=<span class="num">42</span>,                                     <span class="cm"># ★ 随机种子 — 相同 seed + 相同参数 = 相同输出</span>
+
+    <span class="cm"># ─── 惩罚参数（控制重复） ───</span>
+    frequency_penalty=<span class="num">0.0</span>,                        <span class="cm"># 频率惩罚 (-2~2)。正值惩罚高频 token，减少重复</span>
+    presence_penalty=<span class="num">0.0</span>,                          <span class="cm"># 存在惩罚 (-2~2)。正值惩罚已出现过的 token，鼓励新话题</span>
+    repetition_penalty=<span class="num">1.0</span>,                        <span class="cm"># 重复惩罚 (>1 惩罚重复)。KaiChang/Vicuna 时代常用，OpenAI 风格用上面两个</span>
+
+    <span class="cm"># ─── 流式输出 ───</span>
+    <span class="cm"># stream=True,                        # ★ 流式输出 — 逐 token 返回，用户体验更好</span>
+    <span class="cm"># stream_options={"include_usage": True},  # 流式模式下也返回 usage 统计</span>
+
+    <span class="cm"># ─── 其他 ───</span>
+    n=<span class="num">1</span>,                                        <span class="cm"># 生成几个候选回答（>1 时返回多个 choices）</span>
+    <span class="cm"># logprobs=True,                      # 返回每个 token 的 log 概率（调试用）</span>
+    <span class="cm"># top_logprobs=5,                     # 返回 top-5 候选 token 的 log 概率</span>
+)
+
+<span class="builtin">print</span>(response.choices[<span class="num">0</span>].message.content)
+<span class="builtin">print</span>(<span class="str">f"使用: {response.usage}"</span>)  <span class="cm"># {"prompt_tokens": 45, "completion_tokens": 512, "total_tokens": 557}</span></pre>
+
+<h4 style="margin:28px 0 12px;">流式输出 — 逐字显示（像 ChatGPT 一样）</h4>
+
+<pre><span class="lang-label">Python — 流式输出</span>
+<span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
+
+client = OpenAI(base_url=<span class="str">"http://localhost:8000/v1"</span>, api_key=<span class="str">"EMPTY"</span>)
+
+stream = client.chat.completions.create(
+    model=<span class="str">"my-qwen"</span>,
+    messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"写一首关于AI的诗"</span>}],
+    temperature=<span class="num">0.7</span>,
+    max_tokens=<span class="num">512</span>,
+    stream=<span class="kw">True</span>,                                <span class="cm"># ★ 开启流式输出</span>
+)
+
+<span class="kw">for</span> chunk <span class="kw">in</span> stream:                             <span class="cm"># 每次迭代拿到一个新生成的 token</span>
+    <span class="kw">if</span> chunk.choices[<span class="num">0</span>].delta.content:
+        <span class="builtin">print</span>(chunk.choices[<span class="num">0</span>].delta.content, end=<span class="str">""</span>, flush=<span class="kw">True</span>)</pre>
+
+<h4 style="margin:28px 0 12px;">生成参数速查表</h4>
+
+<table>
+  <tr><th>参数</th><th>类型/范围</th><th>默认值</th><th>什么时候调</th></tr>
+  <tr><td><strong>temperature</strong></td><td>float, 0~2</td><td>1.0</td><td>越低越确定（代码/数学用 0.1~0.3），越高越有创意（写作/头脑风暴用 0.8~1.2）</td></tr>
+  <tr><td><strong>top_p</strong></td><td>float, 0~1</td><td>1.0</td><td>核采样。设为 0.9 表示只考虑累积概率前 90% 的 token。通常和 temperature 二选一</td></tr>
+  <tr><td><strong>top_k</strong></td><td>int, 1~N</td><td>-1（不限制）</td><td>只从概率最高的 K 个 token 中选。设 40~50 是常见值。vLLM 特有参数</td></tr>
+  <tr><td><strong>max_tokens</strong></td><td>int</td><td>16</td><td>限制生成长度。设太小回答被截断，设太大浪费资源。建议 512~4096</td></tr>
+  <tr><td style="color:var(--teal);"><strong>seed</strong></td><td>int</td><td>随机</td><td>固定随机种子 = 相同输出。调试、评测、复现实验时必须设</td></tr>
+  <tr><td><strong>frequency_penalty</strong></td><td>float, -2~2</td><td>0</td><td>正值惩罚已出现的 token（按频率）。模型老重复同一句话时调到 0.3~0.5</td></tr>
+  <tr><td><strong>presence_penalty</strong></td><td>float, -2~2</td><td>0</td><td>正值惩罚已出现的 token（不论频率）。想让模型聊新话题时调到 0.3~0.5</td></tr>
+  <tr><td><strong>repetition_penalty</strong></td><td>float, >1.0</td><td>1.0</td><td>vLLM 特有。1.1 = 轻微惩罚重复，1.2 = 明显惩罚。>1.3 可能影响语法</td></tr>
+  <tr><td><strong>stop</strong></td><td>str 或 list</td><td>无</td><td>遇到这些词立即停止生成。常用: <code>["\n\n", "Human:", "###"]</code></td></tr>
+  <tr><td><strong>stream</strong></td><td>bool</td><td>False</td><td>开启后逐 token 返回（Server-Sent Events）。Web 端必开</td></tr>
+  <tr><td><strong>n</strong></td><td>int</td><td>1</td><td>一次生成几个候选回答。>1 时 <code>response.choices</code> 有多个元素</td></tr>
+  <tr><td><strong>logprobs</strong></td><td>bool</td><td>False</td><td>返回每个 token 的对数概率。调试、置信度评估时开启</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>💡 常见场景的参数组合：</strong><br>
+  <strong>• 代码生成：</strong> temperature=0.1, top_p=0.95, max_tokens=4096（确定性高，输出长）<br>
+  <strong>• 创意写作：</strong> temperature=0.9, top_p=0.95, frequency_penalty=0.3（有创意但不重复）<br>
+  <strong>• 翻译：</strong> temperature=0.3, top_p=0.9, seed=42（确定性强，可复现）<br>
+  <strong>• 对话聊天：</strong> temperature=0.7, top_p=0.9, presence_penalty=0.3（自然但不跑题）
+</div>
+
 <p style="margin-top:16px;">本节覆盖了<strong>最常用参数</strong>。完整参数列表（包括 LoRA 热加载、结构化输出、多模态支持等）见 <a href="#sec5" style="color:var(--accent);">第 5 章 部署参数全解析</a>。</p>
 
 <div class="highlight">
