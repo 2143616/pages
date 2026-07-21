@@ -115,6 +115,7 @@ tbody tr:hover { background: var(--bg2); }
     <li><a href="#sec2">2. Pre-training 预训练 — 打地基</a></li>
     <li><a href="#sec3">3. SFT 指令微调 — 学说话</a></li>
     <li><a href="#sec4">4. RLHF — 学品位（上）</a></li>
+      <li style="padding-left:16px;"><a href="#sec4-6" style="font-size:12px;color:var(--fg2);">↳ 4.6 GRPO — 扔掉 Reward/Value Model</a></li>
     <li><a href="#sec5">5. DPO — 学品位（下）</a></li>
     <li><a href="#sec6">6. RLHF vs DPO 深度对决</a></li>
     <li><a href="#sec7">7. 新方法：ORPO / GRPO / KTO</a></li>
@@ -435,15 +436,143 @@ loss = -torch.log(torch.sigmoid(r_win - r_lose))  <span class="cm"># Bradley-Ter
     loss.backward()
     optimizer.step()</pre>
 
-  <h3>4.5 RLHF 的挑战</h3>
+  <h3 id="sec4-6">4.6 GRPO — RLHF 的进化：扔掉 Reward Model 和 Value Model</h3>
+
+  <p>RLHF (PPO) 最大的痛点是<strong>太贵太重</strong>——4 个模型同时跑，显存爆炸，调参地狱。那有没有办法既保留 RLHF 的"强化学习探索能力"，又不用 Reward Model 和 Value Model？</p>
+
+  <p>答案就是 <strong>GRPO（Group Relative Policy Optimization）</strong>，DeepSeek-R1 使用的核心训练方法。</p>
+
+  <h4 style="font-size:1.1em;color:var(--orange);margin:24px 0 10px;">核心洞察：用"组内比较"替代"全局裁判"</h4>
+
+  <p>RLHF 的 PPO 需要一个 Reward Model 当裁判——但这个裁判本身是训练出来的，可能不够公正。GRPO 换了一个思路：<strong>对同一个 prompt 生成 N 个回答，然后在这 N 个回答的内部比较谁好谁差</strong>。</p>
+
+  <div class="arch-box">
+    <span class="label">PPO (RLHF) 的做法：</span><br>
+    &nbsp;&nbsp;生成 1 个回答 → Reward Model 给分 → 更新模型<br>
+    &nbsp;&nbsp;需要: Policy + Reference + <strong>Reward</strong> + <strong>Value</strong> = 4 个模型<br><br>
+    <span class="label">GRPO 的做法：</span><br>
+    &nbsp;&nbsp;生成 4 个回答 → 规则打分 → 组内排名 → 好的提高概率，差的降低<br>
+    &nbsp;&nbsp;需要: Policy + Reference = <strong>2 个模型</strong>（和 DPO 一样轻量！）
+  </div>
+
+  <p><strong>为什么"组内比较"就够了？</strong>因为 GRPO 不关心"绝对好还是绝对差"，只关心<strong>"在当前这批回答里，哪些相对更好"</strong>。这个相对排名信号足以驱动模型向更好的方向进化。</p>
+
+  <h4 style="font-size:1.1em;color:var(--green);margin:24px 0 10px;">GRPO 的工作流程：从"组内排名"到"自我进化"</h4>
+
+  <pre><span class="lang-label">Python — GRPO 完整训练逻辑</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># GRPO = Group Relative Policy Optimization</span>
+<span class="cm"># 核心: 对同一个 prompt 生成 N 个回答，组内排名，无需 Reward Model</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">def</span> <span class="fn">grpo_step</span>(policy_model, ref_model, prompt, beta=<span class="num">0.04</span>, num_samples=<span class="num">4</span>):
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 1: 对同一个 prompt，生成 N 个不同的回答</span>
+    <span class="cm"># 通过不同的随机种子/采样温度，得到多样化的回答</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    responses = [
+        policy_model.generate(prompt, seed=seed)
+        <span class="kw">for</span> seed <span class="kw">in</span> <span class="builtin">range</span>(num_samples)    <span class="cm"># 不同 seed → 不同的随机探索路径</span>
+    ]                                                <span class="cm"># → [y1, y2, y3, y4] 共 4 个回答</span>
+
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 2: 用规则打分 — 不需要 Reward Model！</span>
+    <span class="cm"># 不同任务用不同的打分函数：</span>
+    <span class="cm">#   数学题 → 提取最终答案，与标准答案比较</span>
+    <span class="cm">#   代码题 → 运行代码，看是否通过测试用例</span>
+    <span class="cm">#   推理题 → 用规则检查推理步骤的完整性</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="kw">def</span> <span class="fn">rule_based_reward</span>(response):
+        <span class="cm"># 示范：数学题的简单打分</span>
+        <span class="kw">if</span> extract_answer(response) == correct_answer:
+            <span class="kw">return</span> <span class="num">1.0</span>                                <span class="cm"># 答案全对 → 满分</span>
+        <span class="kw">elif</span> has_correct_format(response):
+            <span class="kw">return</span> <span class="num">0.3</span>                                <span class="cm"># 格式对但答案错 → 部分分</span>
+        <span class="kw">else</span>:
+            <span class="kw">return</span> <span class="num">0.0</span>                                <span class="cm"># 完全错误 → 0 分</span>
+
+    rewards = torch.tensor([rule_based_reward(r) <span class="kw">for</span> r <span class="kw">in</span> responses])
+    <span class="cm"># 示例: [1.0, 0.3, 1.0, 0.0] — y1 和 y3 对, y2 格式对, y4 全错</span>
+
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 3: 组内归一化 — 用这组的均值和标准差做 baseline</span>
+    <span class="cm"># 这是 GRPO 的核心创新：不关心绝对分数，只关心组内排名</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    group_mean = rewards.mean()                        <span class="cm"># 这一组的平均分</span>
+    group_std  = rewards.std() + <span class="num">1e-8</span>               <span class="cm"># 标准差 (+小量防除零)</span>
+
+    <span class="cm"># advantages = "比组内平均水平好多少"（归一化后的相对分数）</span>
+    advantages = (rewards - group_mean) / group_std
+    <span class="cm"># [1.0, 0.3, 1.0, 0.0]/mean=0.575/std≈0.45</span>
+    <span class="cm"># → [(1.0-0.575)/0.45, ...] = [0.94, -0.61, 0.94, -1.28]</span>
+
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 4: 计算 log 概率比（和 DPO 一样的思路）</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    log_ratios = []
+    <span class="kw">for</span> i, response <span class="kw">in</span> <span class="builtin">enumerate</span>(responses):
+        logp_policy = policy_model.log_prob(prompt, response)  <span class="cm"># 当前策略的概率</span>
+        logp_ref    = ref_model.log_prob(prompt, response)     <span class="cm"># 参考策略的概率</span>
+        log_ratios.append(logp_policy - logp_ref)              <span class="cm"># log(π_θ/π_ref)</span>
+
+    log_ratios = torch.stack(log_ratios)
+
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># Step 5: GRPO Loss — advantage 高的回答提高概率</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># GRPO 用 PPO 风格的 clipped loss，防止单步更新过大</span>
+    clip_eps = <span class="num">0.2</span>                                      <span class="cm"># PPO 的标准 clip 值</span>
+    ratio = torch.exp(log_ratios)                       <span class="cm"># π_θ/π_ref</span>
+
+    <span class="cm"># PPO-style clipped objective: min(ratio*A, clip(ratio)*A)</span>
+    <span class="cm"># 如果 advantage 为正 → 提高这条回答的概率</span>
+    <span class="cm"># 如果 advantage 为负 → 降低这条回答的概率</span>
+    surr1 = ratio * advantages                         <span class="cm"># 标准 PPO 目标</span>
+    surr2 = torch.clamp(ratio, <span class="num">1</span>-clip_eps, <span class="num">1</span>+clip_eps) * advantages  <span class="cm"># 裁剪版</span>
+    loss = -torch.<span class="builtin">min</span>(surr1, surr2).mean()           <span class="cm"># 取最小 → 保守更新</span>
+
+    <span class="kw">return</span> loss
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># GRPO 的关键特征总结：</span>
+<span class="cm">#   1. 不需要 Reward Model — 规则打分替代人工标注</span>
+<span class="cm">#   2. 不需要 Value Model — 组内均值作为 baseline</span>
+<span class="cm">#   3. 只需 Policy + Reference = 2 个模型（和 DPO 一样轻）</span>
+<span class="cm">#   4. 保留了 PPO 的在线探索能力（每步生成新回答）</span>
+<span class="cm">#   5. 特别适合数学/代码等有客观标准的推理任务</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h4 style="font-size:1.1em;color:var(--teal);margin:24px 0 10px;">GRPO vs PPO vs DPO — 一张表看清进化路径</h4>
+
+  <table>
+    <thead><tr><th>维度</th><th>RLHF (PPO)</th><th>DPO</th><th>GRPO</th></tr></thead>
+    <tbody>
+      <tr><td><strong>需要的模型数</strong></td><td style="color:var(--red);">4 个（Policy+Ref+Reward+Value）</td><td style="color:var(--green);">2 个（Policy+Ref）</td><td style="color:var(--green);">2 个（Policy+Ref）</td></tr>
+      <tr><td><strong>打分方式</strong></td><td>Reward Model（需人类标注训练）</td><td>隐式 Reward（数学推导消去）</td><td><strong>规则打分</strong>（无需标注！）</td></tr>
+      <tr><td><strong>信号来源</strong></td><td>单个回答的绝对 reward</td><td>两个回答的相对比较</td><td>一组回答的<strong>组内排名</strong></td></tr>
+      <tr><td><strong>数据需求</strong></td><td>偏好标注 + 在线生成</td><td>偏好标注（离线）</td><td><strong>题目 + 规则（无需标注）</strong></td></tr>
+      <tr><td><strong>在线探索</strong></td><td style="color:var(--green);">✅ 有（每步生成新回答）</td><td style="color:var(--red);">❌ 无（离线数据）</td><td style="color:var(--green);">✅ 有（每步生成 N 个回答）</td></tr>
+      <tr><td><strong>训练稳定性</strong></td><td style="color:var(--red);">⚠️ 难调</td><td style="color:var(--green);">✅ 稳定</td><td style="color:var(--orange);">⚠️ 中等（PPO clip 仍需调参）</td></tr>
+      <tr><td><strong>最佳场景</strong></td><td>通用聊天（需人类偏好）</td><td>通用对齐（偏好数据充足）</td><td><strong>推理任务（有客观标准）</strong></td></tr>
+      <tr><td><strong>代表模型</strong></td><td>ChatGPT, Claude</td><td>Llama 2/3, Qwen</td><td>DeepSeek-R1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>为什么 DeepSeek-R1 选择 GRPO？</strong>数学和代码有明确的对错标准——答案对就是对、测试通过就是通过。这使得规则打分<strong>完全自动化</strong>，不需要人工标注。同时 GRPO 保留了 PPO 的在线探索能力——模型不断生成新回答、获得反馈、自我改进，形成了"尝试→打分→学习"的正反馈循环。这是 DeepSeek-R1 惊艳推理能力的核心驱动力之一。
+  </div>
+
+  <h3>4.7 RLHF 的挑战</h3>
 
   <table>
     <thead><tr><th>挑战</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td><strong>显存爆炸</strong></td><td>需要同时运行 4 个模型（Policy + Reference + Reward + Value）。每个都是 7B~70B 参数，即使量化后也需要至少 4×A100</td></tr>
-      <tr><td><strong>Reward Hacking</strong></td><td>模型会找到 Reward Model 的漏洞——比如发现"用礼貌的语气 + 长句"能拿高分，而不一定是内容更好</td></tr>
-      <tr><td><strong>训练不稳定</strong></td><td>PPO 对超参数极度敏感。KL 系数 β 设大了模型不进步，设小了模型胡言乱语</td></tr>
-      <tr><td><strong>在线采样慢</strong></td><td>每步训练都需要 Policy Model 重新生成回答 → 打分 → 更新 → 重新生成，循环很慢</td></tr>
+      <tr><td><strong>显存爆炸</strong></td><td>PPO 需要同时运行 4 个模型（Policy + Reference + Reward + Value），每个 7B~70B。GRPO 只需要 2 个，大幅缓解</td></tr>
+      <tr><td><strong>Reward Hacking</strong></td><td>PPO: 模型会找到 Reward Model 的漏洞——"用礼貌的语气 + 长句"能拿高分。GRPO: 规则打分更客观，不易被 hack</td></tr>
+      <tr><td><strong>训练不稳定</strong></td><td>PPO 对 KL 系数 β 等超参数极度敏感。GRPO 也需要调 clip_eps 等参数，但组内归一化使得训练更稳定</td></tr>
+      <tr><td><strong>在线采样慢</strong></td><td>PPO 和 GRPO 都需要每步生成新回答。GRPO 的 N 个采样可以并行</td></tr>
     </tbody>
   </table>
 </section>
