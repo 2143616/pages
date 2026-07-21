@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>大模型全参数训练 — SFT · RLHF · DPO 从入门到精通</title>
+<title>大模型全参数训练 — SFT · RLHF · DPO · GRPO 从入门到精通</title>
 <style>
 :root {
   --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
@@ -81,6 +81,14 @@ tbody tr:hover { background: var(--bg2); }
   padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; color: var(--fg);
 }
 .highlight strong { color: var(--accent); }
+.summary-box {
+  background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(188,140,255,0.06));
+  border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin: 20px 0;
+}
+.summary-box .label { font-size: 13px; color: var(--teal); font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.summary-box p { font-size: 14px; margin: 0; color: var(--fg); }
+.summary-box ul { margin: 10px 0 0 20px; color: var(--fg2); font-size: 14px; }
+.summary-box ul li { margin-bottom: 4px; }
 .info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
 .info-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
 .arch-box {
@@ -96,6 +104,15 @@ tbody tr:hover { background: var(--bg2); }
   letter-spacing: 0.05em;
 }
 .math { color: var(--purple); font-style: italic; }
+.step-flow {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 16px 0; font-size: 13px; font-family: "JetBrains Mono", monospace;
+}
+.step-flow .step {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--fg); white-space: nowrap;
+}
+.step-flow .step-arrow { color: var(--accent); font-weight: 700; }
 .footer { text-align: center; padding: 40px 0 30px; border-top: 1px solid var(--border); margin-top: 60px; color: var(--fg2); font-size: 13px; }
 .footer a { color: var(--accent); text-decoration: none; }
 @media (max-width: 900px) {
@@ -111,15 +128,14 @@ tbody tr:hover { background: var(--bg2); }
 <nav class="toc">
   <h3>📑 目录</h3>
   <ul>
+    <li><a href="#sec0">0. 先导：TRL 是什么？</a></li>
     <li><a href="#sec1">1. 全景：大模型训练的完整链路</a></li>
-    <li><a href="#sec2">2. Pre-training 预训练 — 打地基</a></li>
-    <li><a href="#sec3">3. SFT 指令微调 — 学说话</a></li>
-    <li><a href="#sec4">4. RLHF — 学品位（上）</a></li>
-      <li style="padding-left:16px;"><a href="#sec4-6" style="font-size:12px;color:var(--fg2);">↳ 4.6 GRPO — 扔掉 Reward/Value Model</a></li>
-    <li><a href="#sec5">5. DPO — 学品位（下）</a></li>
-    <li><a href="#sec6">6. RLHF vs DPO 深度对决</a></li>
-    <li><a href="#sec7">7. 新方法：ORPO / GRPO / KTO</a></li>
-    <li><a href="#sec8">8. 选型指南 & 速查表</a></li>
+    <li><a href="#sec2">2. Pre-training 预训练</a></li>
+    <li><a href="#sec3">3. SFT 指令微调</a></li>
+    <li><a href="#sec4">4. RLHF — PPO + GRPO</a></li>
+    <li><a href="#sec5">5. DPO 直接偏好优化</a></li>
+    <li><a href="#sec6">6. 全景对比 & 选型指南</a></li>
+    <li><a href="#sec7">7. 面试高频考点</a></li>
   </ul>
 </nav>
 
@@ -127,769 +143,728 @@ tbody tr:hover { background: var(--bg2); }
 
 <div class="header">
   <h1>🧠 大模型全参数训练方法</h1>
-  <p>SFT · RLHF · DPO · ORPO · GRPO — 从预训练到对齐，彻底搞懂 LLM 训练的每一种范式</p>
+  <p>SFT · RLHF · DPO · GRPO — 基于 TRL 的工业级实战指南，从原理到代码，一步到位</p>
   <div class="tags">
-    <span>⚡ SFT</span>
-    <span>🎯 RLHF</span>
-    <span>🔥 DPO</span>
-    <span>🧪 GRPO</span>
+    <span>⚡ TRL</span>
+    <span>🎯 SFTTrainer</span>
+    <span>🔥 DPOTrainer</span>
+    <span>🧪 GRPOTrainer</span>
     <span>🐍 PyTorch</span>
-    <span>🤗 Transformers</span>
+    <span>🤗 HuggingFace</span>
     <span>📘 教学文档</span>
   </div>
 </div>
+
+<!-- ═══════════════════════ SEC 0: TRL 先导 ═══ -->
+<section id="sec0">
+  <h2>0. 先导：TRL — 一行命令搞定各种训练</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>TRL（Transformer Reinforcement Learning）是 HuggingFace 官方推出的训练库。它把 SFT、DPO、RLHF、GRPO 等训练方法封装成统一的 Trainer 接口，<strong>和 HuggingFace 的 Trainer API 一模一样</strong>——你会用 HuggingFace 的 Trainer，就会用 TRL。</p>
+  </div>
+
+  <p>在 TRL 出现之前，做 RLHF 需要自己写 Reward Model 训练、PPO 采样循环、KL 惩罚计算……代码量几千行起。TRL 把这些全部封装好，<strong>只需定义配置 → 传入模型和数据 → 一行 <code>trainer.train()</code></strong>。</p>
+
+  <pre><span class="lang-label">Shell — 安装 TRL</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># TRL 依赖 PyTorch + Transformers + Accelerate + PEFT</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+pip install trl transformers accelerate peft datasets bitsandbytes</pre>
+
+  <p><strong>TRL 提供的五个核心 Trainer，对应五种训练范式：</strong></p>
+
+  <table>
+    <thead><tr><th>TRL Trainer</th><th>对应方法</th><th>一句话描述</th><th>数据需求</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SFTTrainer</strong></td><td>SFT 指令微调</td><td>用 QA 对话数据训练模型学会"问答"格式</td><td>指令→回答 对</td></tr>
+      <tr><td><strong>RewardTrainer</strong></td><td>Reward Model 训练</td><td>训练一个打分模型（RLHF 第二步需要）</td><td>两个回答的偏好标注</td></tr>
+      <tr><td><strong>PPOTrainer</strong></td><td>RLHF (PPO)</td><td>用强化学习让模型输出更符合人类偏好</td><td>prompt 列表 + 已训好的 Reward Model</td></tr>
+      <tr><td><strong>DPOTrainer</strong></td><td>DPO 直接偏好优化</td><td>无需 Reward Model，直接用偏好数据优化</td><td>(prompt, win, lose) 三元组</td></tr>
+      <tr><td><strong>GRPOTrainer</strong></td><td>GRPO 组内相对优化</td><td>用规则打分，组内比较，自进化（DeepSeek-R1）</td><td>prompt 列表 + 打分函数</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>本文的核心承诺：</strong>读完这篇文章，你将能对任意一个基座模型（如 Llama、Qwen），用 TRL 依次完成 <strong>SFT → DPO → GRPO</strong> 的完整训练链路，全部用工业级代码实现。
+  </div>
+</section>
 
 <!-- ═══════════════════════ SEC 1 ═══ -->
 <section id="sec1">
   <h2>1. 全景：大模型训练的完整链路</h2>
 
-  <p>训练一个大模型就像<strong>培养一个孩子</strong>。你不能一上来就教他"怎么做人"，而是先让他认字、再学说话、最后才教规矩和品位。这个过程恰好对应 LLM 训练的四个阶段：</p>
-
-  <div class="arch-box">
-    <span class="label">阶段 1: Pre-training（预训练）— 认字</span><br>
-    &nbsp;&nbsp;喂他全互联网的文本，让他学会"下一个词是什么"<br>
-    &nbsp;&nbsp;学到的：语法、常识、推理模式、世界知识<br>
-    &nbsp;&nbsp;成本：占总训练成本的 <strong>99%+</strong><br><br>
-    <span class="arrow">↓</span><br>
-    <span class="label">阶段 2: SFT（指令微调）— 学说话</span><br>
-    &nbsp;&nbsp;用高质量的"问题→答案"对教他对话格式<br>
-    &nbsp;&nbsp;学到的："用户这样问 → 我应该这样答"<br>
-    &nbsp;&nbsp;成本：几十万条数据，几小时到几天<br><br>
-    <span class="arrow">↓</span><br>
-    <span class="label">阶段 3: 偏好对齐（RLHF / DPO）— 学品位</span><br>
-    &nbsp;&nbsp;告诉他"哪种回答更好"——有用的、无害的、诚实的<br>
-    &nbsp;&nbsp;学到的："不是能回答就行，要回答得让人舒服"<br>
-    &nbsp;&nbsp;这是 ChatGPT 从"能用"到"好用"的关键一跃<br><br>
-    <span class="arrow">↓</span><br>
-    <span class="label">阶段 4（可选）: 推理增强（GRPO）— 学思考</span><br>
-    &nbsp;&nbsp;对数学、代码等有明确对错的任务，用规则奖励自我进化<br>
-    &nbsp;&nbsp;学到的："先想一想再回答"（像 DeepSeek-R1 那样）<br>
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>大模型训练 = <strong>预训练（认字）→ SFT（学说话）→ 偏好对齐（学品位）</strong>。每阶段都有统一的 TRL Trainer 接口，本文重点教后两个阶段。</p>
+    <ul>
+      <li>阶段 1「预训练」→ 成本占 99%+，用 Next Token Prediction，不在本文范围</li>
+      <li>阶段 2「SFT」→ <strong>SFTTrainer</strong>，几万条数据，几小时</li>
+      <li>阶段 3「偏好对齐」→ <strong>DPOTrainer</strong> / <strong>PPOTrainer</strong> / <strong>GRPOTrainer</strong>，几千~几万条偏好数据</li>
+    </ul>
   </div>
 
-  <table>
-    <thead><tr><th>阶段</th><th>目标函数</th><th>数据</th><th>学到什么</th><th>代表</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Pre-training</strong></td><td>Next Token Prediction</td><td>互联网文本（万亿 token）</td><td>语言能力、知识储备</td><td>Llama, GPT-3</td></tr>
-      <tr><td><strong>SFT</strong></td><td>Next Token Prediction</td><td>QA 对话对（1~100 万条）</td><td>指令遵循、对话格式</td><td>所有 LLM</td></tr>
-      <tr><td><strong>RLHF</strong></td><td>PPO + Reward Model</td><td>偏好标注（数万条）</td><td>有用性、无害性、诚实性</td><td>ChatGPT, Claude</td></tr>
-      <tr><td><strong>DPO</strong></td><td>偏好分类（无 Reward Model）</td><td>偏好标注（同 RLHF）</td><td>同上，但更简单</td><td>Llama 2/3, Qwen</td></tr>
-      <tr><td><strong>GRPO</strong></td><td>组内相对排序</td><td>规则打分（无需人工标注）</td><td>推理能力、自我纠错</td><td>DeepSeek-R1</td></tr>
-    </tbody>
-  </table>
+  <div class="arch-box">
+    <span class="label">完整训练链路（从 0 到 ChatGPT 级别的对话模型）：</span><br><br>
+    <span class="label">阶段 1: Pre-training（预训练）</span><br>
+    &nbsp;&nbsp;目标: Next Token Prediction | 数据: 互联网文本（万亿 token） | 学到: 语言能力<br>
+    <span class="arrow">↓ 产出: Base Model（会续写但不会对话）</span><br><br>
+    <span class="label">阶段 2: SFT（指令微调）</span><br>
+    &nbsp;&nbsp;工具: <strong>SFTTrainer</strong> | 数据: QA 对话对（1~100 万条） | 学到: 指令遵循<br>
+    <span class="arrow">↓ 产出: SFT Model（会对话但质量不可控）</span><br><br>
+    <span class="label">阶段 3: 偏好对齐（三选一）</span><br>
+    &nbsp;&nbsp;方案 A — RLHF: <strong>RewardTrainer</strong> + <strong>PPOTrainer</strong>（4 模型，显存高，效果上限最高）<br>
+    &nbsp;&nbsp;方案 B — DPO: <strong>DPOTrainer</strong>（2 模型，显存中等，工业界首选）<br>
+    &nbsp;&nbsp;方案 C — GRPO: <strong>GRPOTrainer</strong>（2 模型，无需标注，推理任务最强）<br>
+    <span class="arrow">↓ 产出: Aligned Model（会聊天，知道什么该说什么不该说）</span>
+  </div>
 </section>
 
 <!-- ═══════════════════════ SEC 2 ═══ -->
 <section id="sec2">
   <h2>2. Pre-training 预训练 — 打地基</h2>
 
-  <p>预训练虽然不属于"微调"，但<strong>它是所有后续步骤的基础</strong>，不理解它就不知道为什么 SFT 用几千条数据就能见效。</p>
-
-  <h3>2.1 目标函数：Next Token Prediction</h3>
-
-  <div class="formula">
-    Loss = -log P( token<sub>t</sub> | token<sub>0</sub>, token<sub>1</sub>, ..., token<sub>t-1</sub> )
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>预训练让模型学会"语言本身"。目标函数 = 预测下一个词（Next Token Prediction），不需要人工标注。这一步不涉及 TRL——它直接用 PyTorch 或 Megatron/DeepSpeed 等分布式框架。本文只做概念性介绍。</p>
   </div>
 
-  <p>模型看到的永远是"前文"，要预测的永远是"下一个词"。这个目标<strong>极其简单但极度高效</strong>——互联网上的每一段文字天然就是这个任务的训练数据，不需要人工标注。</p>
-
-  <pre><span class="lang-label">Python — Next Token Prediction 的本质</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># 预训练就是反复做这件事：给前文 → 猜下一个词 → 和正确答案对比</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="kw">import</span> torch
-<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
-
-<span class="cm"># 假设有一句话："人工智能将改变世界"</span>
-tokens = [<span class="num">101</span>, <span class="num">345</span>, <span class="num">678</span>, <span class="num">901</span>, <span class="num">234</span>, <span class="num">567</span>, <span class="num">890</span>]  <span class="cm"># 每个数字是一个 token ID</span>
-
-<span class="cm"># 模型看前 6 个 token，预测第 7 个</span>
-input_ids = tokens[:<span class="num">6</span>]                                      <span class="cm"># [101,345,678,901,234,567] — 前 6 个作为输入</span>
-target    = tokens[<span class="num">6</span>]                                        <span class="cm"># 890 — 真正应该预测的第 7 个</span>
-
-<span class="cm"># 前向传播：模型对每个位置输出词汇表大小的 logits</span>
-logits = model(torch.tensor([input_ids]))                    <span class="cm"># (1, seq_len, vocab_size)</span>
-
-<span class="cm"># 只关心最后一个位置的预测（因为我们只预测"下一个词"）</span>
-last_logits = logits[<span class="num">0</span>, -<span class="num">1</span>, :]                              <span class="cm"># (vocab_size,) — 每个词的概率</span>
-
-<span class="cm"># CrossEntropy = -log(softmax(logits)[target])</span>
-<span class="cm"># 本质：正确答案的概率越高 → loss 越小</span>
-loss = F.cross_entropy(last_logits.unsqueeze(<span class="num">0</span>), torch.tensor([target]))
-<span class="kw">print</span>(<span class="str">f"Loss: {loss.item():.4f}"</span>)  <span class="cm"># 预训练开始时 loss ~10，结束时可降到 ~2</span></pre>
-
-  <div class="highlight">
-    <strong>为什么这个简单的目标能学会一切？</strong>因为"预测下一个词"这个任务隐含地要求模型理解语法（形容词后面通常是名词）、掌握常识（"天空是___" → 蓝色）、学会推理（"因为下雨，所以地面___" → 湿了）、甚至记住知识（"中国的首都是___" → 北京）。<strong>一个任务，涵盖了一切语言能力。</strong>
-  </div>
-
-  <h3>2.2 预训练 vs 微调的本质区别</h3>
+  <p>预训练的目标函数极其简单：给定前文 token<sub>0</sub>...token<sub>t-1</sub>，预测 token<sub>t</sub>。这个任务隐含地要求模型学会语法、常识、推理和知识。</p>
 
   <table>
-    <thead><tr><th></th><th>预训练</th><th>微调 (SFT/RLHF/DPO)</th></tr></thead>
+    <thead><tr><th>维度</th><th>预训练</th><th>微调（后文讲的所有方法）</th></tr></thead>
     <tbody>
       <tr><td><strong>数据规模</strong></td><td>万亿 token</td><td>几千~几十万条</td></tr>
-      <tr><td><strong>数据质量</strong></td><td>参差不齐（互联网原始文本）</td><td>精心筛选和标注</td></tr>
-      <tr><td><strong>学会的能力</strong></td><td>通用语言能力（"会说话"）</td><td>特定行为模式（"会聊天"）</td></tr>
-      <tr><td><strong>目标函数</strong></td><td>Next Token Prediction</td><td>Next Token Prediction / PPO / DPO Loss</td></tr>
-      <tr><td><strong>成本占比</strong></td><td>99%+（百万~千万美元）</td><td>&lt;1%（几千~几万美元）</td></tr>
-      <tr><td><strong>类比</strong></td><td>上完 12 年中小学</td><td>入职培训 3 天</td></tr>
+      <tr><td><strong>数据来源</strong></td><td>互联网原始文本（无需标注）</td><td>人工标注的问答/偏好数据</td></tr>
+      <tr><td><strong>目标函数</strong></td><td>Next Token Prediction</td><td>Next Token / PPO / DPO / GRPO Loss</td></tr>
+      <tr><td><strong>成本</strong></td><td>占总训练成本的 99%+</td><td>&lt;1%（几小时到几天）</td></tr>
+      <tr><td><strong>学到什么</strong></td><td>语言的基础能力</td><td>特定的行为模式</td></tr>
     </tbody>
   </table>
 </section>
 
-<!-- ═══════════════════════ SEC 3 ═══ -->
+<!-- ═══════════════════════ SEC 3: SFT ═══ -->
 <section id="sec3">
-  <h2>3. SFT（Supervised Fine-Tuning）— 指令微调</h2>
+  <h2>3. SFT — 指令微调（Supervised Fine-Tuning）</h2>
 
-  <h3>3.1 什么是 SFT？</h3>
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>SFT 让模型从"续写机器"变成"聊天助手"。<strong>本质 = 把对话数据喂给模型继续做 Next Token Prediction</strong>，但只在回答部分算 loss。TRL 对应：<strong>SFTTrainer</strong>。</p>
+    <ul>
+      <li><strong>输入：</strong> "请解释光合作用 → 光合作用是植物利用……"</li>
+      <li><strong>关键技巧：</strong> 只在回答部分计算 loss（指令部分 label=-100）</li>
+      <li><strong>TRL 一行搞定：</strong> <code>SFTTrainer(model, args, train_dataset).train()</code></li>
+    </ul>
+  </div>
 
-  <p>SFT 是让模型从"续写机器"变成"聊天助手"的<strong>第一步</strong>。预训练模型只会续写——你输入"请帮我写一首诗"，它可能续写"请帮我写一首诗吧，我已经等了很久了"，而不是真的写诗。</p>
+  <h3>3.1 SFT 在做什么？—— 一个直观理解</h3>
 
-  <p>SFT 用<strong>高质量的"问题→答案"对</strong>训练模型，让它学会：当用户给出某种格式的输入时，应该以某种格式输出。</p>
+  <table>
+    <thead><tr><th></th><th>预训练模型（SFT 前）</th><th>SFT 后</th></tr></thead>
+    <tbody>
+      <tr><td><strong>输入</strong></td><td>"请帮我写一首诗"</td><td>"请帮我写一首诗"</td></tr>
+      <tr><td><strong>输出</strong></td><td>"请帮我写一首诗吧，我已经等了很久了……"（续写，不是写诗）</td><td>"春风拂面杨柳青，\n碧水蓝天映画屏……"（真的在写诗！）</td></tr>
+      <tr><td><strong>原因</strong></td><td>只学过续写，没见过对话格式</td><td>学过"用户这样说 → 助手这样答"的模式</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 SFT 的核心原理：和预训练一模一样的目标函数</h3>
+
+  <p>SFT 的目标函数和预训练<strong>完全相同</strong>——都是 <strong>Next Token Prediction</strong>。区别只在于数据：预训练的数据是"随便什么文本"，SFT 的数据是"问题→答案对"。模型并不知道自己在被 SFT，它只是继续做 Next Token Prediction，但因为数据格式变了，行为也变了。</p>
 
   <div class="info-box">
-    <div class="label">💡 SFT 的本质</div>
+    <div class="label">🔑 SFT 最重要的技巧：Loss Masking</div>
     <p style="margin:0;color:var(--fg2);font-size:14px;">
-      SFT 的<strong>目标函数和预训练完全一样</strong>——都是 Next Token Prediction。区别只在于<strong>数据</strong>：预训练的数据是"随便什么文本"，SFT 的数据是"问题→答案对"。模型并不"知道"自己正在被 SFT，它只是继续做"预测下一个 token"这件事，但训练数据变了，所以行为变了。
+      在 SFT 训练中，<strong>只在回答部分计算 loss</strong>，指令部分的 label 设为 -100（CrossEntropyLoss 自动忽略）。<br>
+      为什么？因为模型不需要学"如何出题"——只需要学"如何答题"。如果在指令部分也算 loss，模型会浪费大量训练能力去学习生成"请解释光合作用"这样的指令前缀。
     </p>
   </div>
 
-  <h3>3.2 SFT 的数据格式</h3>
+  <h3>3.3 用 SFTTrainer 实现指令微调</h3>
 
-  <pre><span class="lang-label">SFT 数据格式示例</span>
+  <p>以下是 TRL 的 SFTTrainer 完整训练脚本——<strong>这就是你生产环境中真正会用的代码</strong>：</p>
+
+  <pre><span class="lang-label">Python — TRL SFTTrainer 完整训练脚本</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># SFT 的每条数据就是一个"对话"，有多种模板风格</span>
+<span class="cm"># TRL SFTTrainer — 工业级 SFT 训练，一行 trainer.train() 搞定</span>
+<span class="cm"># 自动帮你做: Loss Masking + 打包序列 + 混合精度 + 梯度累积</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> SFTTrainer, SFTConfig           <span class="cm"># TRL 的核心 API</span>
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
 
-<span class="cm"># 模板 1: Alpaca 格式（简单直接）</span>
-<span class="str">"Below is an instruction that describes a task.\n\n</span>
-<span class="str">### Instruction:\n用 Python 写一个快速排序\n\n</span>
-<span class="str">### Response:\n```python\ndef quicksort(arr):\n    ...```"</span>
+<span class="cm"># ─── Step 1: 加载基座模型和分词器 ───</span>
+<span class="cm"># 从预训练基座出发——这是你从 HuggingFace Hub 下载的模型</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"Qwen/Qwen2.5-7B"</span>,                    <span class="cm"># 换成任意基座：Llama, Mistral, DeepSeek...</span>
+    torch_dtype=<span class="str">"auto"</span>,
+    device_map=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"Qwen/Qwen2.5-7B"</span>)
 
-<span class="cm"># 模板 2: ChatML 格式（OpenAI 风格，支持多轮对话）</span>
-<span class="str">"&lt;|im_start|&gt;system\n你是一个有用的助手&lt;|im_end|&gt;\n</span>
-<span class="str">&lt;|im_start|&gt;user\n什么是光合作用？&lt;|im_end|&gt;\n</span>
-<span class="str">&lt;|im_start|&gt;assistant\n光合作用是植物利用阳光...&lt;|im_end|&gt;"</span>
+<span class="cm"># ─── Step 2: 准备数据 — 对话格式 ───</span>
+<span class="cm"># 数据格式: {"messages": [{"role":"user","content":"..."}, {"role":"assistant","content":"..."}]}</span>
+<span class="cm"># TRL 自动应用 chat_template，并自动只对 assistant 部分算 loss</span>
+dataset = load_dataset(<span class="str">"HuggingFaceH4/ultrachat_200k"</span>, split=<span class="str">"train_sft"</span>)
 
-<span class="cm"># 模板 3: Llama 3 格式（最现代的对话模板）</span>
-<span class="str">"&lt;|begin_of_text|&gt;</span>
-<span class="str">&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;\n\n</span>
-<span class="str">用 Python 写一个快速排序</span>
-<span class="str">&lt;|eot_id|&gt;</span>
-<span class="str">&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;\n\n</span>
-<span class="str">```python\ndef quicksort(arr):\n    ...```</span>
-<span class="str">&lt;|eot_id|&gt;"</span></pre>
+<span class="cm"># ─── Step 3: 配置 SFTConfig — 所有训练参数 ───</span>
+sft_config = SFTConfig(
+    output_dir=<span class="str">"./sft_qwen"</span>,
+    per_device_train_batch_size=<span class="num">2</span>,          <span class="cm"># 单卡 batch size</span>
+    gradient_accumulation_steps=<span class="num">8</span>,          <span class="cm"># 累积 8 步 → 等效 batch=2×8=16</span>
+    num_train_epochs=<span class="num">3</span>,
+    learning_rate=<span class="num">2e-5</span>,                       <span class="cm"># SFT 的 LR 不宜过大</span>
+    warmup_ratio=<span class="num">0.03</span>,
+    lr_scheduler_type=<span class="str">"cosine"</span>,
+    fp16=<span class="kw">True</span>,                              <span class="cm"># 混合精度，省显存（A100 可选 bf16=True）</span>
+    logging_steps=<span class="num">10</span>,
+    save_strategy=<span class="str">"epoch"</span>,
+    max_seq_length=<span class="num">2048</span>,                     <span class="cm"># 序列最大长度，超出的截断</span>
+    packing=<span class="kw">True</span>,                            <span class="cm"># ★ 打包：把多个短对话拼成一条 2048，充分利用 GPU</span>
+    dataset_text_field=<span class="str">"messages"</span>,            <span class="cm"># 告诉 TRL 数据中哪个字段是对话</span>
+)
 
-  <h3>3.3 关键技巧：只在回答部分计算 Loss</h3>
+<span class="cm"># ─── Step 4: 创建 Trainer 并训练 ───</span>
+trainer = SFTTrainer(
+    model=model,
+    args=sft_config,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+)
+trainer.train()                             <span class="cm"># ★ 一行训练！</span>
 
-  <pre><span class="lang-label">Python — SFT 的 Loss Masking</span>
+<span class="cm"># ─── Step 5: 保存模型 ───</span>
+trainer.save_model(<span class="str">"./sft_qwen_final"</span>)
+
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># SFT 最重要的技巧：不要对"指令部分"计算 loss！</span>
-<span class="cm"># 模型只需要学会"对于这个指令，输出这个回答"</span>
-<span class="cm"># 不需要学"如何生成指令"（那是用户的活）</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="kw">import</span> torch
+<span class="cm"># SFTTrainer 自动帮你做的事（你不需要手动写）：</span>
+<span class="cm">#   1. 应用 chat_template（把 JSON 转成模型训练时的 token 序列）</span>
+<span class="cm">#   2. Loss Masking（自动识别 assistant 部分，只在那部分算 loss）</span>
+<span class="cm">#   3. Packing（多个短对话拼成一条长序列，训练效率提升 2~5 倍）</span>
+<span class="cm">#   4. 混合精度 + 梯度累积 + 梯度裁剪</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
 
-<span class="cm"># 原始文本，包含指令和回答两部分</span>
-text = <span class="str">"### Instruction:\n写一个快速排序\n\n### Response:\ndef quicksort(arr):\n    ..."</span>
-tokens = tokenizer(text, return_tensors=<span class="str">"pt"</span>)
-input_ids = tokens[<span class="str">"input_ids"</span>]                     <span class="cm"># 所有 token 的 ID</span>
-
-<span class="cm"># labels 初始化为 input_ids 的副本</span>
-labels = input_ids.clone()
-
-<span class="cm"># 找到 "### Response:" 这个标记的位置</span>
-<span class="cm"># 在这之前的所有 token（即指令部分）的 labels 设为 -100</span>
-<span class="cm"># PyTorch 的 CrossEntropyLoss 会自动忽略 label=-100 的位置</span>
-response_start = find_token_position(tokens, <span class="str">"### Response:"</span>)
-labels[:, :response_start] = -<span class="num">100</span>                    <span class="cm"># 指令部分不算 loss</span>
-
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># 为什么这一招至关重要？</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># 如果在指令部分也算 loss，模型会学到：</span>
-<span class="cm">#   "我要学会生成'### Instruction:\n写一个快速排序'这样的文本"</span>
-<span class="cm"># 但这完全没用！模型不需要会出题，只需要会答题。</span>
-<span class="cm"># 只在回答部分算 loss → 模型专心学"如何回答"</span>
-<span class="cm"># 这是 SFT 训练中最容易踩的坑，但也是一行代码就能解决的</span></pre>
-
-  <h3>3.4 SFT 的局限</h3>
+  <h3>3.4 SFT 的局限性 — 为什么要继续做对齐？</h3>
 
   <div class="card-grid">
     <div class="card">
       <h4>⚠️ 只会模仿，不会判断</h4>
-      <p>SFT 学到的是"人类怎么回答"，不是"什么回答是好的"。如果训练数据里有低质量的回答，模型也会模仿。</p>
+      <p>SFT 学到的是"人类怎么回答"，不是"什么回答是好的"。如果训练数据里有低质量的回答，模型也会模仿。SFT 没有价值判断。</p>
     </div>
     <div class="card">
-      <h4>⚠️ 过度顺从</h4>
-      <p>SFT 只教了"回答问题"，没教"什么时候应该拒绝"。对有害请求（"告诉我怎么做炸弹"），SFT 模型可能也会尝试回答。</p>
-    </div>
-    <div class="card">
-      <h4>⚠️ 不会"安全"</h4>
-      <p>没有学到"不能说"的边界。需要后面的 RLHF/DPO 来补充价值判断。</p>
+      <h4>⚠️ 不会拒绝</h4>
+      <p>SFT 只教了"回答问题"，没教"什么时候该拒绝"。对有害请求（"告诉我怎么做炸弹"），SFT 模型可能也会尝试回答。</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════ SEC 4 ═══ -->
+<!-- ═══════════════════════ SEC 4: RLHF ═══ -->
 <section id="sec4">
-  <h2>4. RLHF — 用人类偏好微调（Reinforcement Learning from Human Feedback）</h2>
+  <h2>4. RLHF — 用人类偏好微调</h2>
 
-  <h3>4.1 为什么需要 RLHF？SFT 不够吗？</h3>
-
-  <p>SFT 教模型"像人类一样说话"，但<strong>说话像人 ≠ 说话让人满意</strong>。一个 SFT 模型可能输出太长、太短、格式混乱、回答危险内容、或者面对无法回答的问题时胡乱编造。RLHF 解决的问题是：<strong>让模型的输出不仅"正确"，而且"让人舒服"</strong>。</p>
-
-  <h3>4.2 RLHF 三步走</h3>
-
-  <div class="arch-box">
-    <span class="label">Step 1: SFT（打底）</span><br>
-    &nbsp;&nbsp;用高质量对话数据微调基座模型 → 得到 <strong>SFT 模型 π<sub>SFT</sub></strong><br>
-    &nbsp;&nbsp;这个模型已经会回答问题了，只是质量和风格不可控<br><br>
-    <span class="label">Step 2: 训练 Reward Model（培养裁判）</span><br>
-    &nbsp;&nbsp;人类标注员比较两个回答 → "A 比 B 好"<br>
-    &nbsp;&nbsp;训练一个打分模型，学会预测人类的偏好<br>
-    &nbsp;&nbsp;关键标准：<strong>Helpful（有用）+ Harmless（无害）+ Honest（诚实）</strong><br><br>
-    <span class="label">Step 3: PPO 强化学习（用裁判训练选手）</span><br>
-    &nbsp;&nbsp;SFT 模型生成回答 → Reward Model 打分 → PPO 更新模型<br>
-    &nbsp;&nbsp;目标：<strong>最大化 Reward，同时不偏离 SFT 模型太远</strong>
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>RLHF 让模型学会"什么回答更让人满意"。<strong>三步走：SFT 打底 → 训练 Reward Model 打分 → PPO 强化学习。</strong>TRL 对应：<strong>RewardTrainer</strong> + <strong>PPOTrainer</strong>。后来 DeepSeek-R1 提出了 <strong>GRPO</strong>，省掉 Reward Model，直接用规则打分，TRL 对应：<strong>GRPOTrainer</strong>。</p>
   </div>
 
-  <h3>4.3 Step 2 深入：Reward Model 的数学</h3>
+  <h3>4.1 为什么 SFT 不够？— 说话像人 ≠ 说话让人满意</h3>
 
-  <p>Reward Model 本质是一个<strong>对比学习</strong>任务。给定同一个 prompt 的两个回答 y<sub>win</sub>（好的）和 y<sub>lose</sub>（差的）：</p>
+  <p>SFT 后的模型会回答问题，但回答质量不可控：可能太长、太短、不安全、或者面对不确定的问题时胡乱编造。RLHF 的核心目标是让模型学会 <strong>Helpful（有用）+ Harmless（无害）+ Honest（诚实）</strong>。</p>
 
-  <div class="formula">
-    Loss<sub>reward</sub> = -log σ( R(x, y<sub>win</sub>) - R(x, y<sub>lose</sub>) )
+  <h3>4.2 RLHF 三步走（PPO 路线）</h3>
+
+  <div class="step-flow">
+    <span class="step">SFT 模型</span>
+    <span class="step-arrow">→</span>
+    <span class="step" style="border-color:var(--teal);">训练 Reward Model</span>
+    <span class="step-arrow">→</span>
+    <span class="step" style="border-color:var(--purple);">PPO 强化学习</span>
   </div>
 
-  <p>其中 σ 是 sigmoid 函数。这个 loss 的含义是：<strong>让 Reward Model 给"好回答"打更高的分、给"差回答"打更低的分</strong>。</p>
+  <h4>Step 1: 训练 Reward Model（培养裁判）</h4>
 
-  <pre><span class="lang-label">Python — Reward Model 训练</span>
+  <p>Reward Model 的任务：<strong>给定一个回答，预测人类会给它打多少分</strong>。训练数据格式是 <strong>(prompt, 好的回答, 差的回答)</strong>——人类标注员只需要说"A 比 B 好"，不需要给出具体分数。</p>
+
+  <pre><span class="lang-label">Python — TRL RewardTrainer 训练 Reward Model</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># Reward Model 通常就是从 SFT 模型改的 — 把最后的 lm_head</span>
-<span class="cm"># 换成一个标量输出层（输出一个分数而非词汇表大小的 logits）</span>
+<span class="cm"># TRL RewardTrainer — 训练一个"打分器"</span>
+<span class="cm"># 数据格式：(prompt, chosen, rejected) → "好回答"和"差回答"</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="kw">class</span> <span class="cls">RewardModel</span>(nn.Module):
-    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="builtin">self</span>, base_model):
-        <span class="kw">super</span>().<span class="fn">__init__</span>()
-        <span class="builtin">self</span>.transformer = base_model.transformer  <span class="cm"># 复用预训练的 Transformer 本体</span>
-        <span class="builtin">self</span>.reward_head = nn.Linear(hidden_size, <span class="num">1</span>)  <span class="cm"># 只改最后一层：输出一个标量</span>
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> RewardTrainer, RewardConfig
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForSequenceClassification
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
 
-    <span class="kw">def</span> <span class="fn">forward</span>(<span class="builtin">self</span>, input_ids, attention_mask):
-        hidden = <span class="builtin">self</span>.transformer(input_ids, attention_mask)
-        <span class="cm"># 取最后一个 token 的 hidden state → 标量 reward</span>
-        reward = <span class="builtin">self</span>.reward_head(hidden[<span class="str">"last_hidden_state"</span>][:, -<span class="num">1</span>, :])
-        <span class="kw">return</span> reward.squeeze(-<span class="num">1</span>)  <span class="cm"># (batch,) — 每个样本一个分数</span>
+<span class="cm"># 1. 加载基座模型 → 把 lm_head 换成 score_head（输出一个标量分数）</span>
+<span class="cm"># AutoModelForSequenceClassification 自动帮你在原模型上加一层</span>
+model = AutoModelForSequenceClassification.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>,                     <span class="cm"># 从 SFT 模型出发</span>
+    num_labels=<span class="num">1</span>,                              <span class="cm"># 输出 1 个标量：分数</span>
+    torch_dtype=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./sft_qwen_final"</span>)
 
+<span class="cm"># 2. 加载偏好数据 — 格式: {"chosen": "好回答", "rejected": "差回答"}</span>
+<span class="cm"># TRL 自动用 Bradley-Terry Loss: -log(sigmoid(R(chosen) - R(rejected)))</span>
+dataset = load_dataset(<span class="str">"trl-lib/ultrafeedback_binarized"</span>, split=<span class="str">"train"</span>)
+
+<span class="cm"># 3. 配置 RewardConfig</span>
+reward_config = RewardConfig(
+    output_dir=<span class="str">"./reward_model"</span>,
+    per_device_train_batch_size=<span class="num">4</span>,
+    num_train_epochs=<span class="num">1</span>,
+    learning_rate=<span class="num">1e-5</span>,
+    max_length=<span class="num">2048</span>,
+    logging_steps=<span class="num">10</span>,
+)
+
+<span class="cm"># 4. 训练 — 和 HuggingFace Trainer 完全一样的 API</span>
+trainer = RewardTrainer(
+    model=model,
+    args=reward_config,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+)
+trainer.train()
+trainer.save_model(<span class="str">"./reward_model_final"</span>)</pre>
+
+  <h4>Step 2: PPO 强化学习（用裁判训练选手）</h4>
+
+  <p>有了 Reward Model 作为裁判，现在可以用 PPO 来优化模型：<strong>多生成 Reward 高的回答，但同时用 KL 惩罚限制模型不要偏离 SFT 太远</strong>。</p>
+
+  <pre><span class="lang-label">Python — TRL PPOTrainer</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># 训练时：对每个 prompt，人类标注了 win 和 lose 两个回答</span>
+<span class="cm"># TRL PPOTrainer — 同时跑 4 个模型（Policy/Ref/Reward/Value）</span>
+<span class="cm"># 显存需求高（7B 模型约需 4×A100），但 API 简洁</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-prompt = <span class="str">"请解释量子计算"</span>
-y_win  = <span class="str">"量子计算利用量子比特的叠加态..."</span>   <span class="cm"># 人类标注: 这个更好</span>
-y_lose = <span class="str">"量子计算是一种计算方式。"</span>          <span class="cm"># 人类标注: 这个太简单</span>
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoTokenizer
 
-r_win  = reward_model(prompt + y_win)         <span class="cm"># Reward Model 给好回答打分</span>
-r_lose = reward_model(prompt + y_lose)        <span class="cm"># Reward Model 给差回答打分</span>
+<span class="cm"># 1. 加载 Policy Model — 带 Value Head 的 SFT 模型</span>
+<span class="cm"># AutoModelForCausalLMWithValueHead = 原模型 + 额外的一个 Value 头</span>
+model = AutoModelForCausalLMWithValueHead.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>,
+    torch_dtype=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./sft_qwen_final"</span>)
 
-loss = -torch.log(torch.sigmoid(r_win - r_lose))  <span class="cm"># Bradley-Terry Loss</span>
-<span class="cm"># 想让 r_win >> r_lose → sigmoid(大正数) → log(≈1) → loss 小</span></pre>
+<span class="cm"># 2. 加载 Ref Model（SFT 模型，冻结，用于计算 KL 惩罚）</span>
+ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>,
+    torch_dtype=<span class="str">"auto"</span>,
+)
 
-  <h3>4.4 Step 3 深入：PPO 的目标函数</h3>
+<span class="cm"># 3. 加载 Reward Model（前面训好的打分器，冻结）</span>
+reward_model = AutoModelForSequenceClassification.from_pretrained(
+    <span class="str">"./reward_model_final"</span>,
+    torch_dtype=<span class="str">"auto"</span>,
+)
 
-  <p>PPO（Proximal Policy Optimization）是 RLHF 的核心算法。它会告诉模型：<strong>多生成 Reward 高的回答，但别跑太远</strong>。</p>
+<span class="cm"># 4. 配置 PPOConfig</span>
+ppo_config = PPOConfig(
+    output_dir=<span class="str">"./ppo_output"</span>,
+    per_device_train_batch_size=<span class="num">1</span>,          <span class="cm"># PPO 显存紧张，batch=1 是常态</span>
+    learning_rate=<span class="num">1e-6</span>,
+    ppo_epochs=<span class="num">4</span>,
+    kl_penalty=<span class="str">"kl"</span>,                           <span class="cm"># KL 惩罚类型</span>
+    init_kl_coef=<span class="num">0.1</span>,                          <span class="cm"># ★ 初始 KL 系数 — 控制偏离 SFT 的程度</span>
+    target=<span class="num">6.0</span>,                              <span class="cm"># ★ KL 目标值 — 自动调整 kl_coef 以保持 KL≈6</span>
+    max_grad_norm=<span class="num">1.0</span>,                        <span class="cm"># 梯度裁剪</span>
+    cliprange=<span class="num">0.2</span>,                           <span class="cm"># PPO clip — 防止单步更新过大</span>
+)
 
-  <div class="formula">
-    maximize &nbsp; 𝔼[ R(x, y) ] - β · KL( π<sub>θ</sub>(y|x) ‖ π<sub>SFT</sub>(y|x) )
-  </div>
+<span class="cm"># 5. 创建 PPOTrainer 并训练</span>
+<span class="cm"># PPOTrainer 会自动：采样回答 → Reward 打分 → 计算 KL → 更新 Policy</span>
+trainer = PPOTrainer(
+    config=ppo_config,
+    model=model,
+    ref_model=ref_model,
+    reward_model=reward_model,
+    tokenizer=tokenizer,
+)
 
-  <div class="highlight">
-    <strong>两项的含义：</strong><br>
-    <strong>第一项 𝔼[R(x,y)]：</strong>让生成的回答获得更高的 Reward 分数（更有用、更无害、更诚实）<br>
-    <strong>第二项 β·KL：</strong>惩罚当前模型（π<sub>θ</sub>）和 SFT 模型（π<sub>SFT</sub>）之间的差异<br>
-    &nbsp;&nbsp;&nbsp;→ 为什么需要这个惩罚？如果没有它，模型会发现："我只要一直说'你太好了！'就能拿高分"——这种现象叫 <strong>Reward Hacking（奖励作弊）</strong><br>
-    &nbsp;&nbsp;&nbsp;→ KL 惩罚保证模型不会为了高分而胡说八道，保持在 SFT 模型附近
-  </div>
+<span class="cm"># 训练循环 — 每步都是：生成→打分→更新</span>
+<span class="kw">for</span> batch <span class="kw">in</span> prompt_dataset:
+    <span class="cm"># 对每个 prompt，PPOTrainer 自动生成回答、打分、计算 loss、更新</span>
+    stats = trainer.step(
+        query_texts=batch[<span class="str">"prompt"</span>],
+        query_tensors=tokenizer(batch[<span class="str">"prompt"</span>], return_tensors=<span class="str">"pt"</span>).input_ids,
+    )
+    <span class="kw">print</span>(<span class="str">f"Reward: {stats['reward']:.2f}, KL: {stats['kl']:.2f}"</span>)
 
-  <pre><span class="lang-label">Python — PPO 的核心逻辑</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># PPO 需要同时运行 4 个模型：</span>
-<span class="cm">#   1. Policy Model (π_θ)        — 训练目标，正在被优化</span>
-<span class="cm">#   2. Reference Model (π_SFT)   — SFT 模型，冻结，用于计算 KL 惩罚</span>
-<span class="cm">#   3. Reward Model (R)          — 打分裁判，冻结</span>
-<span class="cm">#   4. Value Model (V)           — 估算"未来能得多少分"，用于计算 advantage</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-
-<span class="kw">for</span> batch <span class="kw">in</span> dataloader:
-    <span class="cm"># Step 1: 用 Policy Model 生成回答（注意：是当前正在训练的模型！）</span>
-    responses = policy_model.generate(batch[<span class="str">"prompt"</span>])  <span class="cm"># 每个 prompt 生成一个回答</span>
-
-    <span class="cm"># Step 2: Reward Model 打分</span>
-    rewards = reward_model(batch[<span class="str">"prompt"</span>], responses)  <span class="cm"># 每个回答一个分数</span>
-
-    <span class="cm"># Step 3: 计算 KL 散度 — 当前模型和 SFT 模型的概率分布差异</span>
-    logprob_curr = policy_model.logprob(responses)    <span class="cm"># 当前模型对这些回答的概率</span>
-    logprob_ref  = reference_model.logprob(responses) <span class="cm"># SFT 模型对这些回答的概率</span>
-    kl_penalty = (logprob_curr - logprob_ref).<span class="builtin">sum</span>()  <span class="cm"># KL 散度 = 两个 log 概率的差</span>
-
-    <span class="cm"># Step 4: PPO Loss — 最大化 奖励 - KL 惩罚</span>
-    loss = -(rewards.<span class="builtin">sum</span>() - beta * kl_penalty)  <span class="cm"># 负号是因为 optimizer 做 minimization</span>
-
-    loss.backward()
-    optimizer.step()</pre>
-
-  <h3 id="sec4-6">4.6 GRPO — RLHF 的进化：扔掉 Reward Model 和 Value Model</h3>
-
-  <p>RLHF (PPO) 最大的痛点是<strong>太贵太重</strong>——4 个模型同时跑，显存爆炸，调参地狱。那有没有办法既保留 RLHF 的"强化学习探索能力"，又不用 Reward Model 和 Value Model？</p>
-
-  <p>答案就是 <strong>GRPO（Group Relative Policy Optimization）</strong>，DeepSeek-R1 使用的核心训练方法。</p>
-
-  <h4 style="font-size:1.1em;color:var(--orange);margin:24px 0 10px;">核心洞察：用"组内比较"替代"全局裁判"</h4>
-
-  <p>RLHF 的 PPO 需要一个 Reward Model 当裁判——但这个裁判本身是训练出来的，可能不够公正。GRPO 换了一个思路：<strong>对同一个 prompt 生成 N 个回答，然后在这 N 个回答的内部比较谁好谁差</strong>。</p>
-
-  <div class="arch-box">
-    <span class="label">PPO (RLHF) 的做法：</span><br>
-    &nbsp;&nbsp;生成 1 个回答 → Reward Model 给分 → 更新模型<br>
-    &nbsp;&nbsp;需要: Policy + Reference + <strong>Reward</strong> + <strong>Value</strong> = 4 个模型<br><br>
-    <span class="label">GRPO 的做法：</span><br>
-    &nbsp;&nbsp;生成 4 个回答 → 规则打分 → 组内排名 → 好的提高概率，差的降低<br>
-    &nbsp;&nbsp;需要: Policy + Reference = <strong>2 个模型</strong>（和 DPO 一样轻量！）
-  </div>
-
-  <p><strong>为什么"组内比较"就够了？</strong>因为 GRPO 不关心"绝对好还是绝对差"，只关心<strong>"在当前这批回答里，哪些相对更好"</strong>。这个相对排名信号足以驱动模型向更好的方向进化。</p>
-
-  <h4 style="font-size:1.1em;color:var(--green);margin:24px 0 10px;">GRPO 的工作流程：从"组内排名"到"自我进化"</h4>
-
-  <pre><span class="lang-label">Python — GRPO 完整训练逻辑</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># GRPO = Group Relative Policy Optimization</span>
-<span class="cm"># 核心: 对同一个 prompt 生成 N 个回答，组内排名，无需 Reward Model</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="kw">import</span> torch
-<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
-
-<span class="kw">def</span> <span class="fn">grpo_step</span>(policy_model, ref_model, prompt, beta=<span class="num">0.04</span>, num_samples=<span class="num">4</span>):
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># Step 1: 对同一个 prompt，生成 N 个不同的回答</span>
-    <span class="cm"># 通过不同的随机种子/采样温度，得到多样化的回答</span>
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    responses = [
-        policy_model.generate(prompt, seed=seed)
-        <span class="kw">for</span> seed <span class="kw">in</span> <span class="builtin">range</span>(num_samples)    <span class="cm"># 不同 seed → 不同的随机探索路径</span>
-    ]                                                <span class="cm"># → [y1, y2, y3, y4] 共 4 个回答</span>
-
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># Step 2: 用规则打分 — 不需要 Reward Model！</span>
-    <span class="cm"># 不同任务用不同的打分函数：</span>
-    <span class="cm">#   数学题 → 提取最终答案，与标准答案比较</span>
-    <span class="cm">#   代码题 → 运行代码，看是否通过测试用例</span>
-    <span class="cm">#   推理题 → 用规则检查推理步骤的完整性</span>
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="kw">def</span> <span class="fn">rule_based_reward</span>(response):
-        <span class="cm"># 示范：数学题的简单打分</span>
-        <span class="kw">if</span> extract_answer(response) == correct_answer:
-            <span class="kw">return</span> <span class="num">1.0</span>                                <span class="cm"># 答案全对 → 满分</span>
-        <span class="kw">elif</span> has_correct_format(response):
-            <span class="kw">return</span> <span class="num">0.3</span>                                <span class="cm"># 格式对但答案错 → 部分分</span>
-        <span class="kw">else</span>:
-            <span class="kw">return</span> <span class="num">0.0</span>                                <span class="cm"># 完全错误 → 0 分</span>
-
-    rewards = torch.tensor([rule_based_reward(r) <span class="kw">for</span> r <span class="kw">in</span> responses])
-    <span class="cm"># 示例: [1.0, 0.3, 1.0, 0.0] — y1 和 y3 对, y2 格式对, y4 全错</span>
-
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># Step 3: 组内归一化 — 用这组的均值和标准差做 baseline</span>
-    <span class="cm"># 这是 GRPO 的核心创新：不关心绝对分数，只关心组内排名</span>
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    group_mean = rewards.mean()                        <span class="cm"># 这一组的平均分</span>
-    group_std  = rewards.std() + <span class="num">1e-8</span>               <span class="cm"># 标准差 (+小量防除零)</span>
-
-    <span class="cm"># advantages = "比组内平均水平好多少"（归一化后的相对分数）</span>
-    advantages = (rewards - group_mean) / group_std
-    <span class="cm"># [1.0, 0.3, 1.0, 0.0]/mean=0.575/std≈0.45</span>
-    <span class="cm"># → [(1.0-0.575)/0.45, ...] = [0.94, -0.61, 0.94, -1.28]</span>
-
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># Step 4: 计算 log 概率比（和 DPO 一样的思路）</span>
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    log_ratios = []
-    <span class="kw">for</span> i, response <span class="kw">in</span> <span class="builtin">enumerate</span>(responses):
-        logp_policy = policy_model.log_prob(prompt, response)  <span class="cm"># 当前策略的概率</span>
-        logp_ref    = ref_model.log_prob(prompt, response)     <span class="cm"># 参考策略的概率</span>
-        log_ratios.append(logp_policy - logp_ref)              <span class="cm"># log(π_θ/π_ref)</span>
-
-    log_ratios = torch.stack(log_ratios)
-
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># Step 5: GRPO Loss — advantage 高的回答提高概率</span>
-    <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># GRPO 用 PPO 风格的 clipped loss，防止单步更新过大</span>
-    clip_eps = <span class="num">0.2</span>                                      <span class="cm"># PPO 的标准 clip 值</span>
-    ratio = torch.exp(log_ratios)                       <span class="cm"># π_θ/π_ref</span>
-
-    <span class="cm"># PPO-style clipped objective: min(ratio*A, clip(ratio)*A)</span>
-    <span class="cm"># 如果 advantage 为正 → 提高这条回答的概率</span>
-    <span class="cm"># 如果 advantage 为负 → 降低这条回答的概率</span>
-    surr1 = ratio * advantages                         <span class="cm"># 标准 PPO 目标</span>
-    surr2 = torch.clamp(ratio, <span class="num">1</span>-clip_eps, <span class="num">1</span>+clip_eps) * advantages  <span class="cm"># 裁剪版</span>
-    loss = -torch.<span class="builtin">min</span>(surr1, surr2).mean()           <span class="cm"># 取最小 → 保守更新</span>
-
-    <span class="kw">return</span> loss
-
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># GRPO 的关键特征总结：</span>
-<span class="cm">#   1. 不需要 Reward Model — 规则打分替代人工标注</span>
-<span class="cm">#   2. 不需要 Value Model — 组内均值作为 baseline</span>
-<span class="cm">#   3. 只需 Policy + Reference = 2 个模型（和 DPO 一样轻）</span>
-<span class="cm">#   4. 保留了 PPO 的在线探索能力（每步生成新回答）</span>
-<span class="cm">#   5. 特别适合数学/代码等有客观标准的推理任务</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
-
-  <h4 style="font-size:1.1em;color:var(--teal);margin:24px 0 10px;">GRPO vs PPO vs DPO — 一张表看清进化路径</h4>
-
-  <table>
-    <thead><tr><th>维度</th><th>RLHF (PPO)</th><th>DPO</th><th>GRPO</th></tr></thead>
-    <tbody>
-      <tr><td><strong>需要的模型数</strong></td><td style="color:var(--red);">4 个（Policy+Ref+Reward+Value）</td><td style="color:var(--green);">2 个（Policy+Ref）</td><td style="color:var(--green);">2 个（Policy+Ref）</td></tr>
-      <tr><td><strong>打分方式</strong></td><td>Reward Model（需人类标注训练）</td><td>隐式 Reward（数学推导消去）</td><td><strong>规则打分</strong>（无需标注！）</td></tr>
-      <tr><td><strong>信号来源</strong></td><td>单个回答的绝对 reward</td><td>两个回答的相对比较</td><td>一组回答的<strong>组内排名</strong></td></tr>
-      <tr><td><strong>数据需求</strong></td><td>偏好标注 + 在线生成</td><td>偏好标注（离线）</td><td><strong>题目 + 规则（无需标注）</strong></td></tr>
-      <tr><td><strong>在线探索</strong></td><td style="color:var(--green);">✅ 有（每步生成新回答）</td><td style="color:var(--red);">❌ 无（离线数据）</td><td style="color:var(--green);">✅ 有（每步生成 N 个回答）</td></tr>
-      <tr><td><strong>训练稳定性</strong></td><td style="color:var(--red);">⚠️ 难调</td><td style="color:var(--green);">✅ 稳定</td><td style="color:var(--orange);">⚠️ 中等（PPO clip 仍需调参）</td></tr>
-      <tr><td><strong>最佳场景</strong></td><td>通用聊天（需人类偏好）</td><td>通用对齐（偏好数据充足）</td><td><strong>推理任务（有客观标准）</strong></td></tr>
-      <tr><td><strong>代表模型</strong></td><td>ChatGPT, Claude</td><td>Llama 2/3, Qwen</td><td>DeepSeek-R1</td></tr>
-    </tbody>
-  </table>
-
-  <div class="highlight">
-    <strong>为什么 DeepSeek-R1 选择 GRPO？</strong>数学和代码有明确的对错标准——答案对就是对、测试通过就是通过。这使得规则打分<strong>完全自动化</strong>，不需要人工标注。同时 GRPO 保留了 PPO 的在线探索能力——模型不断生成新回答、获得反馈、自我改进，形成了"尝试→打分→学习"的正反馈循环。这是 DeepSeek-R1 惊艳推理能力的核心驱动力之一。
-  </div>
-
-  <h3>4.7 RLHF 的挑战</h3>
-
-  <table>
-    <thead><tr><th>挑战</th><th>说明</th></tr></thead>
-    <tbody>
-      <tr><td><strong>显存爆炸</strong></td><td>PPO 需要同时运行 4 个模型（Policy + Reference + Reward + Value），每个 7B~70B。GRPO 只需要 2 个，大幅缓解</td></tr>
-      <tr><td><strong>Reward Hacking</strong></td><td>PPO: 模型会找到 Reward Model 的漏洞——"用礼貌的语气 + 长句"能拿高分。GRPO: 规则打分更客观，不易被 hack</td></tr>
-      <tr><td><strong>训练不稳定</strong></td><td>PPO 对 KL 系数 β 等超参数极度敏感。GRPO 也需要调 clip_eps 等参数，但组内归一化使得训练更稳定</td></tr>
-      <tr><td><strong>在线采样慢</strong></td><td>PPO 和 GRPO 都需要每步生成新回答。GRPO 的 N 个采样可以并行</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- ═══════════════════════ SEC 5 ═══ -->
-<section id="sec5">
-  <h2>5. DPO — 直接偏好优化（Direct Preference Optimization）</h2>
-
-  <h3>5.1 核心洞察：Reward Model 可以被"消掉"</h3>
-
-  <p>DPO 的数学发现是：<strong>RLHF 的 PPO 目标函数可以被改写，Reward Model 不需要显式存在</strong>。</p>
-
-  <p>在 RLHF 中，最优策略 π* 满足以下关系（推导过程略）：</p>
-
-  <div class="formula">
-    R(x, y) = β · log [ π*(y|x) / π<sub>ref</sub>(y|x) ] + β · log Z(x)
-  </div>
-
-  <p>这意味着<strong>"隐式的 Reward"完全可以从当前策略和参考策略的概率比中推算出来</strong>。将这个关系代回 Bradley-Terry 偏好模型，就得到了 DPO 的 Loss：</p>
-
-  <div class="formula">
-    Loss<sub>DPO</sub> = -log σ( β · log [π<sub>θ</sub>(y<sub>win</sub>)/π<sub>ref</sub>(y<sub>win</sub>)] - β · log [π<sub>θ</sub>(y<sub>lose</sub>)/π<sub>ref</sub>(y<sub>lose</sub>)] )
-  </div>
+trainer.save_model(<span class="str">"./ppo_final"</span>)</pre>
 
   <div class="info-box">
-    <div class="label">🔑 直觉理解</div>
+    <div class="label">⚠️ PPO 的核心挑战：KL 系数的调节</div>
     <p style="margin:0;color:var(--fg2);font-size:14px;">
-      DPO Loss 做的事情就是一句话：<br>
-      <strong>"提高模型对好回答的概率（相对于参考模型），降低模型对差回答的概率"</strong><br><br>
-      不需要 Reward Model 来打分，因为"概率比"本身就是分数——模型越喜欢一个回答（给它更高的概率），就等于给它打了更高的隐式 Reward。
+      <strong>init_kl_coef</strong> 和 <strong>target</strong> 是 PPO 最重要的两个参数。<br>
+      · init_kl_coef 太大 → KL 惩罚太重，模型不敢偏离 SFT → 不进步<br>
+      · init_kl_coef 太小 → 模型为了高分胡言乱语 → Reward Hacking<br>
+      · target=6 的含义：TRL 会自动调节 kl_coef 使实际的 KL 散度保持在 6 左右。这是一个需要实验的值。
     </p>
   </div>
 
-  <pre><span class="lang-label">Python — DPO 的完整训练逻辑</span>
+  <h3>4.3 GRPO — PPO 的进化：扔掉 Reward Model</h3>
+
+  <div class="summary-box">
+    <div class="label">📌 GRPO 核心思想</div>
+    <p><strong>PPO 需要 Reward Model，GRPO 用规则打分。</strong>同一个 prompt 生成 N 个回答，在组内比排名——好的提高概率，差的降低。TRL 对应：<strong>GRPOTrainer</strong>。</p>
+  </div>
+
+  <p>PPO 最大的痛点是<strong>需要训练和维护一个 Reward Model</strong>，这个 Reward Model 本身就可能被 hack。GRPO 的思路是：</p>
+
+  <div class="arch-box">
+    <span class="label">PPO: 生成 1 个回答 → Reward Model 给分 → 更新</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref + <strong style="color:var(--red);">Reward</strong> + Value = <strong style="color:var(--red);">4 个模型</strong><br><br>
+    <span class="label">GRPO: 生成 N 个回答 → 规则打分 → 组内排名 → 更新</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref = <strong style="color:var(--green);">2 个模型</strong>（和 DPO 一样轻量！）
+  </div>
+
+  <pre><span class="lang-label">Python — TRL GRPOTrainer（DeepSeek-R1 的核心训练方法）</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># DPO 的优雅之处：只需要 Policy Model + Reference Model</span>
-<span class="cm"># 没有 Reward Model，没有 Value Model，没有 PPO 调参地狱</span>
+<span class="cm"># TRL GRPOTrainer — 组内比较 + 规则打分，无需 Reward Model</span>
+<span class="cm"># 特别适合数学、代码等有明确对错标准的推理任务</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="kw">def</span> <span class="fn">dpo_loss</span>(policy_model, ref_model, prompt, y_win, y_lose, beta=<span class="num">0.1</span>):
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> GRPOTrainer, GRPOConfig
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
+<span class="kw">import</span> re
+
+<span class="cm"># ─── Step 1: 加载 SFT 模型 ───</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>,
+    torch_dtype=<span class="str">"auto"</span>, device_map=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./sft_qwen_final"</span>)
+
+<span class="cm"># ─── Step 2: 定义打分函数（替代 Reward Model） ───</span>
+<span class="cm"># GRPO 的核心：你用纯 Python 写一个打分函数，不需要训练任何东西！</span>
+<span class="kw">def</span> <span class="fn">math_reward</span>(prompts, completions, answer, **kwargs):
     <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># 输入: prompt + 好的回答 (y_win) + 差的回答 (y_lose)</span>
-    <span class="cm"># 输出: DPO loss — 鼓励模型喜欢 y_win 超过 y_lose</span>
+    <span class="cm"># 输入：prompts（题目列表）, completions（模型生成的回答列表）, answer（标准答案）</span>
+    <span class="cm"># 输出：每个回答的分数列表</span>
     <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    rewards = []
+    <span class="kw">for</span> completion <span class="kw">in</span> completions:
+        <span class="cm"># 从回答中提取最后一个数字（假设数学题答案是个数字）</span>
+        match = re.findall(<span class="str">r"[-]?\d+\.?\d*"</span>, completion)
+        <span class="kw">if</span> <span class="kw">not</span> match:
+            rewards.append(<span class="num">0.0</span>)                           <span class="cm"># 没找到数字 → 0 分</span>
+            <span class="kw">continue</span>
+        pred_answer = <span class="builtin">float</span>(match[-<span class="num">1</span>])                   <span class="cm"># 取最后出现的数字</span>
 
-    <span class="cm"># Step 1: 计算 Policy Model 对两个回答的 log 概率</span>
-    <span class="cm"># 就是常规的 Next Token Prediction 的 log-likelihood</span>
-    logp_win_policy  = policy_model.log_prob(prompt, y_win)   <span class="cm"># 当前策略对好回答的概率</span>
-    logp_lose_policy = policy_model.log_prob(prompt, y_lose)  <span class="cm"># 当前策略对差回答的概率</span>
+        <span class="kw">if</span> <span class="builtin">abs</span>(pred_answer - answer) < <span class="num">1e-6</span>:              <span class="cm"># 答案完全正确</span>
+            rewards.append(<span class="num">1.0</span>)                           <span class="cm"># 满分</span>
+        <span class="kw">elif</span> <span class="builtin">abs</span>(pred_answer - answer) / <span class="builtin">abs</span>(answer) < <span class="num">0.1</span>:  <span class="cm"># 误差 < 10%</span>
+            rewards.append(<span class="num">0.5</span>)                           <span class="cm"># 部分分</span>
+        <span class="kw">else</span>:
+            rewards.append(<span class="num">0.0</span>)
+    <span class="kw">return</span> rewards
 
-    <span class="cm"># Step 2: 计算 Reference Model（SFT 模型）的 log 概率</span>
-    <span class="cm"># Reference Model 是冻结的，不参与梯度更新</span>
-    <span class="kw">with</span> torch.no_grad():
-        logp_win_ref  = ref_model.log_prob(prompt, y_win)     <span class="cm"># SFT 模型对好回答的概率</span>
-        logp_lose_ref = ref_model.log_prob(prompt, y_lose)    <span class="cm"># SFT 模型对差回答的概率</span>
+<span class="kw">def</span> <span class="fn">format_reward</span>(prompts, completions, **kwargs):
+    <span class="cm"># 格式打分：检查回答中是否包含推理步骤标记（如 &lt;think&gt;xxx&lt;/think&gt;）</span>
+    rewards = []
+    <span class="kw">for</span> completion <span class="kw">in</span> completions:
+        score = <span class="num">0.0</span>
+        <span class="kw">if</span> <span class="str">"&lt;think&gt;"</span> <span class="kw">in</span> completion <span class="kw">and</span> <span class="str">"&lt;/think&gt;"</span> <span class="kw">in</span> completion:
+            score += <span class="num">0.25</span>                               <span class="cm"># 有 think 标签 → 加分</span>
+        <span class="kw">if</span> <span class="str">"&lt;answer&gt;"</span> <span class="kw">in</span> completion <span class="kw">and</span> <span class="str">"&lt;/answer&gt;"</span> <span class="kw">in</span> completion:
+            score += <span class="num">0.25</span>                               <span class="cm"># 有 answer 标签 → 加分</span>
+        <span class="kw">if</span> <span class="builtin">len</span>(completion) > <span class="num">50</span>:
+            score += <span class="num">0.25</span>                               <span class="cm"># 回答有一定长度 → 加分</span>
+        rewards.append(score)
+    <span class="kw">return</span> rewards
 
-    <span class="cm"># Step 3: 计算"隐式 Reward" = 策略概率比</span>
-    <span class="cm"># 核心公式: implicit_reward = β * log(π_θ(y|x) / π_ref(y|x))</span>
-    <span class="cm"># 如果当前策略比 SFT 更喜欢一个回答 → 隐式 Reward 为正</span>
-    <span class="cm"># 如果当前策略比 SFT 更不喜欢一个回答 → 隐式 Reward 为负</span>
-    reward_win  = beta * (logp_win_policy  - logp_win_ref)    <span class="cm"># 好回答的隐式 Reward</span>
-    reward_lose = beta * (logp_lose_policy - logp_lose_ref)   <span class="cm"># 差回答的隐式 Reward</span>
+<span class="cm"># ─── Step 3: 准备数据集（只需要题目，不需要标注！） ───</span>
+<span class="cm"># 数据格式: {"prompt": "计算 sin(30°) + cos(60°) 的值", "answer": "1.0"}</span>
+dataset = load_dataset(<span class="str">"your-username/math_problems"</span>, split=<span class="str">"train"</span>)
 
-    <span class="cm"># Step 4: DPO Loss — 让好回答的隐式 Reward > 差回答的</span>
-    <span class="cm"># 等价于 Bradley-Terry 偏好模型: P(win > lose) = σ(R_win - R_lose)</span>
-    loss = -torch.log(torch.sigmoid(reward_win - reward_lose))
+<span class="cm"># ─── Step 4: 配置 GRPOConfig ───</span>
+grpo_config = GRPOConfig(
+    output_dir=<span class="str">"./grpo_output"</span>,
+    per_device_train_batch_size=<span class="num">1</span>,
+    num_generations=<span class="num">4</span>,                          <span class="cm"># ★ 每个 prompt 生成 4 个回答（组内比较用）</span>
+    max_prompt_length=<span class="num">512</span>,                      <span class="cm"># prompt 最大长度</span>
+    max_completion_length=<span class="num">1024</span>,                   <span class="cm"># 回答最大长度</span>
+    learning_rate=<span class="num">5e-6</span>,
+    beta=<span class="num">0.04</span>,                                <span class="cm"># ★ KL 惩罚系数 — 控制偏离 Reference Model 的程度</span>
+    temperature=<span class="num">0.9</span>,                            <span class="cm"># 采样温度 — 越高回答越多样</span>
+    max_grad_norm=<span class="num">0.5</span>,
+    logging_steps=<span class="num">5</span>,
+)
 
-    <span class="kw">return</span> loss
+<span class="cm"># ─── Step 5: 创建 GRPOTrainer 并训练 ───</span>
+trainer = GRPOTrainer(
+    model=model,
+    reward_funcs=[math_reward, format_reward],  <span class="cm"># ★ 打分函数列表 — 多个函数分数会加权求和</span>
+    args=grpo_config,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+)
+trainer.train()
+trainer.save_model(<span class="str">"./grpo_final"</span>)
 
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># β 的作用：控制"偏离 SFT 模型多远"</span>
+<span class="cm"># GRPOTrainer 自动帮你做的事：</span>
+<span class="cm">#   1. 对每个 prompt 生成 num_generations 个回答</span>
+<span class="cm">#   2. 用 reward_funcs 给每个回答打分</span>
+<span class="cm">#   3. 组内归一化（减均值除标准差）→ 得到 advantage</span>
+<span class="cm">#   4. 用 PPO-style clipped loss 更新模型（好的提高，差的降低）</span>
+<span class="cm">#   5. 不需要 Reward Model！不需要 Value Model！</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <div class="highlight">
+    <strong>GRPO 为什么特别适合推理任务？</strong>数学和代码有明确的客观标准——答案对就是对、测试通过就是通过。你可以用几十行 Python 写一个打分函数，替代 RLHF 中昂贵的 Reward Model 训练，而且打分绝对公正。<strong>这是 DeepSeek-R1 的核心训练方法。</strong>
+  </div>
+
+  <h3>4.4 PPO vs GRPO — 一言蔽之</h3>
+
+  <table>
+    <thead><tr><th>维度</th><th>PPO (PPOTrainer)</th><th>GRPO (GRPOTrainer)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>显存 (7B)</strong></td><td style="color:var(--red);">~200GB（4 个模型）</td><td style="color:var(--green);">~100GB（2 个模型）</td></tr>
+      <tr><td><strong>需要 Reward Model</strong></td><td style="color:var(--red);">✅ 要训练和维护</td><td style="color:var(--green);">❌ 用 Python 函数替代</td></tr>
+      <tr><td><strong>打分公正性</strong></td><td>取决于 Reward Model 质量</td><td style="color:var(--green);">取决于规则设计</td></tr>
+      <tr><td><strong>最佳场景</strong></td><td>通用对话（需人类偏好）</td><td style="color:var(--green);">推理任务（有客观标准）</td></tr>
+      <tr><td><strong>代表</strong></td><td>ChatGPT, Claude</td><td>DeepSeek-R1</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 5: DPO ═══ -->
+<section id="sec5">
+  <h2>5. DPO — 直接偏好优化（Direct Preference Optimization）</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>DPO 是 RLHF 的简化版——<strong>不需要 Reward Model，直接用偏好数据训练</strong>。数学上把 RLHF 的目标改写成了分类问题。TRL 对应：<strong>DPOTrainer</strong>。这是工业界当前性价比最高的对齐方案。</p>
+    <ul>
+      <li><strong>输入：</strong> (prompt, 好回答, 差回答) 三元组</li>
+      <li><strong>目标：</strong> 让模型对"好回答"的概率 > "差回答"的概率</li>
+      <li><strong>优势：</strong> 只需 2 个模型（Policy + Ref），显存是 PPO 的一半</li>
+    </ul>
+  </div>
+
+  <h3>5.1 DPO 的理解：从"强化学习"变成"分类问题"</h3>
+
+  <p>DPO 的核心数学发现是：<strong>RLHF 的 PPO 目标函数中，Reward Model 是可以被"消掉"的</strong>。"好回答 vs 差回答"的相对关系，可以直接从模型对两个回答的概率比中推断出来。</p>
+
+  <div class="formula">
+    Loss<sub>DPO</sub> = -log σ( β · (log[π<sub>θ</sub>(y<sub>win</sub>)/π<sub>ref</sub>(y<sub>win</sub>)] - log[π<sub>θ</sub>(y<sub>lose</sub>)/π<sub>ref</sub>(y<sub>lose</sub>)]) )
+  </div>
+
+  <div class="highlight">
+    <strong>直觉：</strong>如果当前模型对"好回答"的概率（相对于 SFT）明显高于"差回答" → σ(大正数) → loss 小。<br>
+    <strong>本质：</strong>把"让好回答概率 > 差回答概率"这件事，做成一个二分类任务。
+  </div>
+
+  <h3>5.2 用 DPOTrainer 实现</h3>
+
+  <pre><span class="lang-label">Python — TRL DPOTrainer 完整脚本</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># β = 0.01 → 几乎不偏离 SFT，模型保守但安全</span>
-<span class="cm"># β = 0.1  → 适中，工业界推荐值</span>
-<span class="cm"># β = 1.0  → 大幅偏离，但可能过拟合偏好数据中的噪声</span>
-<span class="cm"># β 太小会导致模型不学习（loss 不降），β 太大会导致过拟合</span></pre>
+<span class="cm"># TRL DPOTrainer — 工业级 DPO，和 SFTTrainer 一样简单</span>
+<span class="cm"># 数据格式：{"prompt": "...", "chosen": "好回答", "rejected": "差回答"}</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> DPOTrainer, DPOConfig
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+<span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
 
-  <h3>5.2 DPO 的优势</h3>
+<span class="cm"># ─── Step 1: 加载 SFT 模型 ───</span>
+<span class="cm"># DPO 从 SFT 模型开始（不是从原始基座）</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>,
+    torch_dtype=<span class="str">"auto"</span>, device_map=<span class="str">"auto"</span>,
+)
+tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./sft_qwen_final"</span>)
 
-  <div class="card-grid">
-    <div class="card">
-      <h4>🧊 显存减半</h4>
-      <p>不需要 Reward Model 和 Value Model，只需要 Policy + Reference 两个模型。训练 7B 模型从 4×A100 降到 2×A100。</p>
-    </div>
-    <div class="card">
-      <h4>🎯 训练稳定</h4>
-      <p>DPO 是监督学习（偏好分类），不是强化学习。Loss 平滑下降，不会像 PPO 那样突然崩掉。调参成本从几天降到几小时。</p>
-    </div>
-    <div class="card">
-      <h4>📦 离线训练</h4>
-      <p>不需要在线采样，直接用已有的偏好数据训练。RLHF 的 PPO 需要每步重新生成回答。</p>
-    </div>
-    <div class="card">
-      <h4>✅ 效果接近</h4>
-      <p>在大多数 Benchmark 上，DPO 的效果非常接近 RLHF（差距通常在 1%~3% 以内）。Llama 2/3、Qwen 等都使用 DPO。</p>
-    </div>
+<span class="cm"># ─── Step 2: 准备偏好数据 ───</span>
+<span class="cm"># 格式: {"prompt": "请解释量子计算",</span>
+<span class="cm">#         "chosen": "量子计算利用量子比特的叠加态...",     ← 好的</span>
+<span class="cm">#         "rejected": "量子计算是一种计算方式。"}          ← 差的</span>
+dataset = load_dataset(<span class="str">"trl-lib/ultrafeedback_binarized"</span>, split=<span class="str">"train"</span>)
+
+<span class="cm"># ─── Step 3: 配置 DPOConfig ───</span>
+dpo_config = DPOConfig(
+    output_dir=<span class="str">"./dpo_output"</span>,
+    per_device_train_batch_size=<span class="num">2</span>,
+    num_train_epochs=<span class="num">1</span>,
+    learning_rate=<span class="num">5e-5</span>,
+    beta=<span class="num">0.1</span>,                                 <span class="cm"># ★ DPO 最重要的超参数 — 控制偏离 ref 的程度</span>
+    max_length=<span class="num">2048</span>,
+    max_prompt_length=<span class="num">512</span>,
+    logging_steps=<span class="num">10</span>,
+    loss_type=<span class="str">"sigmoid"</span>,                        <span class="cm"># sigmoid / hinge / ipo — sigmoid 是标准</span>
+)
+
+<span class="cm"># ─── Step 4: 创建 DPOTrainer 并训练 ───</span>
+trainer = DPOTrainer(
+    model=model,                            <span class="cm"># Policy Model — 正在被优化</span>
+    ref_model=<span class="kw">None</span>,                         <span class="cm"># ★ TRL 自动从 model 复制一份冻结的 ref_model！</span>
+    args=dpo_config,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+)
+trainer.train()
+trainer.save_model(<span class="str">"./dpo_final"</span>)
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># DPOTrainer 自动帮你做的事：</span>
+<span class="cm">#   1. ref_model=None → TRL 自动创建 Reference Model</span>
+<span class="cm">#   2. 计算 Policy Model 和 Ref Model 对 chosen/rejected 的 log 概率</span>
+<span class="cm">#   3. 计算 DPO Loss: -log(sigmoid(beta * (log_ratio_chosen - log_ratio_rejected)))</span>
+<span class="cm">#   4. 反向传播更新 Policy Model</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <div class="info-box">
+    <div class="label">🔑 DPO 的 beta 参数怎么调？</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      beta 控制模型可以偏离 Reference Model 多远。<br>
+      · beta=0.01 → 几乎不偏离 → 训练后效果和 SFT 差不多 → 太小了<br>
+      · beta=0.1 → 适中，工业界推荐起步值 → 大多数场景的最佳选择<br>
+      · beta=1.0 → 大幅偏离 → 可能过拟合偏好数据中的噪声 → 太大了<br>
+      <strong>调试方法：</strong>从 0.1 开始，观察训练 loss。loss 平稳降到 0.5~0.7 是理想区间。如果 loss 急剧降到 0.3 以下，说明 beta 太小。
+    </p>
   </div>
 </section>
 
 <!-- ═══════════════════════ SEC 6 ═══ -->
 <section id="sec6">
-  <h2>6. RLHF vs DPO 深度对决</h2>
+  <h2>6. 全景对比 & 选型指南</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 这一节帮你做决策</div>
+    <p>面对一个具体的任务和硬件条件，你应该选哪种方法？下面是完整对比表和决策树。</p>
+  </div>
+
+  <h3>6.1 四种训练范式 — 一张表看清一切</h3>
 
   <table>
-    <thead><tr><th>维度</th><th>RLHF (PPO)</th><th>DPO</th></tr></thead>
+    <thead><tr><th>维度</th><th>SFT</th><th>DPO</th><th>PPO (RLHF)</th><th>GRPO</th></tr></thead>
     <tbody>
-      <tr><td><strong>模型数量</strong></td><td>4 个（Policy + Reference + Reward + Value）</td><td>2 个（Policy + Reference）</td></tr>
-      <tr><td><strong>训练方式</strong></td><td>强化学习（PPO）— 在线采样 + 打分 + 更新</td><td>监督学习 — 离线数据直接训练</td></tr>
-      <tr><td><strong>显存 (7B)</strong></td><td>~160GB（需要 4×A100-40G）</td><td>~60GB（2×A100-40G 即可）</td></tr>
-      <tr><td><strong>训练稳定性</strong></td><td style="color:var(--red);">⚠️ 难调，容易崩溃</td><td style="color:var(--green);">✅ 稳定，和 SFT 一样</td></tr>
-      <tr><td><strong>调参难度</strong></td><td style="color:var(--red);">高（KL 系数、PPO clip、学习率、采样温度……）</td><td style="color:var(--green);">低（基本只需要调 β 和学习率）</td></tr>
-      <tr><td><strong>是否需要 Reward Model</strong></td><td>✅ 需要（需要人类标注训练）</td><td>❌ 不需要</td></tr>
-      <tr><td><strong>数据需求</strong></td><td>偏好对（离线）+ 在线生成的回答</td><td>偏好对（离线）— 完全相同！</td></tr>
-      <tr><td><strong>效果上限</strong></td><td style="color:var(--green);">理论上更高（在线探索）</td><td>接近 RLHF（差距 ~1-3%）</td></tr>
-      <tr><td><strong>Reward Hacking</strong></td><td style="color:var(--red);">高（模型会发现 Reward Model 的漏洞）</td><td style="color:var(--green);">低（没有显式的 Reward Model 可以 exploit）</td></tr>
-      <tr><td><strong>代表</strong></td><td>ChatGPT, Claude</td><td>Llama 2/3, Qwen, Mistral</td></tr>
+      <tr><td><strong>TRL 工具</strong></td><td>SFTTrainer</td><td>DPOTrainer</td><td>RewardTrainer + PPOTrainer</td><td>GRPOTrainer</td></tr>
+      <tr><td><strong>需要几个模型</strong></td><td style="color:var(--green);">1 个</td><td style="color:var(--green);">2 个（Policy+Ref）</td><td style="color:var(--red);">4 个（+Reward+Value）</td><td style="color:var(--green);">2 个（Policy+Ref）</td></tr>
+      <tr><td><strong>显存 (7B, BF16)</strong></td><td style="color:var(--green);">~40GB</td><td style="color:var(--green);">~60GB</td><td style="color:var(--red);">~200GB</td><td style="color:var(--green);">~100GB</td></tr>
+      <tr><td><strong>数据需求</strong></td><td>QA 对话对</td><td>偏好对（离线）</td><td>偏好对 + 在线采样</td><td>题目 + 打分函数</td></tr>
+      <tr><td><strong>需要人工标注</strong></td><td>✅ 需要</td><td>✅ 需要</td><td>✅ 需要</td><td style="color:var(--green);">❌ 不需要！</td></tr>
+      <tr><td><strong>训练稳定性</strong></td><td style="color:var(--green);">✅ 极稳定</td><td style="color:var(--green);">✅ 稳定</td><td style="color:var(--red);">⚠️ 难调</td><td style="color:var(--orange);">⚠️ 中等</td></tr>
+      <tr><td><strong>效果上限</strong></td><td>基础</td><td>接近 PPO</td><td style="color:var(--green);">最高</td><td>推理任务最高</td></tr>
+      <tr><td><strong>最佳场景</strong></td><td>指令遵循</td><td>通用对齐</td><td>极致性能</td><td>推理任务</td></tr>
     </tbody>
   </table>
 
-  <h3>6.1 架构对比：模型数量决定显存</h3>
+  <h3>6.2 决策树 — 根据你的情况选方法</h3>
 
-  <pre><span class="lang-label">显存对比</span>
+  <pre><span class="lang-label">选型决策树</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># 以 Llama-7B 为例，BF16 精度，训练时的显存估算</span>
+<span class="cm"># 第一步：确定阶段</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
 
-<span class="cm"># RLHF (PPO):</span>
-<span class="cm">#   Policy Model:    7B × 2 bytes = 14 GB</span>
-<span class="cm">#   Reference Model:  7B × 2 bytes = 14 GB</span>
-<span class="cm">#   Reward Model:     7B × 2 bytes = 14 GB   (也是 7B，只是最后层不同)</span>
-<span class="cm">#   Value Model:      7B × 2 bytes = 14 GB   (同样规模)</span>
-<span class="cm">#   优化器状态 (Adam): 7B × 8 bytes × 2 = 112 GB (Policy + Value 需要优化器)</span>
-<span class="cm">#   激活 + 中间结果:   ~30 GB</span>
-<span class="cm">#   ═════════════════════════════════════════</span>
-<span class="cm">#   总计 ≈ 198 GB → 至少需要 4×A100-80G 或 8×A100-40G</span>
+Q1: 你的模型已经做过 SFT 了吗？
+    ├── 没有 → 先跑 <strong>SFT (SFTTrainer)</strong>，这是所有后续步骤的基础
+    └── 有了 → 继续
 
-<span class="cm"># DPO:</span>
-<span class="cm">#   Policy Model:     7B × 2 bytes = 14 GB</span>
-<span class="cm">#   Reference Model:  7B × 2 bytes = 14 GB  (冻结，不需要优化器)</span>
-<span class="cm">#   优化器状态:       7B × 8 bytes = 56 GB   (只有 Policy 需要)</span>
-<span class="cm">#   激活 + 中间结果:   ~15 GB</span>
-<span class="cm">#   ═════════════════════════════════════════</span>
-<span class="cm">#   总计 ≈ 99 GB → 2×A100-80G 即可，开了 ZeRO-3 甚至只需 2×RTX 4090</span></pre>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 第二步：选择对齐方法</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
 
-  <h3>6.2 什么时候用 RLHF，什么时候用 DPO？</h3>
+Q2: 你有 4+A100 + 调参团队 + 追求极致？
+    └── 是 → <strong>RLHF (RewardTrainer + PPOTrainer)</strong> ← 上限最高但贵
 
-  <div class="arch-box">
-    <span class="label">用 RLHF (PPO) 如果：</span><br>
-    &nbsp;&nbsp;• 你有充足的 GPU（8×A100-80G+）和调参经验<br>
-    &nbsp;&nbsp;• 你在追求极致性能（打榜、商业化旗舰模型）<br>
-    &nbsp;&nbsp;• 你需要在线探索——让模型在训练过程中不断尝试新回答<br><br>
-    <span class="label">用 DPO 如果：</span><br>
-    &nbsp;&nbsp;• 你的 GPU 预算有限（2-4 张卡）<br>
-    &nbsp;&nbsp;• 你希望快速迭代（DPO 训练一天 vs RLHF 调试一周）<br>
-    &nbsp;&nbsp;• 偏好数据充足且质量高（DPO 对数据质量更敏感）<br>
-    &nbsp;&nbsp;• <strong>这覆盖了 95% 的团队</strong>
-  </div>
+Q3: 你有成对的偏好数据（"A 比 B 好"）？
+    └── 是 → <strong>DPO (DPOTrainer)</strong> ← 性价比首选，Llama/Qwen 都在用
+
+Q4: 你做的是数学/代码等有客观标准的任务？
+    └── 是 → <strong>GRPO (GRPOTrainer)</strong> ← 无需标注，自进化
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 推荐的标准流程（覆盖 90% 的团队）：</span>
+<span class="cm">#   SFT (SFTTrainer) → DPO (DPOTrainer)</span>
+<span class="cm">#</span>
+<span class="cm"># 如果做推理增强（数学/代码）：</span>
+<span class="cm">#   SFT (SFTTrainer) → GRPO (GRPOTrainer)</span>
+<span class="cm">#</span>
+<span class="cm"># 如果有钱有资源追求极致：</span>
+<span class="cm">#   SFT (SFTTrainer) → RLHF (RewardTrainer + PPOTrainer)</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>6.3 完整训练链路代码速查</h3>
+
+  <pre><span class="lang-label">Shell — 一条龙训练脚本骨架</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 从基座模型到对齐模型，完整的训练链路</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># 阶段 1: SFT 指令微调</span>
+python train_sft.py \
+    --model Qwen/Qwen2.5-7B \
+    --dataset your-sft-dataset \
+    --output ./sft_model
+
+<span class="cm"># 阶段 2: 偏好对齐（DPO — 推荐）</span>
+python train_dpo.py \
+    --model ./sft_model \
+    --dataset your-preference-dataset \
+    --beta 0.1 \
+    --output ./dpo_model
+
+<span class="cm"># 阶段 2 替代方案: GRPO（推理任务 — 推荐）</span>
+python train_grpo.py \
+    --model ./sft_model \
+    --dataset your-math-problems \
+    --reward_func math_reward \
+    --num_generations 4 \
+    --output ./grpo_model
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 以上每个 train_xxx.py 都是一个 ~50 行的脚本，</span>
+<span class="cm"># 核心结构都是：加载模型 → 加载数据 → 配置 Trainer → trainer.train()</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
 </section>
 
 <!-- ═══════════════════════ SEC 7 ═══ -->
 <section id="sec7">
-  <h2>7. 新方法：ORPO / GRPO / KTO</h2>
-
-  <h3>7.1 ORPO — 最省资源：把 SFT 和对齐一步做完</h3>
-
-  <p>ORPO（Odds Ratio Preference Optimization）的洞察是：<strong>SFT 和偏好对齐可以同时做</strong>，不需要分成两个阶段。</p>
-
-  <div class="arch-box">
-    <span class="label">传统路线：</span><br>
-    &nbsp;&nbsp;基座 → SFT（阶段 1）→ DPO/RLHF（阶段 2）→ 对齐后的模型<br><br>
-    <span class="label">ORPO 路线：</span><br>
-    &nbsp;&nbsp;基座 ───→ SFT + 偏好对齐同时训练 ───→ 对齐后的模型<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;一次训练，两步合一！
-  </div>
-
-  <div class="highlight">
-    <strong>ORPO 的关键创新：</strong>它在 SFT 的 Cross Entropy Loss 上直接加了一个"偏好惩罚项"，惩罚项衡量的是模型对 y_win 和 y_lose 的概率比（Odds Ratio）。不需要 Reference Model，显存和 SFT 一模一样。适合 GPU 紧张的场景。
-  </div>
-
-  <h3>7.2 GRPO — DeepSeek-R1 的方法：推理能力自我进化</h3>
-
-  <p>GRPO（Group Relative Policy Optimization）是 DeepSeek-R1 使用的方法，专为<strong>数学和代码推理</strong>设计。</p>
-
-  <pre><span class="lang-label">GRPO 的核心思想</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># GRPO 既不要 Reward Model，也不要 Value Model（PPO 的两个大头）</span>
-<span class="cm"># 它用"同一道题，生成 N 个回答，组内比较"来提供训练信号</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-
-<span class="cm"># 对每个 prompt（如一道数学题），采样 4 个回答：</span>
-responses = model.generate(prompt, num_return_sequences=<span class="num">4</span>)
-<span class="cm"># → [y1: "答案是 42", y2: "答案是 43", y3: "x=7", y4: "答案是 42.0"]</span>
-
-<span class="cm"># 用规则打分（不需要人类标注！）：</span>
-<span class="cm">#   数学题 → 比较数值答案是否正确</span>
-<span class="cm">#   代码题 → 运行代码看是否通过测试用例</span>
-rewards = [<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">0.5</span>]  <span class="cm"># y1 全对, y2 全错, y3 也对, y4 格式问题</span>
-
-<span class="cm"># 组内归一化：用这一组的均值+标准差做 baseline</span>
-group_mean = np.mean(rewards)   <span class="cm"># (1.0+0.0+1.0+0.5)/4 = 0.625</span>
-group_std  = np.std(rewards)    <span class="cm"># ≈ 0.41</span>
-
-<span class="cm"># "比组内平均水平好的回答 → 提高概率"</span>
-<span class="cm"># "比组内平均水平差的回答 → 降低概率"</span>
-advantages = (rewards - group_mean) / group_std
-<span class="cm"># → [0.91, -1.52, 0.91, -0.30]</span>
-
-<span class="cm"># GRPO 只需要 Policy Model 和 Reference Model（和 DPO 一样的显存）</span>
-<span class="cm"># 但不需要人类标注偏好数据！这是它最大的优势</span></pre>
-
-  <div class="highlight">
-    <strong>GRPO 为什么特别适合推理任务？</strong>数学和代码有明确的"对/错"标准，可以用规则自动打分。这让 GRPO 可以<strong>大规模自我进化</strong>——不需要昂贵的人工标注，只需要大量的题目（可以自动生成），模型就能通过"尝试 → 打分 → 学习"不断提升推理能力。DeepSeek-R1 的惊艳推理能力很大程度上来自 GRPO。
-  </div>
-
-  <h3>7.3 KTO — 连成对数据都不需要了</h3>
-
-  <p>RLHF 和 DPO 都需要<strong>成对</strong>的偏好数据（"A 比 B 好"）。但在实际场景中，很多时候我们只能标注"这个回答好"或"这个回答不好"，<strong>无法比较两个回答</strong>。</p>
-
-  <p>KTO（Kahneman-Tversky Optimization）利用前景理论（Prospect Theory），只需要单个回答的"好/坏"标注就能训练。这大大降低了数据采集成本。</p>
-
-  <h3>7.4 新方法全景对比</h3>
-
-  <table>
-    <thead><tr><th>方法</th><th>需要几个模型</th><th>数据需求</th><th>最佳场景</th></tr></thead>
-    <tbody>
-      <tr><td><strong>DPO</strong></td><td>2 个</td><td>成对偏好（A vs B）</td><td>通用对齐 — 当前性价比首选</td></tr>
-      <tr><td><strong>ORPO</strong></td><td>1 个</td><td>成对偏好（同 DPO）</td><td>GPU 紧张时 — SFT + 对齐一步到位</td></tr>
-      <tr><td><strong>GRPO</strong></td><td>2 个</td><td>规则打分（无需人工）</td><td>数学、代码等有明确对错标准的任务</td></tr>
-      <tr><td><strong>KTO</strong></td><td>2 个</td><td>单个好/坏标注</td><td>无法获取成对偏好数据时</td></tr>
-      <tr><td><strong>SimPO</strong></td><td>1 个</td><td>成对偏好</td><td>连 Reference Model 都想省</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- ═══════════════════════ SEC 8 ═══ -->
-<section id="sec8">
-  <h2>8. 选型指南 & 速查表</h2>
-
-  <h3>8.1 完整方法论速查</h3>
-
-  <table>
-    <thead><tr><th>方法</th><th>阶段</th><th>目标函数</th><th>关键创新</th><th>代表模型</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Pre-training</strong></td><td>基础</td><td>Next Token Pred.</td><td>自监督，无需标注数据</td><td>所有 LLM</td></tr>
-      <tr><td><strong>SFT</strong></td><td>对齐</td><td>Next Token Pred.</td><td>只在回答部分算 loss（Loss Masking）</td><td>所有 LLM</td></tr>
-      <tr><td><strong>RLHF</strong></td><td>对齐</td><td>PPO + Bradley-Terry</td><td>用 Reward Model 模拟人类偏好</td><td>ChatGPT, Claude</td></tr>
-      <tr><td><strong>DPO</strong></td><td>对齐</td><td>偏好分类</td><td>消去 Reward Model，直接优化策略</td><td>Llama 2/3, Qwen</td></tr>
-      <tr><td><strong>ORPO</strong></td><td>对齐</td><td>SFT + Odds Ratio</td><td>SFT 和对齐一步完成</td><td>学术研究</td></tr>
-      <tr><td><strong>GRPO</strong></td><td>对齐/推理</td><td>组内相对排序</td><td>规则打分，自进化，无需 Reward/Value Model</td><td>DeepSeek-R1</td></tr>
-      <tr><td><strong>KTO</strong></td><td>对齐</td><td>前景理论</td><td>不需要成对数据</td><td>学术研究</td></tr>
-    </tbody>
-  </table>
-
-  <h3>8.2 决策树</h3>
-
-  <pre><span class="lang-label">选型决策树</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm">#</span>
-<span class="cm"># Q1: 你在做预训练（从零开始）还是对齐（在已有模型上）？</span>
-<span class="cm">#     → 预训练 → Next Token Prediction（没有其他选择）</span>
-<span class="cm">#     → 对齐 → 继续</span>
-<span class="cm">#</span>
-<span class="cm"># Q2: 你只有"问题→答案"数据，没有偏好标注？</span>
-<span class="cm">#     → 是 → SFT（第一步，通常会做）</span>
-<span class="cm">#     → 否 → 继续</span>
-<span class="cm">#</span>
-<span class="cm"># Q3: 你追求极致性能 + 有 8×A100+？</span>
-<span class="cm">#     → 是 → RLHF (PPO) ← 调参难度大但上限最高</span>
-<span class="cm">#     → 否 → 继续</span>
-<span class="cm">#</span>
-<span class="cm"># Q4: 你有成对的偏好数据（"A 比 B 好"）？</span>
-<span class="cm">#     → 是 → DPO（性价比首选，Llama/Qwen 都在用）</span>
-<span class="cm">#     → 否 → 继续</span>
-<span class="cm">#</span>
-<span class="cm"># Q5: 你做的是数学/代码等有明确对错标准的任务？</span>
-<span class="cm">#     → 是 → GRPO（无需人工标注，自进化）</span>
-<span class="cm">#     → 否 → 只有单条好/坏标注 → KTO</span>
-<span class="cm">#</span>
-<span class="cm"># Q6: GPU 极度紧张，连 Reference Model 都放不下？</span>
-<span class="cm">#     → ORPO 或 SimPO（只需一个模型）</span>
-<span class="cm">#</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
-
-  <h3>8.3 高频面试问题</h3>
+  <h2>7. 面试高频考点</h2>
 
   <div class="card-grid">
     <div class="card">
       <h4>❓ Q1: SFT 和 RLHF/DPO 的本质区别？</h4>
-      <p><strong>答：</strong>SFT 教模型"怎么回答"（模仿人类），RLHF/DPO 教模型"什么回答是好的"（价值判断）。SFT 用的是正向示例（positive examples only），RLHF/DPO 用对比示例（A 比 B 好）。SFT 后模型会说话，RLHF/DPO 后模型会"挑着说"——知道什么时候该拒绝、什么时候该详细、什么时候该简洁。</p>
+      <p><strong>答：</strong>SFT 教模型"怎么回答"（模仿人类），用正向示例。RLHF/DPO 教模型"什么回答是好的"（价值判断），用对比示例。SFT 后模型会说话，RLHF/DPO 后模型知道什么时候该拒绝、什么时候该详细。</p>
     </div>
     <div class="card">
-      <h4>❓ Q2: 为什么 RLHF 要加 KL 惩罚？</h4>
-      <p><strong>答：</strong>防止 Reward Hacking。没有 KL 惩罚时，模型会发现"一直说好话"能拿高分（Reward Model 容易被讨好），但这不是真正的质量提升。KL 惩罚限制当前模型不能偏离 SFT 模型太远，保证它在"学会讨好人"的同时不忘记"好好说话"。</p>
+      <h4>❓ Q2: SFT 为什么只在回答部分算 loss？</h4>
+      <p><strong>答：</strong>模型不需要学"如何出题"，只需要学"如何答题"。如果在指令部分也算 loss，模型会浪费训练能力学习生成"请解释……"这样的前缀。TRL 的 SFTTrainer 通过 chat_template 自动处理这一点。</p>
     </div>
     <div class="card">
-      <h4>❓ Q3: DPO 为什么不需要 Reward Model？</h4>
-      <p><strong>答：</strong>数学上，RLHF 的最优策略和 Reward 之间存在一一映射关系：R(x,y) = β·log(π*/π_ref)。DPO 发现可以直接用"策略概率比"替代"Reward 分数"，从而把 RLHF 的 PPO 目标改写为监督学习的分类目标。Reward Model 在数学上被"消掉"了。</p>
+      <h4>❓ Q3: PPO 为什么需要 KL 惩罚？</h4>
+      <p><strong>答：</strong>防止 Reward Hacking。没有 KL 惩罚时，模型可能发现"一直说好话"能拿高分，但这并非真正的质量提升。KL 惩罚限制模型不偏离 SFT 太远。TRL 的 PPOTrainer 通过 init_kl_coef + target 自动调节。</p>
     </div>
     <div class="card">
-      <h4>❓ Q4: DPO 的 β 参数怎么调？</h4>
-      <p><strong>答：</strong>β 控制偏离 Reference Model 的程度。β 太大 → 策略几乎不偏离 SFT → 学不动；β 太小 → 过度偏离 → 过拟合偏好数据。通常从 0.1 开始，观察训练 loss：平稳下降到 0.5~0.7 附近是理想范围。如果 loss 快速降到 0.3 以下，说明 β 太小。</p>
+      <h4>❓ Q4: DPO 为什么不需要 Reward Model？</h4>
+      <p><strong>答：</strong>数学上，最优策略和 Reward 之间存在一一映射。DPO 发现可以直接用模型对两个回答的"概率比"替代"Reward 分数"，从而省掉 Reward Model。TRL 的 DPOTrainer 封装了这一数学推导。</p>
     </div>
     <div class="card">
-      <h4>❓ Q5: GRPO 和 DPO 的关键区别？</h4>
-      <p><strong>答：</strong>DPO 需要<strong>人类标注</strong>的偏好对（"A 比 B 好"），GRPO 用<strong>规则自动打分</strong>（数学题看答案对错，代码看测试通过率）。GRPO 的核心是"组内比较"——对同一 prompt 生成多个回答，在组内排名，好的提高概率，差的降低。这让 GRPO 特别适合有明确客观标准的推理任务。</p>
+      <h4>❓ Q5: GRPO 和 PPO 的关键区别？</h4>
+      <p><strong>答：</strong>PPO 用 Reward Model 打分（需要训练），GRPO 用规则函数打分（你写 Python 函数）。PPO 生成 1 个回答，看绝对分数；GRPO 生成 N 个回答，组内比较相对排名。GRPO 省掉了 Reward Model 和 Value Model。</p>
     </div>
     <div class="card">
-      <h4>❓ Q6: 为什么 SFT 的 loss 只在回答部分算？</h4>
-      <p><strong>答：</strong>因为模型不需要学"怎么出题"，只需要学"怎么答题"。如果在指令部分也算 loss，模型会浪费训练能力去学习"生成指令前缀"。Loss Masking（把指令部分的 label 设为 -100）让模型完全专注于回答生成。这是 SFT 最容易踩的坑，但也是最简单的优化。</p>
+      <h4>❓ Q6: TRL 的 DPOTrainer 中 ref_model=None 的意义？</h4>
+      <p><strong>答：</strong>DPOTrainer 会在初始化时自动从 model 深拷贝一份并冻结作为 Reference Model。这比你手动创建 ref_model 更方便，且保证两个模型从完全相同的状态出发。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q7: 如何判断 DPO 训练是否正常？</h4>
+      <p><strong>答：</strong>看三个信号：① DPO loss 平稳下降到 0.5~0.7 附近（不要降到 0.3 以下）② chosen 的 logprob 不剧烈下降（DPO 会提高 chosen 的相对概率，但绝对概率可能微降）③ KL 散度不过大（太大说明偏离 SFT 太多）。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q8: GRPO 可以用在通用聊天场景吗？</h4>
+      <p><strong>答：</strong>可以，但需要设计合适的打分函数。通用聊天的好坏更难用规则衡量（"这条回答更自然"没法写成 Python 函数），因此 GRPO 目前主要用于有客观标准的推理任务。对于无客观标准的场景，DPO 更合适。</p>
     </div>
   </div>
 </section>
 
 <div class="footer">
-  📘 大模型全参数训练方法详解 · 教学文档 · 从入门到精通<br>
+  📘 大模型全参数训练方法详解 · 基于 TRL 的工业级实战指南 · 从入门到精通<br>
   由 <a href="https://github.com/2143616">@2143616</a> 制作 ·
   <span style="color: var(--green);">🟢 持续更新</span> ·
-  <span style="color: var(--fg2);">最后更新: 2026-07-18</span>
+  <span style="color: var(--fg2);">最后更新: 2026-07-21</span>
 </div>
 
 </div>
