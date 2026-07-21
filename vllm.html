@@ -1113,11 +1113,12 @@ vllm serve \
 </table>
 
 <h3>9.2 流水线并行（Pipeline Parallelism）</h3>
-<p>将模型的不同层分配到不同 GPU，层间串行计算。</p>
+<p>将模型的不同层分配到不同 GPU，层间串行计算。适合层数极多的模型。</p>
 <pre><span class="lang-label">bash</span>
 vllm serve \
-  --model meta-llama/Meta-Llama-3.1-70B-Instruct \
-  --pipeline-parallel-size <span class="num">2</span> \   <span class="cm"># 2 张 GPU 流水线</span>
+  --model deepseek-ai/DeepSeek-V3 \     <span class="cm"># 60+ 层 MoE，PP 才能发挥优势</span>
+  --pipeline-parallel-size <span class="num">2</span> \        <span class="cm"># 前半层放 GPU-0，后半层放 GPU-1</span>
+  --tensor-parallel-size <span class="num">4</span> \           <span class="cm"># 常和 TP 组合使用</span>
   --port <span class="num">8000</span></pre>
 
 <div class="highlight-warn">
