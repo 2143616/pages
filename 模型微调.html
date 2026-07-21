@@ -625,10 +625,10 @@ llamafactory-cli chat \
 
   <div class="arch-box">
     <span class="label">QLoRA 前向传播时发生了什么：</span><br>
-    &nbsp;&nbsp;1. 4-bit 量化权重 (存于显存) → <strong>反量化</strong>为 BF16 → 正常做矩阵乘法<br>
+    &nbsp;&nbsp;1. 4-bit 量化权重 (存于显存) → <strong>分块反量化</strong>为 BF16 → 正常做矩阵乘法<br>
     &nbsp;&nbsp;2. 反向传播时，<strong>梯度只流向 LoRA adapter</strong>（基座权重不更新）<br>
     &nbsp;&nbsp;3. 优化器状态 <strong>只保存 LoRA 参数的 m/v</strong>（基座的不需要）<br><br>
-    <span class="label">关键：</span>虽然存储是 4-bit，但计算是 BF16 → <strong>训练精度几乎不受影响</strong>
+    <span class="label">关键：</span>虽然计算精度是 BF16，但<strong>不是全量解压</strong>。bitsandbytes 逐块解压——每次只把当前要算的一小块权重从 4-bit → BF16，算完立刻丢弃。全量 BF16 模型<strong>永远不会同时存在于显存中</strong>，所以训练精度几乎不受影响，显存也不爆炸。
   </div>
 
   <h3>5.2 WebUI 操作步骤</h3>
