@@ -503,6 +503,139 @@ trainer.save_model(<span class="str">"./ppo_final"</span>)</pre>
     </p>
   </div>
 
+  <h3>4.2.1 逐行拆解：四模型在代码中的对应关系</h3>
+
+  <p>上面那段 PPOTrainer 代码同时运行了 4 个模型。下面<strong>逐行标注</strong>每个变量对应哪个模型、做什么、是否冻结：</p>
+
+  <pre><span class="lang-label">四模型逐行对应</span>
+<span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 变量 model → Policy Model（策略模型）</span>
+<span class="cm"># 作用："被训练的对象"——不断优化以生成更高 reward 的回答</span>
+<span class="cm"># 训练状态：✅ 参与梯度更新（唯一被 optimizer 更新的模型）</span>
+<span class="cm"># 内部结构：Transformer backbone + lm_head（生成文本）</span>
+<span class="cm">#            + v_head（估计 V(s)，即 Value Model 部分）</span>
+<span class="cm"># 对应代码行 ↓</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+model = AutoModelForCausalLMWithValueHead.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>, torch_dtype=<span class="str">"auto"</span>,
+)
+<span class="cm">#   ↑                    ↑</span>
+<span class="cm">#   Policy Model         "WithValueHead" = 自带 Value Model 头</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 变量 ref_model → Reference Model（参考模型 / 锚点）</span>
+<span class="cm"># 作用：计算 KL 惩罚的"基准线"——policy 不能离 ref 太远</span>
+<span class="cm"># 训练状态：❌ 冻结，不参与梯度更新</span>
+<span class="cm"># 为什么和 Policy 结构相同？因为 KL 计算需要同构的 log 概率输出</span>
+<span class="cm"># 对应代码行 ↓</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(
+    <span class="str">"./sft_qwen_final"</span>, torch_dtype=<span class="str">"auto"</span>,
+)
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 变量 reward_model → Reward Model（奖励模型 / 裁判）</span>
+<span class="cm"># 作用：给 Policy 生成的回答打分——"这个回答有多好？"</span>
+<span class="cm"># 训练状态：❌ 冻结（已在 Step 1 用 RewardTrainer 训好）</span>
+<span class="cm"># 内部结构：Transformer backbone + score_head（输出 1 个标量）</span>
+<span class="cm"># 与 Policy/Ref 的区别：只用 backbone 做理解，不生成文本</span>
+<span class="cm"># 对应代码行 ↓</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+reward_model = AutoModelForSequenceClassification.from_pretrained(
+    <span class="str">"./reward_model_final"</span>, torch_dtype=<span class="str">"auto"</span>,
+)
+<span class="cm">#   ↑                             ↑</span>
+<span class="cm">#   Reward Model                  SequenceClassification = 分类头而非生成头</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># Value Model（价值模型 / Critic）</span>
+<span class="cm"># 作用：估计 V(s) = "当前回答到这一步，最终能拿多少 reward？"</span>
+<span class="cm"># 训练状态：✅ 参与梯度更新（但和 Policy 共享 backbone！）</span>
+<span class="cm"># 在哪里？→ 藏在 model.v_head 里！</span>
+<span class="cm"># Value Model = Transformer backbone + v_head (nn.Linear(4096,1))</span>
+<span class="cm"># 对应代码：没有单独的变量，它是 Policy Model 的一个子模块</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 在 PPOTrainer 内部，Value Model 这样被使用：</span>
+<span class="cm">#   hidden = model.transformer(input_ids)    ← backbone 前向</span>
+<span class="cm">#   action_logits = model.lm_head(hidden)    ← Policy 输出</span>
+<span class="cm">#   v_s = model.v_head(hidden[:, -1, :])     ← Value 输出 (一个标量)</span>
+<span class="cm">#   advantage = reward - v_s                 ← PPO 的 advantage 公式</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 四个变量全部传入 PPOTrainer</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+trainer = PPOTrainer(
+    config=ppo_config,
+    model=model,                <span class="cm"># Policy + Value (两个角色，一个变量)</span>
+    ref_model=ref_model,        <span class="cm"># Reference (冻结的锚点)</span>
+    reward_model=reward_model,  <span class="cm"># Reward (冻结的裁判)</span>
+    tokenizer=tokenizer,
+)</pre>
+
+  <h4 style="font-size:1.1em;color:var(--teal);margin:24px 0 10px;">四模型总览表</h4>
+
+  <table>
+    <thead><tr><th>模型</th><th>代码中的变量名</th><th>加载方式</th><th>冻结/训练</th><th>做什么</th><th>输入→输出</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Policy Model</strong></td>
+        <td><code>model</code></td>
+        <td><code>AutoModelForCausalLMWithValueHead</code></td>
+        <td style="color:var(--green);">✅ 训练（唯一被 optimizer 更新的）</td>
+        <td>生成回答 + 更新策略</td>
+        <td>prompt → 回答文本</td>
+      </tr>
+      <tr>
+        <td><strong>Reference Model</strong></td>
+        <td><code>ref_model</code></td>
+        <td><code>AutoModelForCausalLMWithValueHead</code></td>
+        <td style="color:var(--fg2);">❌ 冻结</td>
+        <td>计算 KL 惩罚的基准线。PPO 目标是"偏离 ref 但别太远"</td>
+        <td>回答 → log 概率</td>
+      </tr>
+      <tr>
+        <td><strong>Reward Model</strong></td>
+        <td><code>reward_model</code></td>
+        <td><code>AutoModelForSequenceClassification</code></td>
+        <td style="color:var(--fg2);">❌ 冻结（Step 1 已训好）</td>
+        <td>给回答打分——模拟人类偏好</td>
+        <td>(prompt, 回答) → 1 个标量分数</td>
+      </tr>
+      <tr>
+        <td><strong>Value Model (Critic)</strong></td>
+        <td><code>model.v_head</code></td>
+        <td>藏在 Policy Model 内部</td>
+        <td style="color:var(--green);">✅ 训练（和 Policy 共享 backbone）</td>
+        <td>估计 V(s)——"走到这一步，最终能拿多少 reward"</td>
+        <td>hidden state → 1 个标量</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 style="font-size:1.1em;color:var(--purple);margin:24px 0 10px;">一个训练步的完整数据流</h4>
+
+  <div class="arch-box">
+    <span class="label">trainer.step() 内部发生的事情（一次前向 + 反向）：</span><br><br>
+    <span class="label">① Policy 生成</span><br>
+    &nbsp;&nbsp;prompt → model.transformer → model.lm_head → 采样出回答文本<br><br>
+    <span class="label">② Reward 打分</span><br>
+    &nbsp;&nbsp;(prompt, 回答文本) → reward_model → 一个分数 r<br><br>
+    <span class="label">③ Value 预估</span><br>
+    &nbsp;&nbsp;回答的 hidden states → model.v_head → 预估价值 v_s<br><br>
+    <span class="label">④ 计算 Advantage</span><br>
+    &nbsp;&nbsp;advantage = r - v_s<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;↑ 如果 r > v_s → advantage 为正 → 这个回答比预期好 → 提高概率<br><br>
+    <span class="label">⑤ 计算 KL 惩罚</span><br>
+    &nbsp;&nbsp;KL = Policy.log_prob(回答) - Ref.log_prob(回答)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;↑ Reference 是 SFT 时的概率，Policy 是当前概率<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;↑ 差值过大 → KL 项变大 → 惩罚 → 拉回去<br><br>
+    <span class="label">⑥ PPO Loss = -(advantage - beta × KL)</span><br>
+    &nbsp;&nbsp;反向传播 → 只更新 Policy（model 参数 + model.v_head 参数）<br>
+    &nbsp;&nbsp;Ref 和 Reward 始终冻结
+  </div>
+
   <h3>4.3 GRPO — PPO 的进化：扔掉 Value Model（Critic）</h3>
 
   <div class="summary-box">
