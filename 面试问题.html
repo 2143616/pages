@@ -216,14 +216,14 @@ code.inline { background: var(--bg3); padding: 2px 6px; border-radius: 4px; font
 <h3>4.1 逐项计算</h3>
 
 <table>
-  <tr><th>组件</th><th>模式</th><th>大小</th></tr>
-  <tr><td>Policy 模型参数</td><td>训练（bf16）</td><td class="num">3.0 GB</td></tr>
-  <tr><td>Policy 梯度</td><td>训练</td><td class="num">3.0 GB</td></tr>
-  <tr><td>Policy 优化器状态</td><td>训练（AdamW）</td><td class="num">12.0 GB</td></tr>
-  <tr><td>Policy 激活</td><td>含生成阶段（num_generations=4, max_len=256）</td><td class="num">~6.0 GB</td></tr>
-  <tr><td>RM 模型</td><td>推理（eval, no grad）</td><td class="num">3.0 GB</td></tr>
-  <tr><td>RM KV cache</td><td>推理时缓存</td><td class="num">~1.0 GB</td></tr>
-  <tr><td class="total">合计</td><td></td><td class="total num">~28.0 GB</td></tr>
+  <tr><th>组件</th><th>模式</th><th>计算公式</th><th>大小</th></tr>
+  <tr><td>Policy 模型参数</td><td>训练（bf16）</td><td><code>1.5B × 2 bytes</code></td><td class="num">3.0 GB</td></tr>
+  <tr><td>Policy 梯度</td><td>训练</td><td><code>1.5B × 2 bytes</code></td><td class="num">3.0 GB</td></tr>
+  <tr><td>Policy 优化器状态</td><td>训练（AdamW fp32）</td><td><code>1.5B × 8 bytes</code>（m 4B + v 4B）</td><td class="num">12.0 GB</td></tr>
+  <tr><td>Policy 激活</td><td>含生成阶段（n_gen=4, max_len=256）</td><td><code>batch × seq × d_model × layers × n_gen</code></td><td class="num">~6.0 GB</td></tr>
+  <tr><td>RM 模型</td><td>推理（eval, no grad）</td><td><code>1.5B × 2 bytes</code>（仅权重，无梯度/优化器）</td><td class="num">3.0 GB</td></tr>
+  <tr><td>RM KV cache</td><td>推理时缓存</td><td><code>2 × layers × seq × d_model × n_gen</code></td><td class="num">~1.0 GB</td></tr>
+  <tr><td class="total">合计</td><td></td><td><code>P×12 + RM_P×2 + KV + activations</code></td><td class="total num">~28.0 GB</td></tr>
 </table>
 
 <div class="highlight orange">
