@@ -181,7 +181,7 @@ pip install trl transformers accelerate peft datasets bitsandbytes</pre>
       <tr><td><strong>RewardTrainer</strong></td><td>Reward Model 训练</td><td>训练一个打分模型（RLHF 第二步需要）</td><td>两个回答的偏好标注</td></tr>
       <tr><td><strong>PPOTrainer</strong></td><td>RLHF (PPO)</td><td>用强化学习让模型输出更符合人类偏好</td><td>prompt 列表 + 已训好的 Reward Model</td></tr>
       <tr><td><strong>DPOTrainer</strong></td><td>DPO 直接偏好优化</td><td>无需 Reward Model，直接用偏好数据优化</td><td>(prompt, win, lose) 三元组</td></tr>
-      <tr><td><strong>GRPOTrainer</strong></td><td>GRPO 组内相对优化</td><td>用规则打分，组内比较，自进化（DeepSeek-R1）</td><td>prompt 列表 + 打分函数</td></tr>
+      <tr><td><strong>GRPOTrainer</strong></td><td>GRPO 组内相对优化</td><td>省掉 Value Model，组内归一化算 advantage。reward 可来自 RM/规则/混合</td><td>prompt 列表 + 打分函数（RM 或 rule-based）</td></tr>
     </tbody>
   </table>
 
@@ -215,7 +215,7 @@ pip install trl transformers accelerate peft datasets bitsandbytes</pre>
     <span class="label">阶段 3: 偏好对齐（三选一）</span><br>
     &nbsp;&nbsp;方案 A — RLHF: <strong>RewardTrainer</strong> + <strong>PPOTrainer</strong>（4 模型，显存高，效果上限最高）<br>
     &nbsp;&nbsp;方案 B — DPO: <strong>DPOTrainer</strong>（2 模型，显存中等，工业界首选）<br>
-    &nbsp;&nbsp;方案 C — GRPO: <strong>GRPOTrainer</strong>（2 模型，无需标注，推理任务最强）<br>
+    &nbsp;&nbsp;方案 C — GRPO: <strong>GRPOTrainer</strong>（省掉 Value Model，用组内归一化替代。reward 可来自 RM 或规则，推理任务最强）<br>
     <span class="arrow">↓ 产出: Aligned Model（会聊天，知道什么该说什么不该说）</span>
   </div>
 </section>
@@ -364,7 +364,7 @@ trainer.save_model(<span class="str">"./sft_qwen_final"</span>)
 
   <div class="summary-box">
     <div class="label">📌 一分钟总结</div>
-    <p>RLHF 让模型学会"什么回答更让人满意"。<strong>三步走：SFT 打底 → 训练 Reward Model 打分 → PPO 强化学习。</strong>TRL 对应：<strong>RewardTrainer</strong> + <strong>PPOTrainer</strong>。后来 DeepSeek-R1 提出了 <strong>GRPO</strong>，省掉 Reward Model，直接用规则打分，TRL 对应：<strong>GRPOTrainer</strong>。</p>
+    <p>RLHF 让模型学会"什么回答更让人满意"。<strong>三步走：SFT 打底 → 训练 Reward Model 打分 → PPO 强化学习。</strong>TRL 对应：<strong>RewardTrainer</strong> + <strong>PPOTrainer</strong>。后来 DeepSeek-R1 提出了 <strong>GRPO</strong>，省掉 Value Model（Critic），用组内归一化替代 V(s) 估计。reward 来源可以是 RM 或规则函数，TRL 对应：<strong>GRPOTrainer</strong>。</p>
   </div>
 
   <h3>4.1 为什么 SFT 不够？— 说话像人 ≠ 说话让人满意</h3>
@@ -503,131 +503,141 @@ trainer.save_model(<span class="str">"./ppo_final"</span>)</pre>
     </p>
   </div>
 
-  <h3>4.3 GRPO — PPO 的进化：扔掉 Reward Model</h3>
+  <h3>4.3 GRPO — PPO 的进化：扔掉 Value Model（Critic）</h3>
 
   <div class="summary-box">
     <div class="label">📌 GRPO 核心思想</div>
-    <p><strong>PPO 需要 Reward Model，GRPO 用规则打分。</strong>同一个 prompt 生成 N 个回答，在组内比排名——好的提高概率，差的降低。TRL 对应：<strong>GRPOTrainer</strong>。</p>
+    <p><strong>GRPO 省掉的是 Value Model（Critic），不是 Reward Model。</strong>奖励信号仍然需要——可以来自 RM 模型、Rule-based 函数、或两者混合。核心创新是：同一个 prompt 生成 N 个回答，用<strong>组内均值和标准差</strong>做 baseline 来计算 advantage，从而<strong>不再需要训练一个单独的 Critic 网络来估计 value</strong>。</p>
+    <ul>
+      <li><strong>PPO 的 advantage：</strong> reward - V(s)，其中 V(s) 需要 Value Model 来估计</li>
+      <li><strong>GRPO 的 advantage：</strong> (reward - group_mean) / group_std，组内归一化替代 Value Model</li>
+    </ul>
   </div>
 
-  <p>PPO 最大的痛点是<strong>需要训练和维护一个 Reward Model</strong>，这个 Reward Model 本身就可能被 hack。GRPO 的思路是：</p>
+  <p>PPO 最大的痛点是<strong>需要同时维护 4 个模型</strong>，其中 Value Model 就是专门用来估计"当前状态有多好"的 Critic 网络。GRPO 用一个巧妙的方法绕过了它：</p>
 
   <div class="arch-box">
-    <span class="label">PPO: 生成 1 个回答 → Reward Model 给分 → 更新</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref + <strong style="color:var(--red);">Reward</strong> + Value = <strong style="color:var(--red);">4 个模型</strong><br><br>
-    <span class="label">GRPO: 生成 N 个回答 → 规则打分 → 组内排名 → 更新</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref = <strong style="color:var(--green);">2 个模型</strong>（和 DPO 一样轻量！）
+    <span class="label">PPO: 生成 1 个回答 → Reward 给分 → Value Model 估计 advantage → 更新</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref + Reward + <strong style="color:var(--red);">Value (Critic)</strong> = <strong style="color:var(--red);">4 个模型</strong><br><br>
+    <span class="label">GRPO: 生成 N 个回答 → Reward 给分 → 组内归一化算 advantage → 更新</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;需要: Policy + Ref + （RM 或 Rule-based）= <strong style="color:var(--green);">3 个模块</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--green);">省掉了 Value Model，advantage 用组内相对排名替代</span>
   </div>
 
-  <pre><span class="lang-label">Python — TRL GRPOTrainer（DeepSeek-R1 的核心训练方法）</span>
+  <div class="info-box">
+    <div class="label">🔑 关键澄清</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      <strong>GRPO 的 reward 可以来自多种来源：</strong><br>
+      ① <strong>RM 模型</strong> — 用 Stage 2 训练的 Reward Model 打分（和 PPO 一样！）<br>
+      ② <strong>Rule-based 函数</strong> — 用 Python 写的规则打分（长度、格式、答案对错等）<br>
+      ③ <strong>混合</strong> — RM + 规则的加权组合<br><br>
+      <strong>不管 reward 来自哪里，GRPO 都不需要 Value Model——这是它和 PPO 的唯一但关键的区别。</strong>DeepSeek-R1 论文的原始 GRPO 用法是 Rule-based reward（数学题用答案对错，代码题用测试通过率），但实际工程中 RM+规则混合也非常常见。
+    </p>
+  </div>
+
+  <pre><span class="lang-label">Python — TRL GRPOTrainer（RM-based + Rule-based 混合示例）</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># TRL GRPOTrainer — 组内比较 + 规则打分，无需 Reward Model</span>
-<span class="cm"># 特别适合数学、代码等有明确对错标准的推理任务</span>
+<span class="cm"># TRL GRPOTrainer — 组内比较替代 Value Model，但 reward 可以来自 RM</span>
+<span class="cm"># 示例：Stage 2 的 RM 模型打分 + 格式/长度的规则打分混合使用</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
 <span class="kw">from</span> <span class="builtin">trl</span> <span class="kw">import</span> GRPOTrainer, GRPOConfig
-<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer
+<span class="kw">from</span> <span class="builtin">transformers</span> <span class="kw">import</span> AutoModelForCausalLM, AutoTokenizer, AutoModelForSequenceClassification
 <span class="kw">from</span> <span class="builtin">datasets</span> <span class="kw">import</span> load_dataset
-<span class="kw">import</span> re
+<span class="kw">import</span> torch
 
-<span class="cm"># ─── Step 1: 加载 SFT 模型 ───</span>
+<span class="cm"># ─── Step 1: 加载 SFT 模型（Policy） ───</span>
 model = AutoModelForCausalLM.from_pretrained(
     <span class="str">"./sft_qwen_final"</span>,
     torch_dtype=<span class="str">"auto"</span>, device_map=<span class="str">"auto"</span>,
 )
 tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./sft_qwen_final"</span>)
 
-<span class="cm"># ─── Step 2: 定义打分函数（替代 Reward Model） ───</span>
-<span class="cm"># GRPO 的核心：你用纯 Python 写一个打分函数，不需要训练任何东西！</span>
-<span class="kw">def</span> <span class="fn">math_reward</span>(prompts, completions, answer, **kwargs):
+<span class="cm"># ─── Step 2: 加载 Stage 2 训好的 Reward Model（可选，作为打分来源之一） ───</span>
+<span class="cm"># 注意：GRPO 不要求必须有 RM，rule-based 打分也完全可行</span>
+<span class="cm"># 这里展示 RM + 规则混合的工程实践</span>
+rm_model = AutoModelForSequenceClassification.from_pretrained(
+    <span class="str">"./reward_model_final"</span>,              <span class="cm"># Stage 2 训好的打分器</span>
+    num_labels=<span class="num">1</span>, torch_dtype=<span class="str">"auto"</span>, device_map=<span class="str">"auto"</span>,
+)
+rm_tokenizer = AutoTokenizer.from_pretrained(<span class="str">"./reward_model_final"</span>)
+rm_model.eval()                             <span class="cm"># 冻结，只用来打分，不参与梯度更新</span>
+
+<span class="cm"># ─── Step 3: 定义打分函数 ───</span>
+<span class="kw">def</span> <span class="fn">rm_reward</span>(completions, prompts=<span class="kw">None</span>, **kwargs):
     <span class="cm"># ═══════════════════════════════════════════════════════</span>
-    <span class="cm"># 输入：prompts（题目列表）, completions（模型生成的回答列表）, answer（标准答案）</span>
-    <span class="cm"># 输出：每个回答的分数列表</span>
+    <span class="cm"># 用法 1: 用 Stage 2 的 RM 模型打分（和 PPO 一样！）</span>
+    <span class="cm"># 这对于通用对话对齐（没有客观对错标准）是最实用的方案</span>
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="kw">if</span> prompts <span class="kw">is</span> <span class="kw">None</span>:
+        prompts = kwargs.get(<span class="str">"prompts"</span>, [<span class="str">""</span>] * <span class="builtin">len</span>(completions))
+    texts = []
+    <span class="kw">for</span> prompt, completion <span class="kw">in</span> <span class="builtin">zip</span>(prompts, completions):
+        resp = completion[<span class="num">0</span>][<span class="str">"content"</span>] <span class="kw">if</span> <span class="builtin">isinstance</span>(completion, <span class="builtin">list</span>) <span class="kw">else</span> <span class="builtin">str</span>(completion)
+        text = rm_tokenizer.apply_chat_template([   <span class="cm"># 构造 RM 需要的输入格式</span>
+            {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: prompt},
+            {<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: resp},
+        ], tokenize=<span class="kw">False</span>)
+        texts.append(text)
+    enc = rm_tokenizer(texts, return_tensors=<span class="str">"pt"</span>, padding=<span class="kw">True</span>, truncation=<span class="kw">True</span>, max_length=<span class="num">512</span>).to(rm_model.device)
+    <span class="kw">with</span> torch.no_grad():
+        scores = rm_model(**enc).logits.squeeze(-<span class="num">1</span>).cpu().tolist()
+    <span class="kw">return</span> [scores] <span class="kw">if</span> <span class="builtin">isinstance</span>(scores, <span class="builtin">float</span>) <span class="kw">else</span> scores
+
+<span class="kw">def</span> <span class="fn">rule_format_reward</span>(completions, **kwargs):
+    <span class="cm"># ═══════════════════════════════════════════════════════</span>
+    <span class="cm"># 用法 2: 用 Python 规则打分（不需要 RM 模型）</span>
+    <span class="cm"># 适合有客观标准的任务：数学答案对错、代码测试通过、格式规范</span>
     <span class="cm"># ═══════════════════════════════════════════════════════</span>
     rewards = []
-    <span class="kw">for</span> completion <span class="kw">in</span> completions:
-        <span class="cm"># 从回答中提取最后一个数字（假设数学题答案是个数字）</span>
-        match = re.findall(<span class="str">r"[-]?\d+\.?\d*"</span>, completion)
-        <span class="kw">if</span> <span class="kw">not</span> match:
-            rewards.append(<span class="num">0.0</span>)                           <span class="cm"># 没找到数字 → 0 分</span>
-            <span class="kw">continue</span>
-        pred_answer = <span class="builtin">float</span>(match[-<span class="num">1</span>])                   <span class="cm"># 取最后出现的数字</span>
-
-        <span class="kw">if</span> <span class="builtin">abs</span>(pred_answer - answer) < <span class="num">1e-6</span>:              <span class="cm"># 答案完全正确</span>
-            rewards.append(<span class="num">1.0</span>)                           <span class="cm"># 满分</span>
-        <span class="kw">elif</span> <span class="builtin">abs</span>(pred_answer - answer) / <span class="builtin">abs</span>(answer) < <span class="num">0.1</span>:  <span class="cm"># 误差 < 10%</span>
-            rewards.append(<span class="num">0.5</span>)                           <span class="cm"># 部分分</span>
-        <span class="kw">else</span>:
-            rewards.append(<span class="num">0.0</span>)
-    <span class="kw">return</span> rewards
-
-<span class="kw">def</span> <span class="fn">format_reward</span>(prompts, completions, **kwargs):
-    <span class="cm"># 格式打分：检查回答中是否包含推理步骤标记（如 &lt;think&gt;xxx&lt;/think&gt;）</span>
-    rewards = []
-    <span class="kw">for</span> completion <span class="kw">in</span> completions:
+    <span class="kw">for</span> c <span class="kw">in</span> completions:
+        text = c[<span class="num">0</span>][<span class="str">"content"</span>] <span class="kw">if</span> <span class="builtin">isinstance</span>(c, <span class="builtin">list</span>) <span class="kw">else</span> <span class="builtin">str</span>(c)
         score = <span class="num">0.0</span>
-        <span class="kw">if</span> <span class="str">"&lt;think&gt;"</span> <span class="kw">in</span> completion <span class="kw">and</span> <span class="str">"&lt;/think&gt;"</span> <span class="kw">in</span> completion:
-            score += <span class="num">0.25</span>                               <span class="cm"># 有 think 标签 → 加分</span>
-        <span class="kw">if</span> <span class="str">"&lt;answer&gt;"</span> <span class="kw">in</span> completion <span class="kw">and</span> <span class="str">"&lt;/answer&gt;"</span> <span class="kw">in</span> completion:
-            score += <span class="num">0.25</span>                               <span class="cm"># 有 answer 标签 → 加分</span>
-        <span class="kw">if</span> <span class="builtin">len</span>(completion) > <span class="num">50</span>:
-            score += <span class="num">0.25</span>                               <span class="cm"># 回答有一定长度 → 加分</span>
+        <span class="kw">if</span> <span class="builtin">len</span>(text) > <span class="num">50</span>: score += <span class="num">0.3</span>              <span class="cm"># 回答有一定长度</span>
+        <span class="kw">if</span> <span class="str">"**"</span> <span class="kw">in</span> text <span class="kw">or</span> <span class="str">"```"</span> <span class="kw">in</span> text: score += <span class="num">0.3</span>  <span class="cm"># 有格式化内容</span>
+        <span class="kw">if</span> text.endswith((<span class="str">"。"</span>, <span class="str">"!"</span>, <span class="str">"?"</span>)): score += <span class="num">0.2</span> <span class="cm"># 有正确结尾</span>
         rewards.append(score)
     <span class="kw">return</span> rewards
 
-<span class="cm"># ─── Step 3: 准备数据集（只需要题目，不需要标注！） ───</span>
-<span class="cm"># 数据格式: {"prompt": "计算 sin(30°) + cos(60°) 的值", "answer": "1.0"}</span>
-dataset = load_dataset(<span class="str">"your-username/math_problems"</span>, split=<span class="str">"train"</span>)
+<span class="cm"># ─── Step 4: 准备数据 ───</span>
+dataset = load_dataset(<span class="str">"your-username/grpo_prompts"</span>, split=<span class="str">"train"</span>)
 
-<span class="cm"># ─── Step 4: 配置 GRPOConfig ───</span>
+<span class="cm"># ─── Step 5: 配置 GRPOConfig ───</span>
 grpo_config = GRPOConfig(
     output_dir=<span class="str">"./grpo_output"</span>,
     per_device_train_batch_size=<span class="num">1</span>,
-    num_generations=<span class="num">4</span>,                          <span class="cm"># ★ 每个 prompt 生成 4 个回答（组内比较用）</span>
-    max_prompt_length=<span class="num">512</span>,                      <span class="cm"># prompt 最大长度</span>
-    max_completion_length=<span class="num">1024</span>,                   <span class="cm"># 回答最大长度</span>
+    num_generations=<span class="num">4</span>,                          <span class="cm"># ★ 每个 prompt 生成 N 个回答（N>1 是必须的！）</span>
+    max_prompt_length=<span class="num">512</span>,
+    max_completion_length=<span class="num">1024</span>,
     learning_rate=<span class="num">5e-6</span>,
-    beta=<span class="num">0.04</span>,                                <span class="cm"># ★ KL 惩罚系数 — 控制偏离 Reference Model 的程度</span>
-    temperature=<span class="num">0.9</span>,                            <span class="cm"># 采样温度 — 越高回答越多样</span>
+    beta=<span class="num">0.04</span>,                                <span class="cm"># ★ KL 惩罚 — 控制偏离 Reference Model 的程度</span>
+    temperature=<span class="num">0.9</span>,
     max_grad_norm=<span class="num">0.5</span>,
     logging_steps=<span class="num">5</span>,
 )
 
-<span class="cm"># ─── Step 5: 创建 GRPOTrainer 并训练 ───</span>
+<span class="cm"># ─── Step 6: 创建 GRPOTrainer — 奖励来源灵活组合 ───</span>
 trainer = GRPOTrainer(
     model=model,
-    reward_funcs=[math_reward, format_reward],  <span class="cm"># ★ 打分函数列表 — 多个函数分数会加权求和</span>
+    <span class="cm"># ★ reward_funcs 可以是任意组合：纯 RM、纯规则、或混合</span>
+    <span class="cm"># 多个函数的分数会自动加权求和</span>
+    reward_funcs=[rm_reward, rule_format_reward],
     args=grpo_config,
     train_dataset=dataset,
-    tokenizer=tokenizer,
+    processing_class=tokenizer,
 )
 trainer.train()
 trainer.save_model(<span class="str">"./grpo_final"</span>)
 
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span>
-<span class="cm"># GRPOTrainer 自动帮你做的事：</span>
-<span class="cm">#   1. 对每个 prompt 生成 num_generations 个回答</span>
-<span class="cm">#   2. 用 reward_funcs 给每个回答打分</span>
-<span class="cm">#   3. 组内归一化（减均值除标准差）→ 得到 advantage</span>
-<span class="cm">#   4. 用 PPO-style clipped loss 更新模型（好的提高，差的降低）</span>
-<span class="cm">#   5. 不需要 Reward Model！不需要 Value Model！</span>
+<span class="cm"># GRPO 的 PPO 的关键区别：</span>
+<span class="cm">#   ✅ 省掉 Value Model (Critic) — 组内归一化替代 V(s) 估计</span>
+<span class="cm">#   ✅ 保留 Reward 信号 — RM / Rule-based / 混合均可</span>
+<span class="cm">#   ✅ num_generations > 1 — 组内比较的前提</span>
+<span class="cm">#</span>
+<span class="cm"># advantage 的计算：</span>
+<span class="cm">#   PPO:  advantage = reward - V(s)           ← 需要 Value Model</span>
+<span class="cm">#   GRPO: advantage = (reward - mean) / std   ← 组内归一化，不要 Value Model</span>
 <span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
-
-  <div class="highlight">
-    <strong>GRPO 为什么特别适合推理任务？</strong>数学和代码有明确的客观标准——答案对就是对、测试通过就是通过。你可以用几十行 Python 写一个打分函数，替代 RLHF 中昂贵的 Reward Model 训练，而且打分绝对公正。<strong>这是 DeepSeek-R1 的核心训练方法。</strong>
-  </div>
-
-  <h3>4.4 PPO vs GRPO — 一言蔽之</h3>
-
-  <table>
-    <thead><tr><th>维度</th><th>PPO (PPOTrainer)</th><th>GRPO (GRPOTrainer)</th></tr></thead>
-    <tbody>
-      <tr><td><strong>显存 (7B)</strong></td><td style="color:var(--red);">~200GB（4 个模型）</td><td style="color:var(--green);">~100GB（2 个模型）</td></tr>
-      <tr><td><strong>需要 Reward Model</strong></td><td style="color:var(--red);">✅ 要训练和维护</td><td style="color:var(--green);">❌ 用 Python 函数替代</td></tr>
-      <tr><td><strong>打分公正性</strong></td><td>取决于 Reward Model 质量</td><td style="color:var(--green);">取决于规则设计</td></tr>
-      <tr><td><strong>最佳场景</strong></td><td>通用对话（需人类偏好）</td><td style="color:var(--green);">推理任务（有客观标准）</td></tr>
-      <tr><td><strong>代表</strong></td><td>ChatGPT, Claude</td><td>DeepSeek-R1</td></tr>
-    </tbody>
-  </table>
 </section>
 
 <!-- ═══════════════════════ SEC 5: DPO ═══ -->
@@ -741,13 +751,13 @@ trainer.save_model(<span class="str">"./dpo_final"</span>)
     <thead><tr><th>维度</th><th>SFT</th><th>DPO</th><th>PPO (RLHF)</th><th>GRPO</th></tr></thead>
     <tbody>
       <tr><td><strong>TRL 工具</strong></td><td>SFTTrainer</td><td>DPOTrainer</td><td>RewardTrainer + PPOTrainer</td><td>GRPOTrainer</td></tr>
-      <tr><td><strong>需要几个模型</strong></td><td style="color:var(--green);">1 个</td><td style="color:var(--green);">2 个（Policy+Ref）</td><td style="color:var(--red);">4 个（+Reward+Value）</td><td style="color:var(--green);">2 个（Policy+Ref）</td></tr>
-      <tr><td><strong>显存 (7B, BF16)</strong></td><td style="color:var(--green);">~40GB</td><td style="color:var(--green);">~60GB</td><td style="color:var(--red);">~200GB</td><td style="color:var(--green);">~100GB</td></tr>
-      <tr><td><strong>数据需求</strong></td><td>QA 对话对</td><td>偏好对（离线）</td><td>偏好对 + 在线采样</td><td>题目 + 打分函数</td></tr>
-      <tr><td><strong>需要人工标注</strong></td><td>✅ 需要</td><td>✅ 需要</td><td>✅ 需要</td><td style="color:var(--green);">❌ 不需要！</td></tr>
+      <tr><td><strong>需要几个模型</strong></td><td style="color:var(--green);">1 个</td><td style="color:var(--green);">2 个（Policy+Ref）</td><td style="color:var(--red);">4 个（+Reward+Value）</td><td style="color:var(--orange);">3 个（+Ref+RM可选）</td></tr>
+      <tr><td><strong>显存 (7B, BF16)</strong></td><td style="color:var(--green);">~40GB</td><td style="color:var(--green);">~60GB</td><td style="color:var(--red);">~200GB</td><td style="color:var(--green);">~120GB</td></tr>
+      <tr><td><strong>数据需求</strong></td><td>QA 对话对</td><td>偏好对（离线）</td><td>偏好对 + 在线采样</td><td>prompt + 打分函数（RM/规则）</td></tr>
+      <tr><td><strong>需要人工标注</strong></td><td>✅ 需要</td><td>✅ 需要</td><td>✅ 需要</td><td style="color:var(--orange);">RM-based 需要 / 规则不需要</td></tr>
       <tr><td><strong>训练稳定性</strong></td><td style="color:var(--green);">✅ 极稳定</td><td style="color:var(--green);">✅ 稳定</td><td style="color:var(--red);">⚠️ 难调</td><td style="color:var(--orange);">⚠️ 中等</td></tr>
-      <tr><td><strong>效果上限</strong></td><td>基础</td><td>接近 PPO</td><td style="color:var(--green);">最高</td><td>推理任务最高</td></tr>
-      <tr><td><strong>最佳场景</strong></td><td>指令遵循</td><td>通用对齐</td><td>极致性能</td><td>推理任务</td></tr>
+      <tr><td><strong>效果上限</strong></td><td>基础</td><td>接近 PPO</td><td style="color:var(--green);">最高</td><td>推理任务最强</td></tr>
+      <tr><td><strong>最佳场景</strong></td><td>指令遵循</td><td>通用对齐</td><td>极致性能</td><td>推理/通用（灵活打分）</td></tr>
     </tbody>
   </table>
 
@@ -842,8 +852,8 @@ python train_grpo.py \
       <p><strong>答：</strong>数学上，最优策略和 Reward 之间存在一一映射。DPO 发现可以直接用模型对两个回答的"概率比"替代"Reward 分数"，从而省掉 Reward Model。TRL 的 DPOTrainer 封装了这一数学推导。</p>
     </div>
     <div class="card">
-      <h4>❓ Q5: GRPO 和 PPO 的关键区别？</h4>
-      <p><strong>答：</strong>PPO 用 Reward Model 打分（需要训练），GRPO 用规则函数打分（你写 Python 函数）。PPO 生成 1 个回答，看绝对分数；GRPO 生成 N 个回答，组内比较相对排名。GRPO 省掉了 Reward Model 和 Value Model。</p>
+      <h4>❓ Q5: GRPO 和 PPO 的关键区别？GRPO 省掉了什么？</h4>
+      <p><strong>答：</strong>GRPO <strong>省掉的是 Value Model（Critic），不是 Reward Model。</strong>PPO 需要训练一个单独的 Critic 网络来估计 V(s)，用于计算 advantage = reward - V(s)。GRPO 对同一 prompt 生成 N 个回答，用组内归一化 (reward - group_mean) / group_std 替代 V(s) 估计。但 <strong>奖励信号仍然需要</strong>——可以来自 Stage 2 训练的 RM 模型、Rule-based 函数、或两者混合。GRPO 的优势是少了 Value Model 的训练和维护成本，advantage 计算更简单。</p>
     </div>
     <div class="card">
       <h4>❓ Q6: TRL 的 DPOTrainer 中 ref_model=None 的意义？</h4>
@@ -854,8 +864,8 @@ python train_grpo.py \
       <p><strong>答：</strong>看三个信号：① DPO loss 平稳下降到 0.5~0.7 附近（不要降到 0.3 以下）② chosen 的 logprob 不剧烈下降（DPO 会提高 chosen 的相对概率，但绝对概率可能微降）③ KL 散度不过大（太大说明偏离 SFT 太多）。</p>
     </div>
     <div class="card">
-      <h4>❓ Q8: GRPO 可以用在通用聊天场景吗？</h4>
-      <p><strong>答：</strong>可以，但需要设计合适的打分函数。通用聊天的好坏更难用规则衡量（"这条回答更自然"没法写成 Python 函数），因此 GRPO 目前主要用于有客观标准的推理任务。对于无客观标准的场景，DPO 更合适。</p>
+      <h4>❓ Q8: GRPO 可以用于通用聊天对齐吗？必须用规则打分吗？</h4>
+      <p><strong>答：</strong>不一定必须用规则！GRPO 的 reward 来源非常灵活：①用 Stage 2 的 RM 模型打分（和 PPO 一样，适合无客观标准的通用对话）；②用 Rule-based 函数（适合有客观标准的推理任务，如数学/代码）；③两者混合。DeepSeek-R1 论文用的是纯规则打分（做数学题），但工程实践中 RM+规则混合是常见选择。对于通用聊天，RM-based GRPO 是一个完全合理的选择。</p>
     </div>
   </div>
 </section>
