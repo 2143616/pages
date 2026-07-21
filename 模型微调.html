@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型微调完全指南 — LlamaFactory · LoRA · QLoRA · 显存计算 从入门到精通</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --fg: #e6edf3; --fg2: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --teal: #56d4dd; --pink: #f778ba;
+  --border: #30363d; --code-bg: #1c2128;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.8;
+  display: flex;
+}
+.toc {
+  position: fixed; top: 0; left: 0; width: 270px; height: 100vh;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  padding: 30px 20px; overflow-y: auto; z-index: 10;
+}
+.toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg2); margin-bottom: 18px; }
+.toc ul { list-style: none; }
+.toc ul li { margin-bottom: 3px; }
+.toc ul li a {
+  display: block; padding: 5px 10px; border-radius: 5px;
+  color: var(--fg2); text-decoration: none; font-size: 13px; transition: all 0.15s;
+}
+.toc ul li a:hover { background: var(--bg3); color: var(--fg); }
+.toc ul li a.active { background: rgba(88,166,255,0.12); color: var(--accent); }
+.main { margin-left: 270px; padding: 60px 80px; max-width: 1000px; width: 100%; }
+.header {
+  text-align: center; padding: 60px 0 50px;
+  border-bottom: 1px solid var(--border); margin-bottom: 50px;
+}
+.header h1 {
+  font-size: 2.6em; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--teal), var(--pink));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 14px;
+}
+.header p { color: var(--fg2); font-size: 1.05em; max-width: 700px; margin: 0 auto; }
+.header .tags { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.header .tags span { background: var(--bg3); color: var(--fg2); padding: 5px 16px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border); }
+section { margin-bottom: 60px; padding-top: 20px; }
+h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+h2::before { content: "# "; color: var(--accent); font-weight: 400; }
+h3 { font-size: 1.3em; color: var(--teal); margin: 36px 0 16px; font-weight: 600; }
+h4 { font-size: 1.1em; color: var(--pink); margin: 24px 0 12px; font-weight: 600; }
+p { color: var(--fg2); margin-bottom: 16px; font-size: 15px; }
+strong { color: var(--fg); }
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px 24px; overflow-x: auto;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 12.5px; line-height: 1.7; position: relative; margin: 20px 0;
+}
+pre span.lang-label {
+  position: absolute; top: 10px; right: 14px; font-size: 11px;
+  color: var(--fg2); background: var(--bg3); padding: 2px 10px;
+  border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.kw  { color: #ff7b72; } .fn  { color: #d2a8ff; }
+.str { color: #a5d6ff; } .cm  { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; } .op  { color: #ffa657; }
+.builtin { color: #58a6ff; } .dec { color: #f778ba; } .cls { color: #ffa657; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+thead th { background: var(--bg3); color: var(--fg); padding: 12px 16px; text-align: left; font-weight: 600; border: 1px solid var(--border); }
+tbody td { padding: 10px 16px; border: 1px solid var(--border); color: var(--fg2); }
+tbody tr:hover { background: var(--bg2); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card h4 { color: var(--accent); margin: 0 0 8px; font-size: 1em; }
+.card p { font-size: 13.5px; margin: 0; }
+.highlight {
+  background: rgba(88,166,255,0.06); border-left: 3px solid var(--accent);
+  padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; color: var(--fg);
+}
+.highlight strong { color: var(--accent); }
+.summary-box {
+  background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(188,140,255,0.06));
+  border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin: 20px 0;
+}
+.summary-box .label { font-size: 13px; color: var(--teal); font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.summary-box p { font-size: 14px; margin: 0; color: var(--fg); }
+.summary-box ul { margin: 10px 0 0 20px; color: var(--fg2); font-size: 14px; }
+.summary-box ul li { margin-bottom: 4px; }
+.info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
+.info-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+.arch-box {
+  border: 1px dashed var(--border); padding: 14px 20px; margin: 10px 0; border-radius: 8px;
+  background: var(--bg2); font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--fg);
+  line-height: 1.9;
+}
+.arch-box .label { color: var(--teal); font-weight: 700; }
+.arch-box .arrow { color: var(--purple); }
+.step-flow {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 16px 0; font-size: 13px; font-family: "JetBrains Mono", monospace;
+}
+.step-flow .step {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--fg); white-space: nowrap;
+}
+.step-flow .step-arrow { color: var(--accent); font-weight: 700; }
+.formula {
+  text-align: center; padding: 18px 0; font-size: 1.15em;
+  color: var(--fg); font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.05em;
+}
+.math { color: var(--purple); font-style: italic; }
+.footer { text-align: center; padding: 40px 0 30px; border-top: 1px solid var(--border); margin-top: 60px; color: var(--fg2); font-size: 13px; }
+.footer a { color: var(--accent); text-decoration: none; }
+@media (max-width: 900px) {
+  .toc { display: none; } .main { margin-left: 0; padding: 30px 20px; }
+  .header h1 { font-size: 1.6em; } h2 { font-size: 1.4em; }
+  pre { padding: 16px 14px; font-size: 11px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <h3>📑 目录</h3>
+  <ul>
+    <li><a href="#sec1">1. 什么是模型微调？</a></li>
+    <li><a href="#sec2">2. 微调方法全景 — 从全参数到 PEFT</a></li>
+    <li><a href="#sec3">3. LlamaFactory — 一站式微调利器</a></li>
+    <li><a href="#sec4">4. LlamaFactory + LoRA 实战</a></li>
+    <li><a href="#sec5">5. LlamaFactory + QLoRA 实战</a></li>
+    <li><a href="#sec6">6. 显存计算 — 你的 GPU 能训多大？</a></li>
+    <li><a href="#sec7">7. 选型指南 & 故障排查</a></li>
+    <li><a href="#sec8">8. 进阶实战 & 常见问题 FAQ</a></li>
+  </ul>
+</nav>
+
+<div class="main">
+
+<div class="header">
+  <h1>🧠 大模型微调完全指南</h1>
+  <p>LlamaFactory · LoRA · QLoRA · PEFT · 显存计算 — 从零到一，用最少的 GPU 做最有效的微调</p>
+  <div class="tags">
+    <span>🦙 LlamaFactory</span>
+    <span>⚡ LoRA</span>
+    <span>🧊 QLoRA</span>
+    <span>📦 PEFT</span>
+    <span>💻 GPU 选型</span>
+    <span>🐍 Python</span>
+    <span>📘 教学文档</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SEC 1 ═══ -->
+<section id="sec1">
+  <h2>1. 什么是模型微调？</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>微调（Fine-Tuning）= 在预训练大模型基础上，用<strong>少量领域数据</strong>继续训练，让模型学会特定技能。全参数微调需要更新所有参数（费 GPU），PEFT 方法（LoRA/QLoRA）只需训练 0.1%~1% 的参数（单张消费级显卡即可）。<strong>LlamaFactory</strong> 是目前最流行的开源微调工具。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🎯 为什么需要微调？</h4>
+      <p>预训练模型只会"续写"——你说"请帮我写一首诗"，它续写"请帮我写一首诗吧，我已经等了很久了……"。微调后它真的会写诗——因为学会了<strong>对话格式和指令遵循</strong>。</p>
+    </div>
+    <div class="card">
+      <h4>💰 全参数 vs 高效微调</h4>
+      <p>全参数 SFT 需要更新 70 亿个参数→需要 80GB+ 显存（4×A100）。LoRA 只训练 800 万个参数→只需 16GB 显存（单张 RTX 3090/4090）。效果差距通常不到 3%。</p>
+    </div>
+    <div class="card">
+      <h4>🦙 LlamaFactory 是什么？</h4>
+      <p>一个开源的 WebUI + CLI 微调框架，支持 100+ 种模型、十几种微调方法。不用写代码，点几下鼠标就能完成微调。<strong>LoRA 和 QLoRA 是其最核心的功能。</strong></p>
+    </div>
+  </div>
+
+  <h3>1.1 微调 vs 从头训练 — 类比理解</h3>
+
+  <table>
+    <thead><tr><th></th><th>从头训练</th><th>微调</th></tr></thead>
+    <tbody>
+      <tr><td><strong>类比</strong></td><td>让一个婴儿从认字开始学</td><td>让一个大学生选修一门专业课</td></tr>
+      <tr><td><strong>数据</strong></td><td>万亿 token 互联网文本</td><td>几千~几十万条领域数据</td></tr>
+      <tr><td><strong>成本</strong></td><td>百万~千万美元</td><td>几十~几千美元（甚至免费）</td></tr>
+      <tr><td><strong>时间</strong></td><td>数月</td><td>数小时~数天</td></tr>
+      <tr><td><strong>产出</strong></td><td>通用语言模型</td><td>特定领域的专家模型</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 2 ═══ -->
+<section id="sec2">
+  <h2>2. 微调方法全景 — 从全参数到 PEFT</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>微调方法分两大类：<strong>全参数微调</strong>（更新所有参数，土豪专用）和 <strong>PEFT 参数高效微调</strong>（只更新极少参数，性价比首选）。PEFT 家族中 <strong>LoRA</strong> 是绝对主流，<strong>QLoRA</strong> 是其 4-bit 量化升级版。</p>
+  </div>
+
+  <h3>2.1 全参数 SFT — 暴力但有代价</h3>
+
+  <p>全参数 SFT 把模型的所有参数都放开训练。效果天花板最高，但代价也最大——7B 模型需要 80~112GB 显存，至少 4×A100-80G 才能跑。</p>
+
+  <p><strong>全参数 SFT 的内存分解（7B 模型，BF16）：</strong></p>
+
+  <table>
+    <thead><tr><th>组件</th><th>大小</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>模型参数</td><td>7B × 2 bytes = 14 GB</td><td>BF16 存储</td></tr>
+      <tr><td>梯度</td><td>7B × 2 bytes = 14 GB</td><td>每个参数一个梯度</td></tr>
+      <tr><td>Adam 优化器 (m+v)</td><td>7B × 8 bytes = 56 GB</td><td>FP32 存储，最大的内存消耗者</td></tr>
+      <tr><td>激活值 (batch=1, seq=2048)</td><td>~10 GB</td><td>开启 gradient checkpointing 可降到 ~2 GB</td></tr>
+      <tr style="color:var(--red);"><td><strong>总计</strong></td><td><strong>~94 GB</strong></td><td>需要 4+A100-80G</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 PEFT — 参数高效微调家族</h3>
+
+  <table>
+    <thead><tr><th>方法</th><th>核心思路</th><th>可训练参数比率</th><th>效果</th><th>主流程度</th></tr></thead>
+    <tbody>
+      <tr><td><strong>LoRA</strong></td><td>在注意力层旁加两个小矩阵 B·A，只训练这两个矩阵</td><td>0.1%~1%</td><td style="color:var(--green);">接近全参数</td><td style="color:var(--green);">⭐⭐⭐⭐⭐</td></tr>
+      <tr><td><strong>QLoRA</strong></td><td>LoRA + 基座 4-bit 量化，显存再砍一半</td><td>0.1%~1%</td><td style="color:var(--green);">接近 LoRA</td><td style="color:var(--green);">⭐⭐⭐⭐⭐</td></tr>
+      <tr><td><strong>Adapter</strong></td><td>在每层 Transformer 后插入小型神经网络</td><td>1%~5%</td><td>中等</td><td>⭐⭐</td></tr>
+      <tr><td><strong>Prefix Tuning</strong></td><td>在输入前加可训练的"前缀 token"</td><td>&lt;0.1%</td><td>中下</td><td>⭐</td></tr>
+      <tr><td><strong>P-Tuning v2</strong></td><td>在每层都加可训练 prompt</td><td>0.1%~3%</td><td>中等</td><td>⭐</td></tr>
+      <tr><td><strong>IA³</strong></td><td>只训练三个缩放向量</td><td>&lt;0.01%</td><td>中等</td><td>⭐</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>结论：</strong>对于 99% 的场景，直接用 <strong>LoRA 或 QLoRA</strong> 就够了。只有当你拥有海量数据（10 万条+）且追求极致性能时，才考虑全参数 SFT。本文后续重点讲 LoRA/QLoRA + LlamaFactory。
+  </div>
+
+  <h3>2.3 LoRA 原理速览</h3>
+
+  <p>LoRA 的核心假设：微调时模型权重的变化量 ΔW 可以分解为两个低秩矩阵的乘积：</p>
+
+  <div class="formula">
+    ΔW = B · A &nbsp;&nbsp;&nbsp;（B ∈ R<sup>d×r</sup>, A ∈ R<sup>r×d</sup>）
+  </div>
+
+  <p>前向传播时：<strong>h = W₀·x + (α/r)·B·A·x</strong>。W₀ 冻结，只训练 B 和 A。r 通常取 8~64，α 通常取 2×r。推理时可以把 B·A 合并回 W₀，零额外开销。</p>
+
+  <p><strong>QLoRA</strong> 在上面基础上，把 W₀ 用 4-bit NormalFloat 量化存储，前向时反量化为 BF16 计算。基座模型显存从 14GB（BF16）降到 ~4GB（4-bit）。</p>
+</section>
+
+<!-- ═══════════════════════ SEC 3 ═══ -->
+<section id="sec3">
+  <h2>3. LlamaFactory — 一站式微调利器</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>LlamaFactory 是 GitHub 上最火的大模型微调工具（30K+ Stars），支持 100+ 种模型和十几种微调方法。提供 WebUI（点鼠标）和 CLI（命令行）两种方式。安装简单，一行 <code>pip install llamafactory</code> 即可。</p>
+  </div>
+
+  <h3>3.1 LlamaFactory 能做什么？</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🎮 WebUI 可视化操作</h4>
+      <p>浏览器中选模型→选数据→调参数→点训练，不用写一行代码。支持实时查看 loss 曲线和训练日志。</p>
+    </div>
+    <div class="card">
+      <h4>🧪 支持十几种微调方法</h4>
+      <p>LoRA、QLoRA、全参数 SFT、Freeze、GaLore、DoRA 等全部内置。切换方法只需改一个配置。</p>
+    </div>
+    <div class="card">
+      <h4>📊 内置数据集处理</h4>
+      <p>支持 Alpaca、ShareGPT、自定义 JSON 等多种数据格式。自动转换、自动划分训练/验证集。</p>
+    </div>
+    <div class="card">
+      <h4>📦 一键导出 & 推理</h4>
+      <p>训练完成后可以合并 LoRA 权重导出、量化导出（GGUF/GPTQ）、直接对话测试。</p>
+    </div>
+  </div>
+
+  <h3>3.2 安装 LlamaFactory</h3>
+
+  <pre><span class="lang-label">Shell</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 1: pip 安装（推荐）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+pip install llamafactory
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 2: 源码安装（如需修改源码或贡献代码）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+git clone https://github.com/hiyouga/LLaMA-Factory.git
+cd LLaMA-Factory
+pip install -e ".[torch,metrics]"
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 验证安装 — 启动 WebUI 看看能不能打开</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+llamafactory-cli webui
+<span class="cm"># 浏览器打开 http://localhost:7860 就能看到界面了</span></pre>
+
+  <h3>3.3 LlamaFactory 的两种使用方式</h3>
+
+  <table>
+    <thead><tr><th>方式</th><th>命令</th><th>适合谁</th></tr></thead>
+    <tbody>
+      <tr><td><strong>WebUI</strong></td><td><code>llamafactory-cli webui</code></td><td>新手、快速实验、可视化调参</td></tr>
+      <tr><td><strong>CLI 命令行</strong></td><td><code>llamafactory-cli train config.yaml</code></td><td>批量实验、脚本化、服务器后台运行</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">💡 建议</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      先用 WebUI 熟悉流程和参数含义，确认配置没问题后，导出 YAML 配置用 CLI 在服务器上跑。WebUI 的界面操作本质上就是帮你生成一个 YAML 配置文件，了解这个对应关系后，CLI 和 WebUI 可以无缝切换。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SEC 4 ═══ -->
+<section id="sec4">
+  <h2>4. LlamaFactory + LoRA 实战详解</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>LoRA 微调 = 冻结基座模型 + 在注意力层加 adapter。LlamaFactory 预配置了最优参数，你只需要调整 rank、alpha、学习率三个值即可。训练产物只有 adapter 文件（几十 MB），可以挂载到任意同架构的基座模型上。</p>
+  </div>
+
+  <h3>4.1 LoRA 的核心配置参数</h3>
+
+  <table>
+    <thead><tr><th>参数</th><th>含义</th><th>推荐值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>r (rank)</strong></td><td>低秩分解的秩</td><td style="color:var(--green);">8~16</td><td>r 越大容量越大但参数量也越大。r=8 适合 1 万条以内，r=16 适合更大数据量</td></tr>
+      <tr><td><strong>lora_alpha</strong></td><td>缩放系数</td><td style="color:var(--green);">2×r (16~32)</td><td>控制 LoRA 对输出的影响强度。通常设为 2×r</td></tr>
+      <tr><td><strong>lora_dropout</strong></td><td>adapter 上的 dropout</td><td>0.05~0.1</td><td>防止过拟合小数据集。数据少于 1000 条时建议 0.1</td></tr>
+      <tr><td><strong>target_modules</strong></td><td>在哪些层加 adapter</td><td>q_proj, v_proj</td><td>只给 Q/V 加最省参数；全部加（q/k/v/o/gate/up/down）效果更好但参数多</td></tr>
+      <tr><td><strong>learning_rate</strong></td><td>学习率</td><td style="color:var(--green);">1e-4 ~ 5e-4</td><td>LoRA 学习率可以比全参数 SFT 高 5~10 倍</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.2 WebUI 操作步骤（图文流程）</h3>
+
+  <div class="step-flow">
+    <span class="step">① 选模型</span><span class="step-arrow">→</span>
+    <span class="step" style="border-color:var(--teal);">② 选数据</span><span class="step-arrow">→</span>
+    <span class="step">③ 选方法</span><span class="step-arrow">→</span>
+    <span class="step" style="border-color:var(--purple);">④ 调参数</span><span class="step-arrow">→</span>
+    <span class="step">⑤ 点训练</span>
+  </div>
+
+  <div class="arch-box">
+    <span class="label">WebUI 操作要点：</span><br><br>
+    <span class="label">① 模型选择：</span>Model name → 选 <strong>Qwen2.5-7B</strong>（或其他支持的模型）<br>
+    &nbsp;&nbsp;→ LlamaFactory 自动从 HuggingFace 下载模型到本地缓存<br><br>
+    <span class="label">② 数据选择：</span>Dataset → 选内置数据集如 <strong>alpaca_zh</strong>，或上传自定义 JSON 文件<br>
+    &nbsp;&nbsp;→ 自定义数据格式：{"instruction":"...", "input":"...", "output":"..."}<br><br>
+    <span class="label">③ 微调方法：</span>Finetuning method → 选 <strong>lora</strong><br><br>
+    <span class="label">④ 关键参数：</span><br>
+    &nbsp;&nbsp;· LoRA rank: <strong>16</strong><br>
+    &nbsp;&nbsp;· LoRA alpha: <strong>32</strong><br>
+    &nbsp;&nbsp;· Learning rate: <strong>2e-4</strong><br>
+    &nbsp;&nbsp;· Epochs: <strong>3</strong><br>
+    &nbsp;&nbsp;· Batch size: <strong>2</strong>（GPU 显存不够就降到 1）<br>
+    &nbsp;&nbsp;· Gradient accumulation: <strong>4</strong>（等效 batch=2×4=8）<br>
+    &nbsp;&nbsp;· Cutoff length: <strong>2048</strong>（序列最大长度）<br><br>
+    <span class="label">⑤ 点击"开始训练"</span> → 看 loss 曲线 → 训练完成后导出 adapter
+  </div>
+
+  <h3>4.3 CLI 命令行方式 — 同一个配置的 YAML 版本</h3>
+
+  <pre><span class="lang-label">YAML — LoRA 训练配置文件</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 保存为 lora_config.yaml，然后运行：</span>
+<span class="cm">#   llamafactory-cli train lora_config.yaml</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm">### 模型配置</span>
+model_name_or_path: Qwen/Qwen2.5-7B-Instruct  <span class="cm"># 基座模型（任意 HuggingFace 模型都可以）</span>
+trust_remote_code: true                        <span class="cm"># 有些模型需要这个才能加载</span>
+
+<span class="cm">### 微调方法</span>
+finetuning_type: lora                          <span class="cm"># ★ 选 lora（也可以填 full 做全参数）</span>
+
+<span class="cm">### LoRA 参数</span>
+lora_rank: 16                                  <span class="cm"># ★ 秩 — 核心超参数，16 是甜点值</span>
+lora_alpha: 32                                 <span class="cm"># ★ 缩放系数 — 2×rank</span>
+lora_dropout: 0.05                             <span class="cm"># dropout 防过拟合</span>
+lora_target: all                               <span class="cm"># "all" = q/k/v/o/gate/up/down 全加 adapter</span>
+  <span class="cm"># 也可以手动指定: [q_proj, v_proj] 最省 / [q_proj, k_proj, v_proj, o_proj] 标准</span>
+
+<span class="cm">### 数据配置</span>
+dataset: alpaca_zh                             <span class="cm"># LlamaFactory 内置中文数据集</span>
+  <span class="cm"># 用自定义数据: dataset_dir: ./my_data, dataset: my_dataset</span>
+template: qwen                                 <span class="cm"># ★ 对话模板，必须和模型匹配！（qwen/llama3/chatml...）</span>
+cutoff_len: 2048                               <span class="cm"># 超过这个长度的序列会截断</span>
+preprocessing_num_workers: 4                   <span class="cm"># 数据预处理的并行线程数</span>
+
+<span class="cm">### 训练参数</span>
+output_dir: ./output/lora_qwen                <span class="cm"># adapter 保存位置</span>
+logging_steps: 10                              <span class="cm"># 每 10 步打印一次 loss</span>
+save_steps: 500                                <span class="cm"># 每 500 步保存一个 checkpoint</span>
+num_train_epochs: 3                            <span class="cm"># 训练 3 个 epoch</span>
+per_device_train_batch_size: 2                 <span class="cm"># 单卡 batch size</span>
+gradient_accumulation_steps: 4                 <span class="cm"># 累积 4 步 → 等效 batch=2×4=8</span>
+learning_rate: 2.0e-4                          <span class="cm"># ★ LoRA 学习率，比全参数 SFT (2e-5) 高 10 倍</span>
+lr_scheduler_type: cosine                      <span class="cm"># 余弦退火 — 从峰值平滑降到接近 0</span>
+warmup_ratio: 0.1                              <span class="cm"># 前 10% 的步数线性预热 lr</span>
+fp16: true                                     <span class="cm"># 混合精度（V100/T4 用 fp16，A100 用 bf16）</span>
+
+<span class="cm">### 训练完了怎么用？</span>
+<span class="cm"># 方式 A: 导出合并后的完整模型</span>
+<span class="cm">#   llamafactory-cli export lora_config.yaml</span>
+<span class="cm"># 方式 B: 直接用 adapter 推理（不合并，随时可切换不同 adapter）</span>
+<span class="cm">#   llamafactory-cli chat lora_config.yaml</span></pre>
+
+  <h3>4.4 训练完成后 — 导出与推理</h3>
+
+  <pre><span class="lang-label">Shell</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 导出方式 1: 合并 LoRA 到基座，保存完整模型</span>
+<span class="cm"># 合并后和普通模型完全一样，可以用 vLLM/Ollama 部署</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+llamafactory-cli export \
+    --model_name_or_path Qwen/Qwen2.5-7B-Instruct \
+    --adapter_name_or_path ./output/lora_qwen \
+    --template qwen \
+    --finetuning_type lora \
+    --export_dir ./merged_qwen_lora \
+    --export_size 2     <span class="cm"># 2 = 导出合并后的 BF16 完整模型</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 导出方式 2: 量化导出为 GGUF（给 Ollama/llama.cpp 用）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+llamafactory-cli export \
+    --model_name_or_path ./merged_qwen_lora \
+    --export_dir ./gguf_qwen \
+    --export_quantization_bit 4  <span class="cm"># 4-bit 量化</span>
+    <span class="cm"># 导出后在 Ollama 中: ollama create my-model -f Modelfile</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 直接用 adapter 推理（不合并，适合快速测试）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+llamafactory-cli chat \
+    --model_name_or_path Qwen/Qwen2.5-7B-Instruct \
+    --adapter_name_or_path ./output/lora_qwen \
+    --template qwen</pre>
+</section>
+
+<!-- ═══════════════════════ SEC 5 ═══ -->
+<section id="sec5">
+  <h2>5. LlamaFactory + QLoRA 实战详解</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>QLoRA = LoRA + 基座 4-bit 量化。基座模型从 14GB（BF16）压到 ~4GB（NF4），显存再砍一半。<strong>单张 RTX 3090/4090（24GB）就能训练 Llama-7B，甚至可以挑战 13B。</strong></p>
+  </div>
+
+  <h3>5.1 QLoRA 的量化原理</h3>
+
+  <p>QLoRA 用了三个关键技巧来在极致压缩显存的同时保持训练质量：</p>
+
+  <table>
+    <thead><tr><th>技术</th><th>做什么</th><th>省多少</th></tr></thead>
+    <tbody>
+      <tr><td><strong>4-bit NormalFloat (NF4)</strong></td><td>一种专门为神经网络权重分布设计的 4-bit 量化格式。比传统的线性量化更好地保留了权重的信息分布</td><td>从 16bit 降到 4bit → 省 75% 模型显存</td></tr>
+      <tr><td><strong>双重量化 (Double Quant)</strong></td><td>对量化常数本身也做一次量化。量化时每个 64 个参数共享一个量化常数，把这些常数再量化</td><td>再省 ~0.4 bit/参数</td></tr>
+      <tr><td><strong>分页优化器 (Paged Optimizer)</strong></td><td>当 GPU 显存不足时，把优化器状态自动换出到 CPU 内存，需要时再换回来</td><td>避免 OOM，显存峰值可控</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-box">
+    <span class="label">QLoRA 前向传播时发生了什么：</span><br>
+    &nbsp;&nbsp;1. 4-bit 量化权重 (存于显存) → <strong>反量化</strong>为 BF16 → 正常做矩阵乘法<br>
+    &nbsp;&nbsp;2. 反向传播时，<strong>梯度只流向 LoRA adapter</strong>（基座权重不更新）<br>
+    &nbsp;&nbsp;3. 优化器状态 <strong>只保存 LoRA 参数的 m/v</strong>（基座的不需要）<br><br>
+    <span class="label">关键：</span>虽然存储是 4-bit，但计算是 BF16 → <strong>训练精度几乎不受影响</strong>
+  </div>
+
+  <h3>5.2 WebUI 操作步骤</h3>
+
+  <p>和 LoRA 几乎一样，只改两个地方：</p>
+
+  <div class="arch-box">
+    <span class="label">① Finetuning method → 选 &quot;lora&quot;</span>（和 LoRA 一样，不是单独的 &quot;qlora&quot;）<br>
+    <span class="label">② 勾选 &quot;Quantization bit&quot; → 选 &quot;4&quot;</span>（这就是 QLoRA 和 LoRA 的唯一 UI 差异）<br>
+    <span class="label">③ 量化类型 → 选 &quot;nf4&quot;</span>（NormalFloat 4-bit，最优选择）<br>
+    <span class="label">④ 勾选 &quot;Double quantization&quot;</span>（双重量化，再省一点显存）<br><br>
+    其余参数（rank、alpha、lr 等）和 LoRA 完全一样。
+  </div>
+
+  <h3>5.3 QLoRA 的 YAML 配置文件</h3>
+
+  <pre><span class="lang-label">YAML — QLoRA 训练配置</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 和 LoRA 配置的区别只有 3 行！</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm">### 模型配置</span>
+model_name_or_path: Qwen/Qwen2.5-7B-Instruct
+
+<span class="cm">### 微调方法</span>
+finetuning_type: lora                          <span class="cm"># 和 LoRA 一样！（不是单独的"qlora"类型）</span>
+
+<span class="cm">### ★ QLoRA 独有的量化配置（下面 4 行是 LoRA 没有的）</span>
+quantization_bit: 4                            <span class="cm"># ★ 4-bit 量化 — QLoRA 的核心标志</span>
+quantization_type: nf4                         <span class="cm"># NormalFloat 4 — 最好的 4-bit 量化策略</span>
+double_quantization: true                      <span class="cm"># 双重量化 — 对量化常数再量化，再省约 0.4bit/param</span>
+  <span class="cm"># 上面 3 行就是这个配置和 LoRA 配置的全部区别！</span>
+
+<span class="cm">### LoRA 参数（和纯 LoRA 完全一样）</span>
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: all
+
+<span class="cm">### 数据配置（和 LoRA 一样）</span>
+dataset: alpaca_zh
+template: qwen
+cutoff_len: 2048
+
+<span class="cm">### 训练参数（和 LoRA 一样）</span>
+output_dir: ./output/qlora_qwen
+num_train_epochs: 3
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+learning_rate: 2.0e-4
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+  <span class="cm"># 注意：QLoRA 不要同时开 fp16 和量化，用量化就不需要混合精度了</span>
+  <span class="cm"># fp16: true  ← QLoRA 不需要这行，量化已经替代了混合精度</span></pre>
+
+  <div class="info-box">
+    <div class="label">⚠️ QLoRA 的常见坑</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      ① <strong>不要同时开 fp16/bf16 和量化</strong>——量化已经处理了精度，再开混合精度会冲突甚至 OOM。<br>
+      ② <strong>QLoRA 训练速度可能比 LoRA 慢 10%~20%</strong>——因为每次前向都要做 4-bit→BF16 反量化。<br>
+      ③ <strong>NF4 是首选</strong>——不要用 int4，NF4 专门为神经网络权重设计，效果明显更好。<br>
+      ④ <strong>batch_size 可以比 LoRA 大</strong>——因为显存更充足，可以考虑把 batch 从 2 提到 4。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SEC 6 ═══ -->
+<section id="sec6">
+  <h2>6. 显存计算 — 你的 GPU 能训多大的模型？</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>显存 = 模型参数 + 梯度 + 优化器状态 + 激活值。全参数 SFT 四个都要，LoRA 只算后三项的 LoRA 部分，QLoRA 模型参数也砍到 1/4。下面给出精确公式和速查表。</p>
+  </div>
+
+  <h3>6.1 通用显存公式</h3>
+
+  <div class="formula">
+    VRAM = M<sub>params</sub> + M<sub>grads</sub> + M<sub>optim</sub> + M<sub>activations</sub>
+  </div>
+
+  <p>其中各项的计算方式取决于微调方法：</p>
+
+  <table>
+    <thead><tr><th>组件</th><th>全参数 SFT</th><th>LoRA</th><th>QLoRA</th></tr></thead>
+    <tbody>
+      <tr><td><strong>模型参数</strong></td><td>P × bytes_per_param</td><td>P × bytes_per_param</td><td style="color:var(--green);">P × 0.5 bytes（含量化开销）</td></tr>
+      <tr><td><strong>梯度</strong></td><td>P × 2 bytes</td><td style="color:var(--green);">P<sub>lora</sub> × 2 bytes（≈ 0.1% P）</td><td style="color:var(--green);">P<sub>lora</sub> × 2 bytes</td></tr>
+      <tr><td><strong>优化器状态</strong></td><td>P × 8 bytes</td><td style="color:var(--green);">P<sub>lora</sub> × 8 bytes</td><td style="color:var(--green);">P<sub>lora</sub> × 8 bytes</td></tr>
+      <tr><td><strong>激活值</strong></td><td>~10 GB</td><td>~15 GB</td><td>~10 GB</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>关键洞察：</strong>LoRA/QLoRA 省显存的核心在于<strong>优化器状态</strong>。Adam 的 momentum 和 variance 各占 4 bytes（FP32），两个加起来 = P×8 bytes，是模型参数（P×2 bytes BF16）的 <strong>4 倍</strong>。全参数 SFT 的优化器状态（7B→56GB）比模型本身（14GB）还大。LoRA 的优化器只需要保存那 0.1% 的 adapter 参数，直接从 56GB 降到 ~100MB。
+  </div>
+
+  <h3>6.2 精确公式 — 代入数字算</h3>
+
+  <pre><span class="lang-label">显存计算公式（代入具体数字）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 符号说明：</span>
+<span class="cm">#   P      = 模型总参数量 (7B, 13B, 70B...)</span>
+<span class="cm">#   P_lora = LoRA 可训练参数量 ≈ P × 0.001~0.005</span>
+<span class="cm">#   bytes  = BF16=2, FP32=4, 4-bit≈0.5</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+<span class="cm"># --- 全参数 SFT (BF16) ---</span>
+<span class="cm"># 模型:  P × 2</span>
+<span class="cm"># 梯度:  P × 2</span>
+<span class="cm"># 优化器: P × 4 × 2 = P × 8  (m+v, 各 FP32=4 bytes)</span>
+<span class="cm"># 激活:  ~10 GB (batch=1, seq=2048, 开了 gradient checkpointing)</span>
+<span class="cm"># VRAM ≈ P × 12 + 10 GB</span>
+<span class="cm">#</span>
+<span class="cm"># 7B:  7 × 12 + 10 =  94 GB → 需要 4×A100-80G</span>
+<span class="cm"># 13B: 13 × 12 + 10 = 166 GB → 需要 8×A100-40G 或 4×A100-80G</span>
+<span class="cm"># 70B: 70 × 12 + 10 = 850 GB → 需要 16×A100-80G</span>
+
+<span class="cm"># --- LoRA (BF16, rank=16, lora_target=all) ---</span>
+<span class="cm"># 冻结模型: P × 2  (冻结，不存梯度、不存优化器)</span>
+<span class="cm"># P_lora ≈ P × 0.005  (rank=16 时约为 0.5% 的参数量)</span>
+<span class="cm">#   梯度:  P_lora × 2</span>
+<span class="cm">#   优化器: P_lora × 8</span>
+<span class="cm">#   激活:  ~15 GB (LoRA 需要额外的 adapter 前向计算)</span>
+<span class="cm"># VRAM ≈ P × 2 + P_lora × 10 + 15 GB</span>
+<span class="cm">#</span>
+<span class="cm"># 7B:  14 + 0.035×10 + 15 ≈ 29 GB → RTX 3090/4090 (24GB) 不够？</span>
+<span class="cm">#      ↑ 等一下 — 实际训练时模型可以 offload 一部分到 CPU</span>
+<span class="cm">#      ↑ 开了 gradient checkpointing + 小 batch → 激活降到 ~8 GB</span>
+<span class="cm">#      ↑ 实际 LoRA (7B): 14 + 0.35 + 8 ≈ 22 GB → 可以跑！</span>
+
+<span class="cm"># --- QLoRA (NF4, rank=16) ---</span>
+<span class="cm"># 量化模型: P × 0.5  (4-bit NF4, 含反量化开销)</span>
+<span class="cm"># P_lora ≈ P × 0.005</span>
+<span class="cm">#   梯度:  P_lora × 2</span>
+<span class="cm">#   优化器: P_lora × 8</span>
+<span class="cm">#   激活:  ~10 GB</span>
+<span class="cm"># VRAM ≈ P × 0.5 + P_lora × 10 + 10 GB</span>
+<span class="cm">#</span>
+<span class="cm"># 7B:  3.5 + 0.35 + 10 ≈ 14 GB → ✅ 1×RTX 3090/4090 (24GB) 轻松</span>
+<span class="cm"># 13B: 6.5 + 0.65 + 15 ≈ 22 GB → ✅ 1×RTX 3090/4090 刚刚好</span>
+<span class="cm"># 70B: 35 + 3.5 + 30 ≈ 69 GB → ⚠️ 需要 A100-80G 或双卡</span></pre>
+
+  <h3>6.3 显存速查表 — 你的 GPU 能训什么？</h3>
+
+  <table>
+    <thead><tr><th>GPU</th><th>显存</th><th>全参数 SFT</th><th>LoRA (BF16)</th><th>QLoRA (NF4)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>RTX 3060</strong></td><td>12 GB</td><td style="color:var(--red);">无法训练</td><td style="color:var(--orange);">7B（勉强）</td><td style="color:var(--green);">7B</td></tr>
+      <tr><td><strong>RTX 3090 / 4090</strong></td><td>24 GB</td><td style="color:var(--red);">无法训练</td><td style="color:var(--green);">7B，13B（勉强）</td><td style="color:var(--green);">7B~13B</td></tr>
+      <tr><td><strong>RTX 5090</strong></td><td>32 GB</td><td style="color:var(--red);">无法训练</td><td style="color:var(--green);">7B~13B</td><td style="color:var(--green);">7B~13B</td></tr>
+      <tr><td><strong>A100-40G</strong></td><td>40 GB</td><td style="color:var(--orange);">7B（勉强）</td><td style="color:var(--green);">7B~13B</td><td style="color:var(--green);">7B~13B，70B（勉强）</td></tr>
+      <tr><td><strong>A100-80G</strong></td><td>80 GB</td><td style="color:var(--green);">7B~13B</td><td style="color:var(--green);">13B~70B</td><td style="color:var(--green);">7B~70B</td></tr>
+      <tr><td><strong>2×A100-80G</strong></td><td>160 GB</td><td style="color:var(--green);">13B，70B（勉强）</td><td style="color:var(--green);">70B</td><td style="color:var(--green);">70B</td></tr>
+      <tr><td><strong>4×A100-80G</strong></td><td>320 GB</td><td style="color:var(--green);">70B</td><td style="color:var(--green);">70B</td><td style="color:var(--green);">70B</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.4 显存影响因素详解</h3>
+
+  <table>
+    <thead><tr><th>因素</th><th>如何影响</th><th>省显存的优化手段</th></tr></thead>
+    <tbody>
+      <tr><td><strong>batch_size</strong></td><td>翻倍 → 激活值翻倍。LoRA 从 batch=1→2，显存可能从 18GB 跳到 28GB</td><td>减小 batch + 增大 gradient_accumulation（等效 batch 不变）</td></tr>
+      <tr><td><strong>seq_length</strong></td><td>从 2048→4096，激活值几乎翻倍（因为 Attention 矩阵是 n²）</td><td>用 FlashAttention-2（自动减少激活值显存）、截断长序列</td></tr>
+      <tr><td><strong>lora_target</strong></td><td>只给 q/v 加→~0.1% 参数；all→~0.5% 参数</td><td>GPU 紧张时选 [q_proj, v_proj]；显存充足选 all</td></tr>
+      <tr><td><strong>lora_rank</strong></td><td>rank 8→16，adapter 参数量翻倍，但绝对值很小（~0.1%→~0.2%）</td><td>rank 对显存影响微乎其微（差异 &lt;0.1GB）</td></tr>
+      <tr><td><strong>gradient_checkpointing</strong></td><td>用额外 20% 计算换 ~50% 激活值显存</td><td>显存紧张时必须开启（LlamaFactory 默认开启）</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 7 ═══ -->
+<section id="sec7">
+  <h2>7. 选型指南 & 常见故障排查</h2>
+
+  <div class="summary-box">
+    <div class="label">📌 一分钟总结</div>
+    <p>选方法看 GPU 和任务：24GB 以下→QLoRA，24~40GB→LoRA，80GB+→考虑全参数。常见 OOM 的解法：降 batch、降 seq_length、开 QLoRA、精简 lora_target。</p>
+  </div>
+
+  <h3>7.1 选型决策</h3>
+
+  <pre><span class="lang-label">选型决策树</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+
+你的 GPU 显存是多少？
+  ├── < 12 GB → 只能用小模型（Qwen2.5-1.5B / 0.5B）QLoRA
+  ├── 12~16 GB → QLoRA 训练 7B 模型，关掉一些 lora_target
+  ├── 16~24 GB → QLoRA 训练 7B~13B，或 LoRA 训练 7B
+  ├── 24~40 GB → LoRA 训练 7B~13B，QLoRA 训练 13B~34B
+  ├── 40~80 GB → LoRA 训练 13B~70B，全参数 SFT 训 7B
+  └── 80 GB+ → 随便玩
+
+你的数据量是多少？
+  ├── < 1000 条 → LoRA rank=8, lora_dropout=0.1（防过拟合）
+  ├── 1000~1 万条 → LoRA rank=16, lora_dropout=0.05
+  ├── 1 万~10 万条 → LoRA rank=32, lora_target=all
+  └── > 10 万条 → LoRA rank=64 或 全参数 SFT
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span></pre>
+
+  <h3>7.2 方案对比总表</h3>
+
+  <table>
+    <thead><tr><th>方案</th><th>GPU 需求 (7B)</th><th>效果</th><th>速度</th><th>存储</th><th>推荐场景</th></tr></thead>
+    <tbody>
+      <tr><td><strong>全参数 SFT</strong></td><td style="color:var(--red);">4×A100-80G</td><td>100%</td><td>慢</td><td>14 GB（完整模型）</td><td>大数据量 + 极致性能</td></tr>
+      <tr><td><strong>LoRA</strong></td><td style="color:var(--orange);">1×3090/4090</td><td>95%~98%</td><td>中</td><td>30 MB（adapter）</td><td>通用首选</td></tr>
+      <tr><td><strong>QLoRA</strong></td><td style="color:var(--green);">1×3060/3090</td><td>93%~97%</td><td>稍慢（~15%）</td><td>30 MB（adapter）</td><td>GPU 紧张时首选</td></tr>
+    </tbody>
+  </table>
+
+  <h3>7.3 常见故障排查</h3>
+
+  <table>
+    <thead><tr><th>问题</th><th>可能原因</th><th>解决方案</th></tr></thead>
+    <tbody>
+      <tr><td><strong>CUDA OOM</strong></td><td>显存不够</td><td>① 降 batch_size 到 1 ② 开 QLoRA ③ 降 cutoff_len ④ 精简 lora_target 为 q_proj,v_proj</td></tr>
+      <tr><td><strong>Loss 不下降</strong></td><td>学习率不合适 / 数据格式错误</td><td>① lr 试试 1e-4 / 2e-4 / 5e-4 ② 检查 template 是否和模型匹配 ③ 检查数据中 output 字段是否有内容</td></tr>
+      <tr><td><strong>训练后效果差</strong></td><td>过拟合 / 数据质差 / rank 太小</td><td>① 增大 lora_dropout ② 清洗数据 ③ 增大 rank 到 32 ④ 增大 lora_target 到 all</td></tr>
+      <tr><td><strong>训练很慢</strong></td><td>batch 太小 / 数据加载瓶颈</td><td>① QLoRA 先天慢 10%~20% ② 增大 preprocessing_num_workers ③ 检查数据是否在 SSD 上</td></tr>
+      <tr><td><strong>推理时回答乱码</strong></td><td>template 不匹配 / 未应用 chat_template</td><td>① 确认 template 和训练时一致 ② LlamaFactory chat 模式会自动应用 template</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════ SEC 8 ═══ -->
+<section id="sec8">
+  <h2>8. 进阶实战 & 常见问题</h2>
+
+  <h3>8.1 如何准备自己的数据集？</h3>
+
+  <p>LlamaFactory 支持多种数据格式。最常用的是 <strong>Alpaca 格式</strong>和 <strong>ShareGPT 格式</strong>：</p>
+
+  <pre><span class="lang-label">JSON — 数据集格式</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 格式 1: Alpaca（单轮问答 — 最简单）</span>
+<span class="cm"># 保存为 data/my_dataset.json，然后在 dataset_info.json 注册</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+[
+  {
+    <span class="str">"instruction"</span>: <span class="str">"请用 Python 写一个快速排序算法"</span>,
+    <span class="str">"input"</span>: <span class="str">""</span>,                              <span class="cm"># 可选上下文，没有就填空串</span>
+    <span class="str">"output"</span>: <span class="str">"def quicksort(arr):\n    if len(arr) &lt;= 1:\n        return arr\n    ..."</span>
+  },
+  {
+    <span class="str">"instruction"</span>: <span class="str">"翻译以下内容为英文"</span>,
+    <span class="str">"input"</span>: <span class="str">"人工智能正在改变世界"</span>,           <span class="cm"># 这里是具体要翻译的内容</span>
+    <span class="str">"output"</span>: <span class="str">"Artificial intelligence is changing the world"</span>
+  }
+]
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 格式 2: ShareGPT（多轮对话 — 更现代）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+[
+  {
+    <span class="str">"conversations"</span>: [
+      {<span class="str">"from"</span>: <span class="str">"human"</span>, <span class="str">"value"</span>: <span class="str">"请用 Python 写一个快速排序"</span>},
+      {<span class="str">"from"</span>: <span class="str">"gpt"</span>,    <span class="str">"value"</span>: <span class="str">"def quicksort(arr):\n    ..."</span>},
+      {<span class="str">"from"</span>: <span class="str">"human"</span>, <span class="str">"value"</span>: <span class="str">"能解释一下时间复杂度吗？"</span>},
+      {<span class="str">"from"</span>: <span class="str">"gpt"</span>,    <span class="str">"value"</span>: <span class="str">"快速排序的平均时间复杂度为 O(n log n)..."</span>}
+    ]
+  }
+]
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 在 dataset_info.json 中注册你的数据集</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="str">"my_dataset"</span>: {
+  <span class="str">"file_name"</span>: <span class="str">"my_dataset.json"</span>,
+  <span class="str">"formatting"</span>: <span class="str">"alpaca"</span>,              <span class="cm"># 告诉 LlamaFactory 数据格式</span>
+  <span class="str">"columns"</span>: {
+    <span class="str">"prompt"</span>: <span class="str">"instruction"</span>,            <span class="cm"># 哪个字段作为 prompt</span>
+    <span class="str">"query"</span>: <span class="str">"input"</span>,                   <span class="cm"># 哪个字段作为上下文</span>
+    <span class="str">"response"</span>: <span class="str">"output"</span>                 <span class="cm"># 哪个字段作为回答</span>
+  }
+}</pre>
+
+  <h3>8.2 显存计算 — 逐模型精算表</h3>
+
+  <p>下面给出三种方法在常见模型规模上的<strong>精确显存估算</strong>（BF16/NF4，batch=1，seq=2048，gradient_checkpointing=ON）：</p>
+
+  <table>
+    <thead><tr><th>模型</th><th>参数量</th><th>全参数 SFT</th><th>LoRA (rank=16)</th><th>QLoRA (NF4, rank=16)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Qwen2.5-0.5B</strong></td><td>0.5B</td><td>~16 GB</td><td>~8 GB</td><td>~4 GB</td></tr>
+      <tr><td><strong>Qwen2.5-1.5B</strong></td><td>1.5B</td><td>~28 GB</td><td>~10 GB</td><td>~5 GB</td></tr>
+      <tr><td><strong>Qwen2.5-3B</strong></td><td>3B</td><td>~46 GB</td><td>~14 GB</td><td>~7 GB</td></tr>
+      <tr><td><strong>Llama-3-8B</strong></td><td>8B</td><td>~106 GB</td><td>~24 GB</td><td>~14 GB</td></tr>
+      <tr><td><strong>Qwen2.5-7B</strong></td><td>7B</td><td>~94 GB</td><td>~22 GB</td><td>~13 GB</td></tr>
+      <tr><td><strong>Qwen2.5-14B</strong></td><td>14B</td><td>~178 GB</td><td>~36 GB</td><td>~20 GB</td></tr>
+      <tr><td><strong>Llama-3-70B</strong></td><td>70B</td><td>~850 GB</td><td>~160 GB</td><td>~65 GB</td></tr>
+      <tr><td><strong>Qwen2.5-72B</strong></td><td>72B</td><td>~874 GB</td><td>~165 GB</td><td>~67 GB</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <strong>如何读这张表：</strong>以 Qwen2.5-7B 为例——全参数 SFT 需要 94GB（4×A100-80G），LoRA 只需 22GB（1×RTX 3090/4090），QLoRA 只需 13GB（1×RTX 3060 都够）。<strong>QLoRA 的显存只有全参数 SFT 的 1/7。</strong>
+  </div>
+
+  <h3>8.3 LoRA Rank 选择指南</h3>
+
+  <p>rank 是 LoRA 最重要的超参数。它决定了 adapter 的"容量"——rank 越大，adapter 能学到的模式越复杂，但参数量也越大。</p>
+
+  <table>
+    <thead><tr><th>rank</th><th>参数量 (7B, lora_target=all)</th><th>适合场景</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td><strong>4</strong></td><td>~0.03% (~2M)</td><td>极简单风格迁移、语气调整</td><td>勉强</td></tr>
+      <tr><td style="color:var(--green);"><strong>8</strong></td><td>~0.06% (~4M)</td><td>小数据集 (&lt;3K 条)、简单任务</td><td>入门首选</td></tr>
+      <tr><td style="color:var(--green);"><strong>16</strong></td><td>~0.12% (~8M)</td><td><strong>绝大多数任务的标准选择</strong></td><td>甜点值</td></tr>
+      <tr><td><strong>32</strong></td><td>~0.25% (~17M)</td><td>大数据集 (&gt;10K 条)、复杂任务</td><td>接近全参数</td></tr>
+      <tr><td><strong>64</strong></td><td>~0.5% (~34M)</td><td>代码生成、数学推理等复杂任务</td><td>≈全参数</td></tr>
+      <tr><td><strong>128+</strong></td><td>~1% (~67M)</td><td>海量数据 + 追求极限</td><td>边际递减</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <div class="label">🔬 实践建议</div>
+    <p style="margin:0;color:var(--fg2);font-size:14px;">
+      先跑 rank=8/16/32 的小规模对比实验（各训 1 个 epoch 看 eval loss），选 loss 最低的。大多数情况下 rank=16 和 rank=64 的效果差距在 1% 以内，但 rank=64 的参数量是 rank=16 的 4 倍。lora_alpha 通常设为 2×rank。
+    </p>
+  </div>
+
+  <h3>8.4 LlamaFactory 多 GPU 训练</h3>
+
+  <pre><span class="lang-label">Shell — 多卡训练</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 1: DeepSpeed ZeRO-2（推荐，自动数据并行 + 优化器分片）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+deepspeed --num_gpus=4 \
+    src/train.py \
+    --deepspeed examples/deepspeed/ds_z2_config.json \
+    --model_name_or_path Qwen/Qwen2.5-7B-Instruct \
+    --finetuning_type lora \
+    --dataset alpaca_zh \
+    --output_dir ./output/lora_4gpu \
+    --per_device_train_batch_size 4 \         <span class="cm"># 4 卡 × batch=4 = 等效 batch=16</span>
+    --gradient_accumulation_steps 2 \         <span class="cm"># ×2 = 等效 batch=32</span>
+    --learning_rate 2.0e-4 \
+    --fp16
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 方式 2: torchrun（PyTorch 原生多卡）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+torchrun --nproc_per_node=4 \
+    src/train.py \
+    --model_name_or_path Qwen/Qwen2.5-7B-Instruct \
+    --finetuning_type lora \
+    --dataset alpaca_zh \
+    --output_dir ./output/lora_4gpu \
+    --per_device_train_batch_size 4 \
+    --learning_rate 2.0e-4 \
+    --fp16
+
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+<span class="cm"># 多卡全参数 SFT — 训练 70B 模型（需要 4×A100-80G）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════════</span>
+deepspeed --num_gpus=4 \
+    src/train.py \
+    --deepspeed examples/deepspeed/ds_z3_config.json \  <span class="cm"># ZeRO-3: 参数+梯度+优化器全分片</span>
+    --model_name_or_path meta-llama/Llama-3-70B-Instruct \
+    --finetuning_type full \                             <span class="cm"># ★ 全参数微调</span>
+    --dataset your_large_dataset \
+    --output_dir ./output/full_70b \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 16 \                   <span class="cm"># 等效 batch=1×16=16</span>
+    --learning_rate 1.0e-5 \
+    --bf16</pre>
+
+  <h3>8.5 常见问题 FAQ</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>❓ Q1: LoRA 训练完的 adapter 能跨模型用吗？</h4>
+      <p><strong>答：</strong>不能。adapter 必须挂载到<strong>完全相同架构</strong>的基座上。Qwen2.5-7B 训的 adapter 不能给 Llama-3-8B 用——即使参数量相近，内部层命名和维度不同。同架构内可以（Qwen2.5-7B 的 adapter 可以给 7B-Instruct 用）。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q2: 训练过程中 loss 降到多少算好？</h4>
+      <p><strong>答：</strong>没有绝对的数值标准（取决于任务难度和数据格式），但看趋势：① loss 平滑下降→正常；② loss 震荡→lr 太大；③ loss 下降后突然回升→过拟合（减 epoch、加 dropout）；④ eval loss 不再下降时就应该停了。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q3: 怎么判断是过拟合还是欠拟合？</h4>
+      <p><strong>答：</strong>看 train loss 和 eval loss 的差距。train loss 持续下降到很低（如 0.3）但 eval loss 在上升 → 过拟合（增大 dropout、减少 epoch、减小 rank）。train loss 和 eval loss 都在高位不动 → 欠拟合（增大 rank、增大 lr、增加 epoch）。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q4: LoRA 训练必须需要 chat_template 吗？</h4>
+      <p><strong>答：</strong>强烈建议。chat_template 决定模型如何理解对话格式。如果训练时没用 template 但推理时用了 → 模型不认识你的输入格式 → 输出乱码。LlamaFactory 的 template 参数会自动处理，确保训练和推理格式一致。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q5: QLoRA 训练完需要反量化吗？</h4>
+      <p><strong>答：</strong>不需要。QLoRA 只在<strong>训练时</strong>量化基座。adapter 本身是 BF16 的。导出合并后就是普通的 BF16 模型。你也可以导出 4-bit GGUF 给 Ollama 用。</p>
+    </div>
+    <div class="card">
+      <h4>❓ Q6: 哪种微调方法最快？</h4>
+      <p><strong>答：</strong>全参数 SFT 每步最快（无 adapter 开销），但总训练时间可能更长（需要更多 epoch）。LoRA 每步稍慢 5%~10%（adapter 前向开销），但收敛快（少 epoch）。QLoRA 比 LoRA 再慢 10%~20%（反量化开销）。综合：LoRA≈全参数 > QLoRA。</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  📘 大模型微调完全指南 · LlamaFactory · LoRA · QLoRA · 显存计算 · 从入门到精通<br>
+  由 <a href="https://github.com/2143616">@2143616</a> 制作 ·
+  <span style="color: var(--green);">🟢 持续更新</span> ·
+  <span style="color: var(--fg2);">最后更新: 2026-07-21</span>
+</div>
+
+</div>
+</body>
+</html>
