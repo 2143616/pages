@@ -481,22 +481,84 @@ outputs = llm.generate([<span class="str">"Hello, how are you?"</span>], samplin
 
 <h3>4.2 OpenAI 兼容 API 服务方式</h3>
 
+<p>API Server 是生产部署的标准方式——启动后任何支持 OpenAI API 的客户端都能直接调用。下面先展示<strong>一个最常用配置的完整示例</strong>，再逐参数解释：</p>
+
 <pre><span class="lang-label">bash</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════
-# 一行命令启动 API 服务
-# ═══════════════════════════════════════════════════════════</span>
-python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen2.5-7B-Instruct \
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 最简启动（仅必要参数）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+vllm serve Qwen/Qwen2.5-7B-Instruct \
   --port <span class="num">8000</span> \
   --host <span class="num">0.0.0.0</span>
 
-<span class="cm"># 启动后即可用 OpenAI 客户端调用</span>
-<span class="cm"># curl http://localhost:8000/v1/chat/completions -d '{"model":"Qwen/Qwen2.5-7B-Instruct","messages":[{"role":"user","content":"你好"}]}'</span></pre>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 生产部署常用配置（带上所有关键参数）</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+vllm serve Qwen/Qwen2.5-7B-Instruct \
+  <span class="cm"># ─── 服务参数 ───</span>
+  --port <span class="num">8000</span> \                                  <span class="cm"># ★ API 监听端口</span>
+  --host <span class="num">0.0.0.0</span> \                               <span class="cm"># ★ 绑定所有网卡（允许外部访问）</span>
+  --api-key sk-xxxxx \                          <span class="cm"># 设置 API 密钥（不设则不校验）</span>
+  --served-model-name my-qwen \                 <span class="cm"># ★ 对外暴露的模型名（客户端用这个名字请求）</span>
+  <span class="cm"># ─── 模型参数 ───</span>
+  --dtype auto \                                 <span class="cm"># ★ 数据类型: auto/bfloat16/float16/float32</span>
+  --max-model-len <span class="num">8192</span> \                         <span class="cm"># ★ 最大上下文长度（可超模型原始限制）</span>
+  --quantization awq \                           <span class="cm"># ★ 量化: awq/gptq/fp8/squeezellm/None</span>
+  --trust-remote-code \                          <span class="cm"># ★ 自定义架构模型必加（Qwen/DeepSeek/ChatGLM）</span>
+  <span class="cm"># ─── 显存与并行参数 ───</span>
+  --gpu-memory-utilization <span class="num">0.90</span> \              <span class="cm"># ★ GPU 显存利用率（0.9=90%，留 10% 给系统）</span>
+  --tensor-parallel-size <span class="num">1</span> \                   <span class="cm"># ★ 张量并行（单卡=1，4 卡=4）</span>
+  --pipeline-parallel-size <span class="num">1</span> \                <span class="cm"># 流水线并行（默认=1，层数极多时用）</span>
+  <span class="cm"># ─── KV Cache 参数 ───</span>
+  --max-num-seqs <span class="num">256</span> \                          <span class="cm"># ★ 最大并发请求数（默认 256）</span>
+  --max-num-batched-tokens <span class="num">8192</span> \              <span class="cm"># 单步最多处理 token 数（影响吞吐）</span>
+  --enable-prefix-caching \                      <span class="cm"># ★ 启用前缀缓存（系统提示词复用）</span>
+  <span class="cm"># ─── 调度参数 ───</span>
+  --disable-log-requests                         <span class="cm"># 不记录请求日志（减少 IO）</span>
+
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># DGX Spark (128GB 统一内存) 推荐配置</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+vllm serve Qwen/Qwen2.5-72B-Instruct \
+  --port <span class="num">8000</span> \
+  --dtype auto \
+  --max-model-len <span class="num">32768</span> \                       <span class="cm"># 128GB 显存可以开更长上下文</span>
+  --gpu-memory-utilization <span class="num">0.95</span> \              <span class="cm"># 统一内存更充裕，可以提高利用率</span>
+  --tensor-parallel-size <span class="num">1</span> \                   <span class="cm"># DGX Spark 单 GPU，不需要 TP</span>
+  --max-num-seqs <span class="num">512</span> \                          <span class="cm"># 大显存支持更多并发</span>
+  --enable-prefix-caching</pre>
+
+<p>各参数的<strong>详细含义和作用</strong>见下表：</p>
+
+<table>
+  <tr><th>参数</th><th>默认值</th><th>详细说明</th></tr>
+  <tr><td><code>--port</code></td><td>8000</td><td>API 服务监听端口。客户端通过 <code>http://IP:8000/v1</code> 调用</td></tr>
+  <tr><td><code>--host</code></td><td>127.0.0.1</td><td>绑定 IP。<code>0.0.0.0</code> = 允许外部访问；<code>127.0.0.1</code> = 仅本机</td></tr>
+  <tr><td><code>--served-model-name</code></td><td>（同 model）</td><td>对外暴露的模型名称。设成 <code>gpt-4</code> 后客户端用 <code>model="gpt-4"</code> 即可，隐藏真实模型名</td></tr>
+  <tr><td><code>--dtype</code></td><td>auto</td><td>模型精度。auto=自动检测模型配置；bfloat16/float16=半精度；float32=全精度</td></tr>
+  <tr><td style="color:var(--teal);"><strong>--max-model-len</strong></td><td>模型默认值</td><td><strong>最重要的参数之一。</strong>上下文窗口大小。可以<strong>超过</strong>模型原始训练长度（如 Llama-3-8B 原生 8K，设 32K 也可以推理，但精度可能下降）</td></tr>
+  <tr><td style="color:var(--teal);"><strong>--gpu-memory-utilization</strong></td><td>0.90</td><td><strong>最重要的参数之一。</strong>vLLM 可以使用的 GPU 显存比例。设太低浪费显存，设太高（0.98+）可能 OOM。建议 0.85~0.95</td></tr>
+  <tr><td><code>--quantization</code></td><td>None</td><td>量化方式。awq/gptq/fp8/squeezellm。H100/DGX Spark 用 fp8，消费级显卡用 awq</td></tr>
+  <tr><td><code>--tensor-parallel-size</code></td><td>1</td><td>GPU 数量。单卡=1。70B 模型 FP16 需要 ~140GB，2×A100-80G 设 2</td></tr>
+  <tr><td><code>--max-num-seqs</code></td><td>256</td><td>最大同时处理的请求数。增大 = 更高吞吐但更多显存给 KV Cache。显存紧张时减小此值</td></tr>
+  <tr><td><code>--enable-prefix-caching</code></td><td>False</td><td>开启 APC（自动前缀缓存）。共享 System Prompt 场景下 TTFT 大幅降低</td></tr>
+  <tr><td><code>--api-key</code></td><td>（无）</td><td>设置 API 访问密钥。不设则任何能访问端口的客户端都可以调用</td></tr>
+  <tr><td><code>--trust-remote-code</code></td><td>False</td><td>允许执行模型仓库中的自定义 Python 代码。Qwen/DeepSeek/ChatGLM/Phi 等<strong>必须加</strong></td></tr>
+</table>
+
+<div class="highlight">
+  <strong>💡 你日常最需要调的三个参数：</strong><br>
+  ① <strong>--max-model-len</strong> — 决定上下文窗口多大（开销大头在 KV Cache，8192→32768 显存翻几倍）<br>
+  ② <strong>--gpu-memory-utilization</strong> — 决定 vLLM 能用多少显存（设太高 OOM，设太低吞吐上不去）<br>
+  ③ <strong>--max-num-seqs</strong> — 决定最多同时处理多少请求（越大 = KV Cache 预留越多 = 单请求可用显存越少）
+</div>
+
+<p style="margin-top:16px;">启动后即可用 OpenAI 客户端调用（<strong>和调用 GPT-4 完全一样的代码</strong>）：</p>
 
 <pre><span class="lang-label">Python</span>
-<span class="cm"># ═══════════════════════════════════════════════════════════
-# 调用 API 服务的客户端代码
-# ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
+<span class="cm"># 调用 API 服务的客户端代码</span>
+<span class="cm"># ═══════════════════════════════════════════════════════════</span>
 <span class="kw">from</span> <span class="builtin">openai</span> <span class="kw">import</span> OpenAI
 
 <span class="cm"># 创建客户端（指向你的 vLLM 服务）</span>
@@ -507,7 +569,7 @@ client = OpenAI(
 
 <span class="cm"># 聊天补全</span>
 response = client.chat.completions.create(
-    model=<span class="str">"Qwen/Qwen2.5-7B-Instruct"</span>,
+    model=<span class="str">"my-qwen"</span>,  <span class="cm"># 对应 --served-model-name</span>
     messages=[
         {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: <span class="str">"你是一个有用的助手"</span>},
         {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用Python写一个快速排序"</span>},
@@ -517,6 +579,8 @@ response = client.chat.completions.create(
 )
 
 <span class="builtin">print</span>(response.choices[<span class="num">0</span>].message.content)</pre>
+
+<p style="margin-top:16px;">本节覆盖了<strong>最常用参数</strong>。完整参数列表（包括 LoRA 热加载、结构化输出、多模态支持等）见 <a href="#sec5" style="color:var(--accent);">第 5 章 部署参数全解析</a>。</p>
 
 <div class="highlight">
   <strong>💡 两种方式的区别：</strong>
